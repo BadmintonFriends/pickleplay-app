@@ -6,7 +6,7 @@
  * - 향후 더 많은 대회 커밍쑨
  */
 import AppHeader from "@/components/AppHeader";
-import { Calendar, MapPin, Clock, Users, Trophy, Bell, ChevronRight, ExternalLink } from "lucide-react";
+import { Calendar, MapPin, Clock, Users, Trophy, Bell, ChevronRight, ExternalLink, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -112,19 +112,12 @@ export default function TournamentPage() {
             </div>
 
             {/* CTA 버튼 */}
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={handleNotify}
-                className="flex-1 bg-[#C8E632] text-[#1a1a2e] text-xs font-bold py-3 rounded-xl hover:bg-[#bdd62e] transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
-              >
-                <Bell className="w-3.5 h-3.5" />
-                오픈 알림 받기
-              </button>
+            <div className="mt-4">
               <button
                 onClick={() => {
                   window.open("https://map.naver.com/p/search/만인당실내체육관", "_blank");
                 }}
-                className="flex-1 bg-[#1a1a2e] text-white text-xs font-bold py-3 rounded-xl hover:bg-[#2a2a3e] transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                className="w-full bg-[#1a1a2e] text-white text-xs font-bold py-3 rounded-xl hover:bg-[#2a2a3e] transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 장소 보기
@@ -134,10 +127,10 @@ export default function TournamentPage() {
         </div>
       </motion.section>
 
-      {/* 대회 주최 정보 */}
-      <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      {/* 주최/주관 */}
+      <motion.section className="px-4 pb-3" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">주최 · 후원</h3>
+          <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">주최 · 주관</h3>
           <div className="space-y-2.5">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
@@ -145,15 +138,44 @@ export default function TournamentPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-[#1a1a2e]">리닝코리아</p>
-                <p className="text-[11px] text-gray-400">타이틀 스폰서</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#C8E632]/15 flex items-center justify-center shrink-0">
+                <Users className="w-4 h-4 text-[#8BA61E]" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#1a1a2e]">포항 전국 피클볼 조직 위원회</p>
               </div>
             </div>
           </div>
         </div>
       </motion.section>
 
+      {/* 후원/협찬 */}
+      <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">후원 · 협찬</h3>
+          <div className="space-y-2.5">
+            {[
+              "포항시 체육회",
+              "대한피클볼 협회",
+              "포항시 피클볼 협회",
+              "포항 피클볼 클럽",
+            ].map((name) => (
+              <div key={name} className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <Heart className="w-4 h-4 text-blue-400" />
+                </div>
+                <p className="text-xs font-bold text-[#1a1a2e]">{name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
       {/* 더 많은 대회 커밍쑨 */}
-      <motion.section className="px-4 pb-6" initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+      <motion.section className="px-4 pb-6" initial="hidden" animate="visible" variants={fadeUp} custom={4}>
         <div className="bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl p-5 text-center border border-gray-200/50 border-dashed">
           <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center mx-auto mb-3 shadow-sm">
             <Trophy className="w-6 h-6 text-gray-300" />
