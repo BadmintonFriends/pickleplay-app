@@ -1,261 +1,199 @@
 /*
- * HomePage — PicklePlay 홈 화면
+ * HomePage — PicklePlay 커밍쑨 랜딩 페이지
  * 디자인: Clean Sport Utility
- * - 인사말 + 다음 경기 카드
- * - 빠른 메뉴 (코트 예약, 매치 찾기, 장비 쇼핑)
- * - 라이브 코트 현황
- * - 커뮤니티 하이라이트
+ * - 6월 정식 오픈 안내
+ * - 브랜드 소개 + 주요 기능 미리보기
+ * - 사전 등록 유도
  */
 import AppHeader from "@/components/AppHeader";
-import { MapPin, Clock, Search, Plus, ShoppingBag, ChevronRight, MessageSquare, ThumbsUp, Navigation } from "lucide-react";
-import { useLocation } from "wouter";
+import { Trophy, MapPin, ShoppingBag, Users, Clock, Zap, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLocation } from "wouter";
 
-const HERO_COURTS = "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/hero-courts-FbYNhChEfY5c4b7aad6Cn3.webp";
-const COMMUNITY_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/community-league-MVrak7nsqS83bUFUbbzaTT.webp";
+const HERO_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/hero-courts-FbYNhChEfY5c4b7aad6Cn3.webp";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.06, duration: 0.35, ease: [0, 0, 0.2, 1] as const },
+    transition: { delay: i * 0.08, duration: 0.4, ease: [0, 0, 0.2, 1] as const },
   }),
 };
+
+const features = [
+  {
+    icon: Trophy,
+    title: "대회",
+    desc: "전국 피클볼 대회 정보를 한눈에",
+    color: "bg-[#C8E632]/20",
+    iconColor: "text-[#8BA61E]",
+    path: "/tournament",
+  },
+  {
+    icon: MapPin,
+    title: "코트 예약",
+    desc: "가까운 코트를 찾고 바로 예약",
+    color: "bg-blue-50",
+    iconColor: "text-blue-500",
+    path: "/courts",
+  },
+  {
+    icon: ShoppingBag,
+    title: "샵",
+    desc: "패들, 볼, 의류 등 장비 쇼핑",
+    color: "bg-amber-50",
+    iconColor: "text-amber-500",
+    path: "/shop",
+  },
+  {
+    icon: Users,
+    title: "소셜",
+    desc: "피클볼 커뮤니티와 함께하세요",
+    color: "bg-purple-50",
+    iconColor: "text-purple-500",
+    path: "/social",
+  },
+];
 
 export default function HomePage() {
   const [, navigate] = useLocation();
 
   return (
     <div className="bg-[#f8f9fa]">
-      <AppHeader showCart />
+      <AppHeader />
 
-      {/* 인사말 섹션 */}
+      {/* 히어로 섹션 */}
       <motion.section
-        className="px-4 pt-2 pb-4"
+        className="relative mx-4 mt-2 rounded-2xl overflow-hidden h-52"
         initial="hidden"
         animate="visible"
         variants={fadeUp}
         custom={0}
       >
-        <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">안녕하세요, 민수님</p>
-        <h1 className="text-[26px] font-bold text-[#1a1a2e] leading-tight mt-0.5">
-          다음 경기
-          <br />
-          <span className="text-[#8ab500] italic">준비되셨나요?</span>
-        </h1>
+        <img src={HERO_IMG} alt="피클볼 코트" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a2e]/80 via-[#1a1a2e]/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4 text-[#C8E632]" />
+            <span className="text-[11px] font-bold text-[#C8E632] uppercase tracking-wider">
+              2026년 6월 정식 오픈
+            </span>
+          </div>
+          <h1 className="text-2xl font-black text-white leading-tight">
+            피클볼의 모든 것,
+            <br />
+            <span className="text-[#C8E632]">PicklePlay</span>
+          </h1>
+        </div>
       </motion.section>
 
-      {/* 다음 경기 카드 */}
+      {/* 카운트다운 배너 */}
       <motion.section
-        className="px-4 pb-4"
+        className="mx-4 mt-4"
         initial="hidden"
         animate="visible"
         variants={fadeUp}
         custom={1}
       >
-        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 pb-3">
-            <span className="inline-flex items-center gap-1 bg-[#C8E632] text-[#1a1a2e] text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
-              <span className="w-1.5 h-1.5 bg-[#1a1a2e] rounded-full animate-pulse" />
-              예정된 경기
+        <div className="bg-[#1a1a2e] rounded-2xl p-5 text-center">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-[#C8E632]" />
+            <span className="text-xs font-bold text-[#C8E632] uppercase tracking-wider">
+              Coming Soon
             </span>
-            <h3 className="text-lg font-bold text-[#1a1a2e] mt-2.5">단식 대결</h3>
-            <p className="text-sm text-gray-500 mt-0.5">vs. 김태현 &ldquo;The Wall&rdquo;</p>
           </div>
-          <div className="p-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-gray-500" />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">시간</p>
-                <p className="text-sm font-semibold text-[#1a1a2e]">오늘, 오후 4:30</p>
-              </div>
+          <h2 className="text-lg font-bold text-white mb-1">
+            2026년 6월, 정식 서비스 오픈
+          </h2>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            대회 정보, 코트 예약, 장비 쇼핑, 커뮤니티까지
+            <br />
+            피클볼에 필요한 모든 것을 준비하고 있습니다.
+          </p>
+
+          {/* 카운트다운 박스 */}
+          <div className="grid grid-cols-3 gap-2.5 mt-4">
+            <div className="bg-white/10 rounded-xl py-3">
+              <p className="text-2xl font-black text-[#C8E632]">D-62</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">오픈까지</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <MapPin className="w-4 h-4 text-gray-500" />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">코트</p>
-                <p className="text-sm font-semibold text-[#1a1a2e]">04번 코트 (센터)</p>
-              </div>
+            <div className="bg-white/10 rounded-xl py-3">
+              <p className="text-2xl font-black text-white">4</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">주요 기능</p>
             </div>
-            <button className="mt-1 bg-[#1a1a2e] text-white text-xs font-semibold px-5 py-2.5 rounded-full hover:bg-[#2a2a3e] transition-colors flex items-center gap-1.5">
-              <Navigation className="w-3.5 h-3.5" />
-              길찾기
-            </button>
+            <div className="bg-white/10 rounded-xl py-3">
+              <p className="text-2xl font-black text-white">1</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">등록 대회</p>
+            </div>
           </div>
         </div>
       </motion.section>
 
-      {/* 빠른 메뉴 */}
-      <section className="px-4 pb-4 space-y-2.5">
-        {[
-          {
-            icon: Plus,
-            title: "코트 예약",
-            desc: "가까운 코트를 찾아 예약하세요",
-            bg: "bg-[#C8E632]",
-            hoverBg: "hover:bg-[#bdd62e]",
-            iconBg: "bg-white/40",
-            path: "/courts",
-            delay: 2,
-          },
-          {
-            icon: Search,
-            title: "매치 찾기",
-            desc: "비슷한 실력의 상대를 매칭해드려요",
-            bg: "bg-[#d4e5f7]",
-            hoverBg: "hover:bg-[#c4d5e7]",
-            iconBg: "bg-white/50",
-            path: "/matches",
-            delay: 3,
-          },
-          {
-            icon: ShoppingBag,
-            title: "장비 쇼핑",
-            desc: "프로가 사용하는 장비를 만나보세요",
-            bg: "bg-[#fde68a]",
-            hoverBg: "hover:bg-[#fcd34d]",
-            iconBg: "bg-white/50",
-            path: "/shop",
-            delay: 4,
-          },
-        ].map((item) => (
-          <motion.button
-            key={item.title}
-            onClick={() => navigate(item.path)}
-            className={`w-full flex items-start gap-3 ${item.bg} rounded-2xl p-4 ${item.hoverBg} transition-colors text-left active:scale-[0.98]`}
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            custom={item.delay}
-          >
-            <div className={`w-8 h-8 ${item.iconBg} rounded-full flex items-center justify-center shrink-0`}>
-              <item.icon className="w-4 h-4 text-[#1a1a2e]" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-[#1a1a2e]">{item.title}</p>
-              <p className="text-xs text-[#1a1a2e]/60 mt-0.5">{item.desc}</p>
-            </div>
-          </motion.button>
-        ))}
-      </section>
-
-      {/* 라이브 코트 현황 */}
+      {/* 주요 기능 미리보기 */}
       <motion.section
-        className="px-4 pb-4"
+        className="px-4 mt-5"
         initial="hidden"
         animate="visible"
         variants={fadeUp}
-        custom={5}
+        custom={2}
       >
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-bold text-[#1a1a2e]">실시간 코트 현황</h2>
-            <p className="text-xs text-gray-400 mt-0.5">선셋파크 피클볼장</p>
-          </div>
-          <button
-            onClick={() => navigate("/courts")}
-            className="text-xs font-semibold text-gray-500 flex items-center gap-0.5 hover:text-[#1a1a2e] transition-colors"
-          >
-            전체보기 <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {[
-            { num: "01", name: "북쪽 코트", next: "오후 2:00", open: true },
-            { num: "02", name: "북쪽 코트", next: "오후 3:30", open: false },
-            { num: "03", name: "남쪽 코트", next: "오후 4:00", open: true },
-            { num: "04", name: "센터 코트", next: "오후 5:00", open: false },
-          ].map((court) => (
-            <div
-              key={court.num}
-              className="min-w-[130px] bg-white rounded-xl border border-gray-100 p-3 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-lg font-bold text-[#1a1a2e]">{court.num}</span>
-                {court.open && (
-                  <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full uppercase">
-                    OPEN
-                  </span>
-                )}
-              </div>
-              <p className="text-xs font-medium text-[#1a1a2e]">{court.name}</p>
-              <p className="text-[10px] text-gray-400 mt-1">다음: {court.next}</p>
-            </div>
-          ))}
+        <h2 className="text-base font-bold text-[#1a1a2e] mb-3">주요 기능</h2>
+        <div className="space-y-2.5">
+          {features.map((f, idx) => {
+            const Icon = f.icon;
+            return (
+              <motion.button
+                key={f.title}
+                className="w-full bg-white rounded-xl p-4 flex items-center gap-3.5 shadow-sm border border-gray-100 text-left hover:border-[#C8E632]/50 transition-all active:scale-[0.98]"
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                custom={idx + 3}
+                onClick={() => navigate(f.path)}
+              >
+                <div className={`w-11 h-11 rounded-xl ${f.color} flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-5 h-5 ${f.iconColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-[#1a1a2e]">{f.title}</h3>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{f.desc}</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-300 shrink-0" />
+              </motion.button>
+            );
+          })}
         </div>
       </motion.section>
 
-      {/* 커뮤니티 하이라이트 */}
-      <section className="px-4 pb-6">
-        <h2 className="text-base font-bold text-[#1a1a2e] mb-3">커뮤니티 하이라이트</h2>
-
-        {/* 리그 업데이트 */}
-        <motion.div
-          className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 mb-3"
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          custom={6}
-        >
-          <img
-            src={HERO_COURTS}
-            alt="시티 오픈 대회"
-            className="w-full h-40 object-cover"
-          />
-          <div className="p-3.5">
-            <span className="text-[10px] font-bold bg-[#C8E632] text-[#1a1a2e] px-2 py-0.5 rounded-full uppercase">
-              리그 소식
-            </span>
-            <h3 className="text-sm font-bold text-[#1a1a2e] mt-2">
-              시티 오픈 등록이 월요일에 시작됩니다!
-            </h3>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              이번 시즌 최대 규모 대회에 200명 이상의 선수가 참가합니다.
-            </p>
-            <div className="flex items-center gap-3 mt-2.5 text-xs text-gray-400">
-              <span className="flex items-center gap-1">
-                <MessageSquare className="w-3.5 h-3.5" /> 42 댓글
-              </span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* 프로 팁 */}
-        <motion.div
-          className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100"
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          custom={7}
-        >
-          <img
-            src={COMMUNITY_IMG}
-            alt="프로 팁"
-            className="w-full h-40 object-cover"
-          />
-          <div className="p-3.5">
-            <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full uppercase">
-              프로 팁
-            </span>
-            <h3 className="text-sm font-bold text-[#1a1a2e] mt-2">
-              키친 라인 마스터하기
-            </h3>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              코치 사라가 네트 앞에서 공격적으로 플레이하는 비법을 공유합니다.
-            </p>
-            <div className="flex items-center gap-3 mt-2.5 text-xs text-gray-400">
-              <span className="flex items-center gap-1">
-                <ThumbsUp className="w-3.5 h-3.5" /> 128 좋아요
-              </span>
-            </div>
-          </div>
-        </motion.div>
-      </section>
+      {/* 첫 번째 대회 안내 */}
+      <motion.section
+        className="mx-4 mt-5 mb-6"
+        initial="hidden"
+        animate="visible"
+        variants={fadeUp}
+        custom={7}
+      >
+        <div className="bg-gradient-to-br from-[#C8E632] to-[#a8c41e] rounded-2xl p-5">
+          <span className="text-[10px] font-bold bg-[#1a1a2e] text-[#C8E632] px-2.5 py-1 rounded-full uppercase">
+            첫 번째 대회
+          </span>
+          <h3 className="text-base font-bold text-[#1a1a2e] mt-3 leading-snug">
+            리닝코리아 포항 전국
+            <br />
+            피클볼 대회
+          </h3>
+          <p className="text-xs text-[#1a1a2e]/70 mt-1.5">
+            2026년 6월 14일(일) · 만인당실내체육관
+          </p>
+          <button
+            onClick={() => navigate("/tournament")}
+            className="mt-3 bg-[#1a1a2e] text-white text-xs font-bold px-5 py-2.5 rounded-full hover:bg-[#2a2a3e] transition-colors flex items-center gap-1.5"
+          >
+            자세히 보기 <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </motion.section>
     </div>
   );
 }

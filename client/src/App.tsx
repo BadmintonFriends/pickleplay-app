@@ -6,20 +6,20 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AppLayout from "./components/AppLayout";
 import HomePage from "./pages/HomePage";
+import TournamentPage from "./pages/TournamentPage";
 import CourtsPage from "./pages/CourtsPage";
-import MatchesPage from "./pages/MatchesPage";
-import SocialPage from "./pages/SocialPage";
 import ShopPage from "./pages/ShopPage";
+import SocialPage from "./pages/SocialPage";
 
 function Router() {
   return (
     <AppLayout>
       <Switch>
         <Route path="/" component={HomePage} />
+        <Route path="/tournament" component={TournamentPage} />
         <Route path="/courts" component={CourtsPage} />
-        <Route path="/matches" component={MatchesPage} />
-        <Route path="/social" component={SocialPage} />
         <Route path="/shop" component={ShopPage} />
+        <Route path="/social" component={SocialPage} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>
