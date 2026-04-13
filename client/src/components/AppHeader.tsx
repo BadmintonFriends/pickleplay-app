@@ -8,9 +8,11 @@ export default function AppHeader() {
   return (
     <header className="flex items-center justify-between px-4 py-3 bg-white sticky top-0 z-40">
       <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-full bg-[#C8E632]/20 flex items-center justify-center border-2 border-[#C8E632]/40">
-          <span className="text-lg">🏓</span>
-        </div>
+        <img
+          src="https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/pickleplay-logo-Hr5ci5Jbarb5jB2SwsZ9MB.webp"
+          alt="PicklePlay"
+          className="w-9 h-9 rounded-full object-cover"
+        />
         <span className="text-lg font-bold text-[#1a1a2e] tracking-tight">
           PicklePlay
         </span>
