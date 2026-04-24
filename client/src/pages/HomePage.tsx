@@ -1,14 +1,14 @@
 /*
- * HomePage — PicklePlay 커밍쑨 랜딩 페이지
+ * HomePage — PicklePlay 랜딩 페이지
  * 디자인: Clean Sport Utility
- * - 6월 정식 오픈 안내
- * - 브랜드 소개 + 주요 기능 미리보기
- * - 사전 등록 유도
+ * - 대회 기능 정식 오픈
+ * - 나머지 기능 2026년 중 오픈 예정
  */
 import AppHeader from "@/components/AppHeader";
-import { Trophy, MapPin, ShoppingBag, Users, Clock, Zap, ArrowRight } from "lucide-react";
+import { Trophy, MapPin, ShoppingBag, Users, Clock, Zap, ArrowRight, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 const HERO_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/hero-courts-FbYNhChEfY5c4b7aad6Cn3.webp";
 
@@ -29,6 +29,7 @@ const features = [
     color: "bg-[#C8E632]/20",
     iconColor: "text-[#8BA61E]",
     path: "/tournament",
+    isOpen: true,
   },
   {
     icon: MapPin,
@@ -37,6 +38,7 @@ const features = [
     color: "bg-blue-50",
     iconColor: "text-blue-500",
     path: "/courts",
+    isOpen: false,
   },
   {
     icon: ShoppingBag,
@@ -45,6 +47,7 @@ const features = [
     color: "bg-amber-50",
     iconColor: "text-amber-500",
     path: "/shop",
+    isOpen: false,
   },
   {
     icon: Users,
@@ -53,11 +56,20 @@ const features = [
     color: "bg-purple-50",
     iconColor: "text-purple-500",
     path: "/social",
+    isOpen: false,
   },
 ];
 
 export default function HomePage() {
   const [, navigate] = useLocation();
+
+  const handleFeatureClick = (f: typeof features[0]) => {
+    if (f.isOpen) {
+      navigate(f.path);
+    } else {
+      toast.info(`${f.title} 기능은 2026년 중 오픈 예정입니다.`);
+    }
+  };
 
   return (
     <div className="bg-[#f8f9fa]">
@@ -77,7 +89,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-4 h-4 text-[#C8E632]" />
             <span className="text-[11px] font-bold text-[#C8E632] uppercase tracking-wider">
-              2026년 6월 정식 오픈
+              대회 참가 신청 오픈
             </span>
           </div>
           <h1 className="text-2xl font-black text-white leading-tight">
@@ -88,7 +100,7 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* 카운트다운 배너 */}
+      {/* 서비스 안내 배너 */}
       <motion.section
         className="mx-4 mt-4"
         initial="hidden"
@@ -98,25 +110,25 @@ export default function HomePage() {
       >
         <div className="bg-[#1a1a2e] rounded-2xl p-5 text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-[#C8E632]" />
+            <CheckCircle2 className="w-4 h-4 text-[#C8E632]" />
             <span className="text-xs font-bold text-[#C8E632] uppercase tracking-wider">
-              Coming Soon
+              Now Open
             </span>
           </div>
           <h2 className="text-lg font-bold text-white mb-1">
-            2026년 6월, 정식 서비스 오픈
+            대회 참가 신청 오픈!
           </h2>
           <p className="text-xs text-gray-400 leading-relaxed">
-            대회 정보, 코트 예약, 장비 쇼핑, 커뮤니티까지
+            지금 바로 피클볼 대회에 참가 신청하세요.
             <br />
-            피클볼에 필요한 모든 것을 준비하고 있습니다.
+            코트 예약, 장비 쇼핑, 커뮤니티는 2026년 중 오픈 예정입니다.
           </p>
 
-          {/* 카운트다운 박스 */}
+          {/* 통계 박스 */}
           <div className="grid grid-cols-3 gap-2.5 mt-4">
             <div className="bg-white/10 rounded-xl py-3">
-              <p className="text-2xl font-black text-[#C8E632]">D-62</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">오픈까지</p>
+              <p className="text-2xl font-black text-[#C8E632]">OPEN</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">대회 접수</p>
             </div>
             <div className="bg-white/10 rounded-xl py-3">
               <p className="text-2xl font-black text-white">4</p>
@@ -150,13 +162,20 @@ export default function HomePage() {
                 animate="visible"
                 variants={fadeUp}
                 custom={idx + 3}
-                onClick={() => navigate(f.path)}
+                onClick={() => handleFeatureClick(f)}
               >
                 <div className={`w-11 h-11 rounded-xl ${f.color} flex items-center justify-center shrink-0`}>
                   <Icon className={`w-5 h-5 ${f.iconColor}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-bold text-[#1a1a2e]">{f.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-[#1a1a2e]">{f.title}</h3>
+                    {f.isOpen ? (
+                      <span className="text-[8px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full uppercase">Open</span>
+                    ) : (
+                      <span className="text-[8px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">2026년 중</span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-gray-400 mt-0.5">{f.desc}</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-300 shrink-0" />
@@ -176,7 +195,7 @@ export default function HomePage() {
       >
         <div className="bg-gradient-to-br from-[#C8E632] to-[#a8c41e] rounded-2xl p-5">
           <span className="text-[10px] font-bold bg-[#1a1a2e] text-[#C8E632] px-2.5 py-1 rounded-full uppercase">
-            첫 번째 대회
+            접수 중
           </span>
           <h3 className="text-base font-bold text-[#1a1a2e] mt-3 leading-snug">
             리닝코리아 포항 전국
@@ -190,7 +209,7 @@ export default function HomePage() {
             onClick={() => navigate("/tournament")}
             className="mt-3 bg-[#1a1a2e] text-white text-xs font-bold px-5 py-2.5 rounded-full hover:bg-[#2a2a3e] transition-colors flex items-center gap-1.5"
           >
-            자세히 보기 <ArrowRight className="w-3.5 h-3.5" />
+            참가 신청하기 <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </motion.section>

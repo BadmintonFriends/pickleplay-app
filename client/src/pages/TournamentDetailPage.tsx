@@ -1,12 +1,13 @@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 import AppHeader from "@/components/AppHeader";
 import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   Calendar, MapPin, Users, Trophy, ChevronRight,
   ExternalLink, FileText, Clock, AlertCircle, CheckCircle2,
-  ChevronLeft, Image as ImageIcon,
+  ChevronLeft, Image as ImageIcon, LogIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,15 @@ export default function TournamentDetailPage() {
   const status = statusConfig[tournament.status] ?? statusConfig.draft;
   const organizerInfo = tournament.organizerInfo ? JSON.parse(tournament.organizerInfo) : null;
   const sizeOptions: string[] = tournament.sizeOptions ? JSON.parse(tournament.sizeOptions) : [];
+
+  const handleRegisterClick = () => {
+    if (!isAuthenticated) {
+      // 비로그인 사용자에게 로그인 안내 후 리다이렉트
+      window.location.href = getLoginUrl();
+      return;
+    }
+    navigate(`/tournament/${tournamentId}/register`);
+  };
 
   return (
     <div className="bg-[#f8f9fa]">
@@ -273,15 +283,35 @@ export default function TournamentDetailPage() {
         </motion.section>
       )}
 
-      {/* CTA: Register */}
+      {/* CTA: Register - 로그인 안내 포함 */}
       {tournament.status === "open" && (
-        <motion.section className="px-4 pb-6" initial="hidden" animate="visible" variants={fadeUp} custom={6}>
+        <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={6}>
+          {!isAuthenticated && (
+            <div className="bg-blue-50 rounded-xl p-3 mb-3 flex items-start gap-2.5 border border-blue-100">
+              <LogIn className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-blue-800">로그인 후 참가 신청이 가능합니다</p>
+                <p className="text-[10px] text-blue-600 mt-0.5">
+                  아직 계정이 없으신가요? 간편하게 회원가입하고 참가 신청하세요!
+                </p>
+              </div>
+            </div>
+          )}
           <button
-            onClick={() => navigate(`/tournament/${tournamentId}/register`)}
+            onClick={handleRegisterClick}
             className="w-full bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            참가 신청하기
+            {isAuthenticated ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                참가 신청하기
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4" />
+                로그인하고 참가 신청하기
+              </>
+            )}
           </button>
         </motion.section>
       )}

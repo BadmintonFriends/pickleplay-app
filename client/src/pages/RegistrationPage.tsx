@@ -6,7 +6,7 @@ import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   ChevronLeft, Upload, Edit3, AlertCircle, CheckCircle2,
-  User, Phone, Calendar, Gift, Loader2, Info,
+  User, Phone, Calendar, Gift, Loader2, Info, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -556,6 +556,35 @@ export default function RegistrationPage() {
       {/* ─── Excel Upload Tab ─── */}
       {tab === "excel" && (
         <motion.div className="px-4 space-y-4" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+          {/* Template Download */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <h3 className="text-sm font-bold text-[#1a1a2e] mb-2">엑셀 양식 다운로드</h3>
+            <p className="text-[10px] text-gray-400 mb-2">
+              아래 양식을 다운로드하여 작성 후 업로드해주세요.
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  const XLSX = await import("xlsx");
+                  const header = ["종목", "급수", "선수1이름", "선수1생년월일", "선수1전화번호", "선수1사이즈", "선수2이름", "선수2생년월일", "선수2전화번호", "선수2사이즈"];
+                  const example = ["남복", "A조", "홍길동", "1990-01-01", "010-1234-5678", "L", "김철수", "1992-05-15", "010-9876-5432", "XL"];
+                  const ws = XLSX.utils.aoa_to_sheet([header, example]);
+                  ws["!cols"] = header.map(() => ({ wch: 16 }));
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, "참가신청");
+                  XLSX.writeFile(wb, "참가신청_양식.xlsx");
+                  toast.success("양식이 다운로드되었습니다");
+                } catch {
+                  toast.error("양식 다운로드에 실패했습니다");
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-[#1a1a2e] text-white text-xs font-bold py-2.5 rounded-xl hover:bg-[#2a2a3e] transition-colors active:scale-[0.98]"
+            >
+              <Download className="w-3.5 h-3.5" />
+              양식 다운로드 (.xlsx)
+            </button>
+          </div>
+
           {/* Upload Area */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <h3 className="text-sm font-bold text-[#1a1a2e] mb-2">엑셀 파일 업로드</h3>

@@ -66,7 +66,7 @@ export default function CourtsPage() {
           </p>
           <div className="mt-4 inline-flex items-center gap-1.5 bg-[#1a1a2e] text-white text-xs font-bold px-4 py-2 rounded-full">
             <Clock className="w-3.5 h-3.5 text-[#C8E632]" />
-            2026년 6월 오픈 예정
+            2026년 중 오픈 예정
           </div>
         </div>
       </motion.section>
