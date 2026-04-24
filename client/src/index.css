@@ -50,6 +50,13 @@
   --color-court-green: oklch(0.82 0.22 120);
   --color-court-green-deep: oklch(0.70 0.20 120);
   --color-signal-red: oklch(0.58 0.22 25);
+  /* Event type colors — 종목별 색상 */
+  --color-event-mixed: var(--event-mixed);
+  --color-event-mixed-foreground: var(--event-mixed-foreground);
+  --color-event-women: var(--event-women);
+  --color-event-women-foreground: var(--event-women-foreground);
+  --color-event-men: var(--event-men);
+  --color-event-men-foreground: var(--event-men-foreground);
   --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-display: 'Archivo Black', sans-serif;
 }
@@ -106,6 +113,13 @@
   --optic: oklch(0.82 0.22 120);
   --optic-foreground: oklch(0.12 0.01 0);
   --optic-deep: oklch(0.70 0.20 120);
+  /* Event type colors — light mode */
+  --event-mixed: oklch(0.62 0.22 300);       /* 혼복 — 보라 */
+  --event-mixed-foreground: oklch(0.99 0 0);
+  --event-women: oklch(0.68 0.18 350);       /* 여복 — 분홍 */
+  --event-women-foreground: oklch(0.99 0 0);
+  --event-men: oklch(0.58 0.18 250);         /* 남복 — 파랑 */
+  --event-men-foreground: oklch(0.99 0 0);
 }
 
 /* ===== Dark Theme ===== */
@@ -159,6 +173,13 @@
   --optic: oklch(0.92 0.22 120);
   --optic-foreground: oklch(0.13 0.01 0);
   --optic-deep: oklch(0.83 0.2 120);
+  /* Event type colors — dark mode (brighter for dark bg) */
+  --event-mixed: oklch(0.72 0.20 300);       /* 혼복 — 보라 */
+  --event-mixed-foreground: oklch(0.99 0 0);
+  --event-women: oklch(0.76 0.16 350);       /* 여복 — 분홍 */
+  --event-women-foreground: oklch(0.99 0 0);
+  --event-men: oklch(0.68 0.16 250);         /* 남복 — 파랑 */
+  --event-men-foreground: oklch(0.99 0 0);
 }
 
 @layer base {

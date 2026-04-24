@@ -186,3 +186,13 @@
 - [x] 페이지에서 bg-court-green, text-court-green, bg-green-* 등 하드코딩 초록 제거
 - [x] 배지/태그 초록 색상을 primary 또는 중립 색상으로 대체
 - [x] 브라우저 검증 및 vitest 54개 통과 확인
+
+## Phase 22: 대회 정보 업데이트 + 공문 링크 + 종목별 색상
+- [x] DB 대회 정보 업데이트 (일시: 6/13-14, 모집기간, 참가비 6만원, 종목 등)
+- [x] tournaments 테이블에 공문 링크(officialDocUrl) 필드 추가
+- [x] 공문 링크 데이터 삽입 (노션 URL)
+- [x] 종목별 색상 CSS 변수 추가 (혼복:보라, 여복:분홍, 남복:파랑 / 라이트+다크)
+- [x] TournamentDetailPage에 공문 링크 버튼 추가
+- [x] TournamentDetailPage 종목별 색상 반영
+- [x] RegistrationPage 종목별 색상 반영
+- [x] vitest 54개 테스트 통과 확인

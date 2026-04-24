@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
+import { getEventColor } from "@/lib/eventColors";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -230,16 +231,17 @@ export default function TournamentDetailPage() {
               {tournament.events.map((event: any) => {
                 const pct = event.maxTeams > 0 ? Math.min((event.currentTeams / event.maxTeams) * 100, 100) : 0;
                 const isFull = event.currentTeams >= event.maxTeams;
+                const ec = getEventColor(event.eventType);
                 return (
-                  <div key={event.id} className="p-3 bg-ink-3 rounded-xl">
+                  <div key={event.id} className={`p-3 rounded-xl ${ec.bgSubtle} border ${ec.border}/30`}>
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] font-bold border-primary text-primary">
+                        <Badge variant="outline" className={`text-[10px] font-bold ${ec.border} ${ec.text}`}>
                           {event.eventType}
                         </Badge>
                         <span className="text-xs font-bold text-foreground">{event.skillLevel}</span>
                       </div>
-                      <span className={`text-[10px] font-bold ${isFull ? "text-destructive" : "text-primary"}`}>
+                      <span className={`text-[10px] font-bold ${isFull ? "text-destructive" : ec.text}`}>
                         {event.currentTeams}/{event.maxTeams}팀
                       </span>
                     </div>
@@ -254,6 +256,27 @@ export default function TournamentDetailPage() {
           )}
         </div>
       </motion.section>
+
+      {/* Official Document Link */}
+      {tournament.officialDocUrl && (
+        <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={5}>
+          <a
+            href={tournament.officialDocUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-4 bg-card rounded-2xl border border-line-strong hover:bg-muted transition-colors"
+          >
+            <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 text-primary" strokeWidth={2.2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground">대회 공문 보기</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">공식 대회 요강 및 세부 규정 확인</p>
+            </div>
+            <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+          </a>
+        </motion.section>
+      )}
 
       {/* Documents */}
       {tournament.documents && tournament.documents.length > 0 && (

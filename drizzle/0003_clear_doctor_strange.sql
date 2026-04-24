@@ -1,0 +1,1 @@
+ALTER TABLE `tournaments` ADD `officialDocUrl` varchar(1000);

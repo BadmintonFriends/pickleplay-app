@@ -62,6 +62,7 @@ export const tournaments = mysqlTable("tournaments", {
   status: mysqlEnum("status", ["draft", "open", "closed", "cancelled"])
     .default("draft")
     .notNull(),
+  officialDocUrl: varchar("officialDocUrl", { length: 1000 }), // 공문 링크 URL
   organizerId: int("organizerId"), // FK to users.id
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

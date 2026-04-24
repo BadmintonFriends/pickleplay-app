@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
+import { getEventColor } from "@/lib/eventColors";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -405,6 +406,7 @@ export default function RegistrationPage() {
               {tournament.events.map((event: any) => {
                 const isFull = event.currentTeams >= event.maxTeams;
                 const isSelected = selectedEventId === event.id;
+                const ec = getEventColor(event.eventType);
                 return (
                   <button
                     key={event.id}
@@ -412,14 +414,14 @@ export default function RegistrationPage() {
                     onClick={() => handleEventChange(event.id)}
                     className={`p-3 rounded-xl text-left transition-all border-2 ${
                       isSelected
-                        ? "border-primary bg-primary/10"
+                        ? `${ec.border} ${ec.bgSubtle}`
                         : isFull
                         ? "border-line-strong bg-ink-3 opacity-50 cursor-not-allowed"
                         : "border-line-strong bg-ink-3 hover:border-line-strong"
                     }`}
                   >
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Badge variant="outline" className="text-[9px] font-bold border-primary text-primary">
+                      <Badge variant="outline" className={`text-[9px] font-bold ${ec.border} ${ec.text}`}>
                         {event.eventType}
                       </Badge>
                     </div>
