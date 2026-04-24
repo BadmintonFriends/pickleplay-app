@@ -57,6 +57,8 @@ export async function sendVerificationCode(phone: string): Promise<{ success: bo
       .verifications.create({
         to: normalizePhoneToE164(normalizedPhone),
         channel: "sms",
+        locale: "ko",
+        customFriendlyName: "피클플레이 로그인/회원가입",
       });
     return { success: verification.status === "pending" };
   } catch (error: any) {

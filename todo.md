@@ -80,3 +80,8 @@
 - [x] 데모 계정 지원 (010-0000-0000 / 1324) - sms.ts에 이미 구현됨
 - [x] vitest 테스트 업데이트 - 46개 테스트 통과 (smsAuth 10개 추가)
 - [x] OAuth 관련 코드 완전 제거 (oauth.ts → no-op, sdk.ts OAuth 메서드 제거)
+
+## Phase 10: 인증번호 UX 개선 (2026-04-24)
+- [x] 인증번호 입력창 4자리 → 6자리로 변경 (Login/Register 페이지)
+- [x] 인증번호 화면에 국제발신(+1 760-647-8528) 차단 확인 알림 추가
+- [x] SMS 발송 시 피클플레이 인증번호 메시지 커스텀 (customFriendlyName + locale:ko)

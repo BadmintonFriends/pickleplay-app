@@ -86,8 +86,8 @@ export default function RegisterPage() {
 
   const handleVerifyAndNext = () => {
     setError("");
-    if (code.length !== 4) {
-      setError("인증번호 4자리를 입력해주세요");
+    if (code.length !== 6) {
+      setError("인증번호 6자리를 입력해주세요");
       return;
     }
     // 인증번호 확인은 최종 register 시 서버에서 수행
@@ -181,7 +181,15 @@ export default function RegisterPage() {
               {stepIcons[step]}
             </div>
             <CardTitle className="text-lg text-gray-900">{stepTitles[step]}</CardTitle>
-            <CardDescription className="text-sm">{stepDescs[step]}</CardDescription>
+            <CardDescription className="text-sm">
+              {stepDescs[step]}
+              {step === "code" && (
+                <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
+                  인증번호는 국제번호 <span className="font-semibold">+1 760-647-8528</span>에서 발송됩니다.<br />
+                  문자가 오지 않는 경우, 국제발신 차단 여부를 확인해주세요.
+                </div>
+              )}
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -214,10 +222,10 @@ export default function RegisterPage() {
                   <Input
                     type="text"
                     inputMode="numeric"
-                    placeholder="0000"
+                    placeholder="000000"
                     value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    maxLength={4}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    maxLength={6}
                     className="text-center text-2xl tracking-[0.5em] font-mono"
                     onKeyDown={(e) => e.key === "Enter" && handleVerifyAndNext()}
                     autoFocus
@@ -231,7 +239,7 @@ export default function RegisterPage() {
                 {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                 <Button
                   onClick={handleVerifyAndNext}
-                  disabled={code.length !== 4}
+                  disabled={code.length !== 6}
                   className="w-full bg-[#1a1a2e] hover:bg-[#2a2a3e] text-white"
                 >
                   다음

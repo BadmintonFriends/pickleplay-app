@@ -83,8 +83,8 @@ export default function LoginPage() {
 
   const handleLogin = () => {
     setError("");
-    if (code.length !== 4) {
-      setError("인증번호 4자리를 입력해주세요");
+    if (code.length !== 6) {
+      setError("인증번호 6자리를 입력해주세요");
       return;
     }
     const digits = phone.replace(/\D/g, "");
@@ -126,6 +126,12 @@ export default function LoginPage() {
               {step === "phone"
                 ? "가입하신 전화번호를 입력해주세요"
                 : `${phone}으로 발송된 인증번호를 입력해주세요`}
+              {step === "code" && (
+                <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
+                  인증번호는 국제번호 <span className="font-semibold">+1 760-647-8528</span>에서 발송됩니다.<br />
+                  문자가 오지 않는 경우, 국제발신 차단 여부를 확인해주세요.
+                </div>
+              )}
             </CardDescription>
           </CardHeader>
 
@@ -159,10 +165,10 @@ export default function LoginPage() {
                   <Input
                     type="text"
                     inputMode="numeric"
-                    placeholder="0000"
+                    placeholder="000000"
                     value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    maxLength={4}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    maxLength={6}
                     className="text-center text-2xl tracking-[0.5em] font-mono"
                     onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                     autoFocus
@@ -176,7 +182,7 @@ export default function LoginPage() {
                 {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                 <Button
                   onClick={handleLogin}
-                  disabled={loginMutation.isPending || code.length !== 4}
+                  disabled={loginMutation.isPending || code.length !== 6}
                   className="w-full bg-[#1a1a2e] hover:bg-[#2a2a3e] text-white"
                 >
                   {loginMutation.isPending ? (
