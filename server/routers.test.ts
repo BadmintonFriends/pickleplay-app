@@ -148,6 +148,7 @@ vi.mock("./sms", () => ({
     if (digits.startsWith("82")) return `0${digits.slice(2)}`;
     return digits;
   }),
+  sendSmsMessage: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 vi.mock("./_core/sdk", () => ({

@@ -7,7 +7,7 @@ import * as db from "./db";
 import { storagePut } from "./storage";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { sendVerificationCode, verifyCode, normalizePhoneToDigits } from "./sms";
+import { sendVerificationCode, verifyCode, normalizePhoneToDigits, sendSmsMessage } from "./sms";
 import { sdk } from "./_core/sdk";
 
 // ─── Validation schemas ──────────────────────────────────
@@ -281,10 +281,47 @@ const adminRouter = router({
       paymentStatus: z.enum(["unpaid", "paid", "refunded"]),
     }))
     .mutation(async ({ input }) => {
-      await db.updateRegistration(input.registrationId, {
+      const reg = await db.getRegistrationById(input.registrationId);
+      if (!reg) throw new TRPCError({ code: "NOT_FOUND", message: "접수 정보를 찾을 수 없습니다" });
+
+      const updateData: Record<string, unknown> = {
         paymentStatus: input.paymentStatus,
-        status: input.paymentStatus === "paid" ? "confirmed" : "pending",
-      });
+      };
+
+      if (input.paymentStatus === "paid") {
+        updateData.status = "confirmed";
+      } else if (input.paymentStatus === "refunded") {
+        updateData.status = "cancelled";
+        // 환불 시 팀 카운트 감소
+        if (reg.status !== "cancelled") {
+          await db.decrementEventTeamCount(reg.tournamentEventId);
+        }
+      } else {
+        updateData.status = "pending";
+      }
+
+      await db.updateRegistration(input.registrationId, updateData as any);
+
+      // 입금 완료 시 SMS 알림 전송
+      if (input.paymentStatus === "paid") {
+        try {
+          const playerList = await db.getPlayersByRegistration(input.registrationId);
+          const tournament = await db.getTournamentById(reg.tournamentId);
+          const tournamentName = tournament?.name || "대회";
+          const regNumber = reg.registrationNumber || `#${reg.id}`;
+
+          // 대표 선수(1번) 전화번호로 SMS 발송
+          const mainPlayer = playerList.find(p => p.playerOrder === 1) || playerList[0];
+          if (mainPlayer?.phone) {
+            const message = `[피클플레이] ${tournamentName} 참가비 입금이 확인되었습니다.\n접수번호: ${regNumber}\n참가가 확정되었습니다. 감사합니다!`;
+            await sendSmsMessage(mainPlayer.phone, message);
+          }
+        } catch (smsError) {
+          console.error("[SMS] 입금 완료 알림 발송 실패:", smsError);
+          // SMS 실패해도 입금 상태 변경은 유지
+        }
+      }
+
       return { success: true };
     }),
 

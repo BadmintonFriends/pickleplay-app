@@ -67,6 +67,31 @@ export async function sendVerificationCode(phone: string): Promise<{ success: bo
   }
 }
 
+/** 일반 SMS 메시지 발송 (알림용) */
+export async function sendSmsMessage(phone: string, message: string): Promise<{ success: boolean; error?: string }> {
+  const normalizedPhone = normalizePhoneToDigits(phone);
+
+  // 데모 계정은 실제 발송 건너뜀
+  if (isDemoAccount(normalizedPhone)) {
+    console.log(`[SMS-DEMO] To: ${normalizedPhone}, Message: ${message}`);
+    return { success: true };
+  }
+
+  try {
+    const client = getClient();
+    const result = await client.messages.create({
+      to: normalizePhoneToE164(normalizedPhone),
+      from: ENV.twilioFromNumber || undefined,
+      messagingServiceSid: ENV.twilioMessagingServiceSid || undefined,
+      body: message,
+    });
+    return { success: !!result.sid };
+  } catch (error: any) {
+    console.error("[SMS] Failed to send message:", error.message);
+    return { success: false, error: error.message };
+  }
+}
+
 /** 인증번호 검증 */
 export async function verifyCode(phone: string, code: string): Promise<{ success: boolean; error?: string }> {
   const normalizedPhone = normalizePhoneToDigits(phone);

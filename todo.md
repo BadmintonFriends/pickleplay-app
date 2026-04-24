@@ -108,3 +108,13 @@
 - [x] RegistrationPage에서 접수 완료 시 확인 페이지로 이동
 - [x] App.tsx에 새 라우트 등록 (MyPage, Terms, Privacy, RegistrationComplete)
 - [x] vitest 테스트 업데이트 - 54개 테스트 통과 (user 라우터 8개 추가)
+
+## Phase 14: 포스터 업로드, 입금/환불 관리, SMS 알림 (2026-04-24)
+- [x] 서버: 포스터 업로드 API (S3 storagePut 활용) - 이미 구현됨
+- [x] 서버: 입금 완료 시 SMS 알림 전송 기능 (sendSmsMessage 추가)
+- [x] 서버: 환불 처리 API 개선 (환불 시 팀 카운트 감소 + 상태 자동 변경)
+- [x] 프론트: 관리자 포스터 업로드 UI (인스타 4:5 비율)
+- [x] 프론트: 관리자 입금/환불 관리 UI 개선 (버튼식 상태 변경 + SMS 알림 표시)
+- [x] 프론트: 대회 상세 페이지에 포스터 표시 (이미 구현됨 - 캐러셀 UI)
+- [x] 프론트: 관리자 대회 상태값 관리 UI (접수 받기/마감/취소 등)
+- [x] vitest 테스트 업데이트 - 54개 테스트 통과 (sendSmsMessage mock 추가)

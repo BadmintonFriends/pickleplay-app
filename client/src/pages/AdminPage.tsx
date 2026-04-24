@@ -1,6 +1,5 @@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
@@ -8,9 +7,11 @@ import {
   Plus, Edit3, Trash2, Eye, CheckCircle2, XCircle,
   CreditCard, Download, Loader2, AlertCircle, Home,
   Shield, UserCheck, Search, Filter, Save, X,
+  Upload, Image as ImageIcon, MessageSquare, RefreshCw,
+  Phone, DollarSign, Ban, PlayCircle, PauseCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 type AdminTab = "tournaments" | "registrations" | "users";
@@ -70,12 +71,32 @@ const fadeUp = {
   }),
 };
 
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  draft: { label: "준비 중", color: "bg-gray-100 text-gray-600", icon: Settings },
+  open: { label: "접수 중", color: "bg-green-100 text-green-700", icon: PlayCircle },
+  closed: { label: "접수 마감", color: "bg-amber-100 text-amber-700", icon: PauseCircle },
+  cancelled: { label: "취소", color: "bg-red-100 text-red-700", icon: Ban },
+};
+
+const paymentStatusConfig: Record<string, { label: string; color: string }> = {
+  unpaid: { label: "미입금", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  paid: { label: "입금완료", color: "bg-green-50 text-green-700 border-green-200" },
+  refunded: { label: "환불", color: "bg-red-50 text-red-700 border-red-200" },
+};
+
+const regStatusConfig: Record<string, { label: string; color: string }> = {
+  pending: { label: "대기", color: "bg-gray-50 text-gray-600 border-gray-200" },
+  confirmed: { label: "확정", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  cancelled: { label: "취소", color: "bg-red-50 text-red-600 border-red-200" },
+};
+
 export default function AdminPage() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("tournaments");
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const posterInputRef = useRef<HTMLInputElement>(null);
 
   // Tournament form state
   const [formMode, setFormMode] = useState<TournamentFormMode>("list");
@@ -83,6 +104,8 @@ export default function AdminPage() {
   const [form, setForm] = useState<TournamentFormData>(emptyForm());
   const [events, setEvents] = useState<EventFormData[]>([emptyEvent()]);
   const [ageGroups, setAgeGroups] = useState<AgeGroupFormData[]>([]);
+  const [posterPreviews, setPosterPreviews] = useState<string[]>([]);
+  const [uploadingPoster, setUploadingPoster] = useState(false);
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin" || user?.role === "organizer";
 
@@ -97,7 +120,7 @@ export default function AdminPage() {
 
   // Mutations
   const updatePaymentMutation = trpc.admin.updatePaymentStatus.useMutation({
-    onSuccess: () => { toast.success("입금 상태 변경 완료"); refetchRegs(); },
+    onSuccess: () => { toast.success("입금 상태 변경 완료 (SMS 알림 전송됨)"); refetchRegs(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -114,11 +137,9 @@ export default function AdminPage() {
   const createTournamentMutation = trpc.admin.createTournament.useMutation({
     onSuccess: async (data) => {
       toast.success("대회가 생성되었습니다!");
-      // Set events
       if (events.length > 0 && events.some(e => e.skillLevel)) {
         await setEventsMutation.mutateAsync({ tournamentId: data.id, events: events.filter(e => e.skillLevel) });
       }
-      // Set age groups
       if (form.hasAgeGroup && ageGroups.length > 0 && ageGroups.some(ag => ag.code)) {
         await setAgeGroupsMutation.mutateAsync({ tournamentId: data.id, ageGroups: ageGroups.filter(ag => ag.code) });
       }
@@ -143,6 +164,11 @@ export default function AdminPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const uploadPosterMutation = trpc.admin.uploadPoster.useMutation({
+    onSuccess: () => { toast.success("포스터가 업로드되었습니다!"); },
+    onError: (err: any) => toast.error("포스터 업로드 실패: " + err.message),
+  });
+
   const setEventsMutation = trpc.admin.setEvents.useMutation();
   const setAgeGroupsMutation = trpc.admin.setAgeGroups.useMutation();
 
@@ -152,6 +178,7 @@ export default function AdminPage() {
     setForm(emptyForm());
     setEvents([emptyEvent()]);
     setAgeGroups([]);
+    setPosterPreviews([]);
   };
 
   const startCreate = () => {
@@ -172,7 +199,6 @@ export default function AdminPage() {
       organizerHosts: orgInfo.hosts?.join(", ") ?? "",
       organizerSponsors: orgInfo.sponsors?.join(", ") ?? "",
     });
-    // Load events from detail
     try {
       const detail = await utils.tournament.detail.fetch({ id: t.id });
       if (detail.events.length > 0) {
@@ -187,11 +213,62 @@ export default function AdminPage() {
           code: ag.code, label: ag.label, minAge: ag.minAge, maxAge: ag.maxAge ?? 99,
         })));
       }
+      if (detail.posters && detail.posters.length > 0) {
+        setPosterPreviews(detail.posters.map((p: any) => p.imageUrl));
+      }
     } catch {
       setEvents([emptyEvent()]);
     }
     setEditingId(t.id);
     setFormMode("edit");
+  };
+
+  const handlePosterUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (!editingId && formMode !== "edit") {
+      toast.error("대회를 먼저 생성한 후 포스터를 업로드해주세요");
+      return;
+    }
+    const tournamentId = editingId;
+    if (!tournamentId) return;
+
+    setUploadingPoster(true);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith("image/")) {
+          toast.error(`${file.name}은 이미지 파일이 아닙니다`);
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name}은 10MB를 초과합니다`);
+          continue;
+        }
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        // Extract base64 data and content type from data URL
+        const [header, b64] = base64.split(",");
+        const ct = header.match(/data:(.*?);/)?.[1] || "image/jpeg";
+        const result = await uploadPosterMutation.mutateAsync({
+          tournamentId,
+          base64Data: b64,
+          contentType: ct,
+          sortOrder: posterPreviews.length + i,
+        });
+        setPosterPreviews(prev => [...prev, (result as any).imageUrl]);
+      }
+      utils.tournament.detail.invalidate({ id: tournamentId });
+    } catch (err) {
+      console.error("Poster upload error:", err);
+    } finally {
+      setUploadingPoster(false);
+      if (posterInputRef.current) posterInputRef.current.value = "";
+    }
   };
 
   const handleSubmit = () => {
@@ -222,6 +299,15 @@ export default function AdminPage() {
     }
   };
 
+  // Quick status change for tournament
+  const handleQuickStatusChange = (tournamentId: number, newStatus: "draft" | "open" | "closed" | "cancelled") => {
+    updateTournamentMutation.mutate({
+      id: tournamentId,
+      data: { status: newStatus },
+    });
+    toast.success(`대회 상태가 "${statusConfig[newStatus]?.label || newStatus}"(으)로 변경되었습니다`);
+  };
+
   // Excel export
   const handleExcelExport = async () => {
     if (!regData || regData.length === 0) {
@@ -249,7 +335,6 @@ export default function AdminPage() {
       }
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(rows);
-      // Column widths
       ws["!cols"] = [
         { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 8 },
         { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 },
@@ -363,35 +448,67 @@ export default function AdminPage() {
                 <p className="text-xs text-gray-400">등록된 대회가 없습니다</p>
               </div>
             ) : (
-              tournamentList.map((t: any) => (
-                <div key={t.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-xs font-bold text-[#1a1a2e] flex-1 truncate">{t.name}</h3>
-                    <Badge variant="outline" className="text-[9px] ml-2">{t.status}</Badge>
+              tournamentList.map((t: any) => {
+                const sc = statusConfig[t.status] || statusConfig.draft;
+                const StatusIcon = sc.icon;
+                return (
+                  <div key={t.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-bold text-[#1a1a2e] flex-1 truncate">{t.name}</h3>
+                      <Badge className={`${sc.color} text-[9px] font-bold border-0 flex items-center gap-0.5`}>
+                        <StatusIcon className="w-2.5 h-2.5" />
+                        {sc.label}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mb-3">{t.startDate} ~ {t.endDate} · {t.venue}</p>
+
+                    {/* Quick Status Controls */}
+                    <div className="flex flex-wrap gap-1.5 mb-3 pb-3 border-b border-gray-50">
+                      <span className="text-[9px] text-gray-400 font-semibold mr-1 self-center">상태 변경:</span>
+                      {(Object.entries(statusConfig) as ["draft" | "open" | "closed" | "cancelled", typeof statusConfig["draft"]][]).map(([key, cfg]) => {
+                        const BtnIcon = cfg.icon;
+                        const isActive = t.status === key;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => !isActive && handleQuickStatusChange(t.id, key)}
+                            disabled={isActive}
+                            className={`flex items-center gap-0.5 text-[9px] font-bold px-2 py-1 rounded-md transition-all ${
+                              isActive
+                                ? `${cfg.color} ring-1 ring-current`
+                                : "bg-gray-50 text-gray-400 hover:bg-gray-100"
+                            }`}
+                          >
+                            <BtnIcon className="w-2.5 h-2.5" />
+                            {cfg.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => navigate(`/tournament/${t.id}`)}
+                        className="text-[10px] font-bold text-[#8BA61E] flex items-center gap-1"
+                      >
+                        <Eye className="w-3 h-3" /> 상세
+                      </button>
+                      <button
+                        onClick={() => startEdit(t)}
+                        className="text-[10px] font-bold text-blue-500 flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3 h-3" /> 수정
+                      </button>
+                      <button
+                        onClick={() => { setSelectedTournamentId(t.id); setActiveTab("registrations"); }}
+                        className="text-[10px] font-bold text-purple-500 flex items-center gap-1"
+                      >
+                        <Users className="w-3 h-3" /> 접수 관리
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-gray-400">{t.startDate} · {t.venue}</p>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => navigate(`/tournament/${t.id}`)}
-                      className="text-[10px] font-bold text-[#8BA61E] flex items-center gap-1"
-                    >
-                      <Eye className="w-3 h-3" /> 상세
-                    </button>
-                    <button
-                      onClick={() => startEdit(t)}
-                      className="text-[10px] font-bold text-blue-500 flex items-center gap-1"
-                    >
-                      <Edit3 className="w-3 h-3" /> 수정
-                    </button>
-                    <button
-                      onClick={() => { setSelectedTournamentId(t.id); setActiveTab("registrations"); }}
-                      className="text-[10px] font-bold text-purple-500 flex items-center gap-1"
-                    >
-                      <Users className="w-3 h-3" /> 접수 관리
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </motion.div>
         )}
@@ -455,6 +572,57 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* Poster Upload (only in edit mode) */}
+            {formMode === "edit" && editingId && (
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-[#1a1a2e] flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5" /> 대회 포스터
+                  </h3>
+                  <button
+                    onClick={() => posterInputRef.current?.click()}
+                    disabled={uploadingPoster}
+                    className="flex items-center gap-1 text-[10px] font-bold text-[#8BA61E] hover:text-[#6d8517] disabled:opacity-50"
+                  >
+                    {uploadingPoster ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                    {uploadingPoster ? "업로드 중..." : "포스터 추가"}
+                  </button>
+                  <input
+                    ref={posterInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePosterUpload}
+                    className="hidden"
+                  />
+                </div>
+                <p className="text-[9px] text-gray-400">인스타그램 4:5 비율 권장 (1080x1350px). 최대 10MB.</p>
+                {posterPreviews.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {posterPreviews.map((url, i) => (
+                      <div key={i} className="relative aspect-[4/5] rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                        <img src={url} alt={`포스터 ${i + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute top-1 left-1 bg-black/50 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+                          {i + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
+                    <ImageIcon className="w-8 h-8 text-gray-200 mb-2" />
+                    <p className="text-[10px] text-gray-400">아직 업로드된 포스터가 없습니다</p>
+                    <button
+                      onClick={() => posterInputRef.current?.click()}
+                      className="mt-2 text-[10px] font-bold text-[#8BA61E] underline"
+                    >
+                      포스터 업로드하기
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Organizer Info */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-3">
               <h3 className="text-xs font-bold text-[#1a1a2e] mb-2">주최/후원 정보</h3>
@@ -488,7 +656,7 @@ export default function AdminPage() {
               <div>
                 <label className="text-[10px] font-semibold text-gray-400 block mb-1">사이즈 옵션 (쉼표 구분)</label>
                 <input value={form.sizeOptions} onChange={e => setForm(p => ({...p, sizeOptions: e.target.value}))}
-                  className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs border border-gray-100 focus:outline-none focus:ring-2 focus:ring-[#C8E632]/50" placeholder='예: S, M, L, XL, 2XL, 3XL 또는 ["S","M","L","XL"]' />
+                  className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs border border-gray-100 focus:outline-none focus:ring-2 focus:ring-[#C8E632]/50" placeholder='예: S, M, L, XL, 2XL, 3XL' />
               </div>
             </div>
 
@@ -686,13 +854,13 @@ export default function AdminPage() {
                     className="flex items-center gap-1.5 bg-green-600 text-white text-[10px] font-bold px-3 py-2.5 rounded-xl hover:bg-green-700 transition-colors whitespace-nowrap"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    엑셀 내보내기
+                    엑셀
                   </button>
                 </div>
 
                 {/* Stats */}
                 {regData && regData.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <div className="bg-white rounded-lg p-2.5 text-center border border-gray-100">
                       <p className="text-lg font-black text-[#1a1a2e]">{regData.length}</p>
                       <p className="text-[9px] text-gray-400">전체</p>
@@ -704,6 +872,10 @@ export default function AdminPage() {
                     <div className="bg-white rounded-lg p-2.5 text-center border border-gray-100">
                       <p className="text-lg font-black text-amber-500">{regData.filter((r: any) => r.paymentStatus === "unpaid").length}</p>
                       <p className="text-[9px] text-gray-400">미입금</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-2.5 text-center border border-gray-100">
+                      <p className="text-lg font-black text-red-500">{regData.filter((r: any) => r.paymentStatus === "refunded").length}</p>
+                      <p className="text-[9px] text-gray-400">환불</p>
                     </div>
                   </div>
                 )}
@@ -730,41 +902,98 @@ export default function AdminPage() {
                         )
                       );
                     })
-                    .map((reg: any) => (
-                      <div key={reg.id} className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-mono text-gray-400">{reg.registrationNumber}</span>
-                          <div className="flex gap-1">
-                            <select
-                              value={reg.paymentStatus}
-                              onChange={(e) => updatePaymentMutation.mutate({ registrationId: reg.id, paymentStatus: e.target.value as any })}
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white"
-                            >
-                              <option value="unpaid">미입금</option>
-                              <option value="paid">입금완료</option>
-                              <option value="refunded">환불</option>
-                            </select>
-                            <select
-                              value={reg.status}
-                              onChange={(e) => updateStatusMutation.mutate({ registrationId: reg.id, status: e.target.value as any })}
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white"
-                            >
-                              <option value="pending">대기</option>
-                              <option value="confirmed">확정</option>
-                              <option value="cancelled">취소</option>
-                            </select>
+                    .map((reg: any) => {
+                      const ps = paymentStatusConfig[reg.paymentStatus] || paymentStatusConfig.unpaid;
+                      const rs = regStatusConfig[reg.status] || regStatusConfig.pending;
+                      return (
+                        <div key={reg.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                          {/* Header Row */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-gray-400">{reg.registrationNumber}</span>
+                              <Badge className={`${rs.color} text-[8px] font-bold border`}>{rs.label}</Badge>
+                              <Badge className={`${ps.color} text-[8px] font-bold border`}>{ps.label}</Badge>
+                            </div>
+                            <span className="text-[9px] text-gray-300">
+                              {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString("ko-KR") : ""}
+                            </span>
                           </div>
+
+                          {/* Event Info */}
+                          {((reg as any).eventType || (reg as any).skillLevel) && (
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <Badge variant="outline" className="text-[8px] font-bold">{(reg as any).eventType}</Badge>
+                              <Badge variant="outline" className="text-[8px]">{(reg as any).skillLevel}</Badge>
+                            </div>
+                          )}
+
+                          {/* Players */}
+                          <div className="space-y-1 mb-3">
+                            {reg.players?.map((p: any) => (
+                              <div key={p.id} className="flex items-center gap-2 text-[10px] text-gray-600 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                                <span className="font-bold text-[#1a1a2e] min-w-[50px]">{p.name}</span>
+                                <span className="flex items-center gap-0.5"><Phone className="w-2.5 h-2.5" />{p.phone}</span>
+                                <span>{p.birthDate}</span>
+                                {p.giftSize && <Badge variant="outline" className="text-[8px]">{p.giftSize}</Badge>}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
+                            <span className="text-[9px] text-gray-400 font-semibold">입금:</span>
+                            <div className="flex gap-1">
+                              {(["unpaid", "paid", "refunded"] as const).map(status => {
+                                const cfg = paymentStatusConfig[status];
+                                const isActive = reg.paymentStatus === status;
+                                return (
+                                  <button
+                                    key={status}
+                                    onClick={() => !isActive && updatePaymentMutation.mutate({ registrationId: reg.id, paymentStatus: status })}
+                                    disabled={isActive || updatePaymentMutation.isPending}
+                                    className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${
+                                      isActive ? `${cfg.color} ring-1 ring-current` : "bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
+                                    } disabled:opacity-60`}
+                                  >
+                                    {status === "paid" && <DollarSign className="w-2.5 h-2.5 inline mr-0.5" />}
+                                    {status === "refunded" && <RefreshCw className="w-2.5 h-2.5 inline mr-0.5" />}
+                                    {cfg.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <span className="text-[9px] text-gray-300 mx-1">|</span>
+                            <span className="text-[9px] text-gray-400 font-semibold">접수:</span>
+                            <div className="flex gap-1">
+                              {(["pending", "confirmed", "cancelled"] as const).map(status => {
+                                const cfg = regStatusConfig[status];
+                                const isActive = reg.status === status;
+                                return (
+                                  <button
+                                    key={status}
+                                    onClick={() => !isActive && updateStatusMutation.mutate({ registrationId: reg.id, status })}
+                                    disabled={isActive || updateStatusMutation.isPending}
+                                    className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${
+                                      isActive ? `${cfg.color} ring-1 ring-current` : "bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
+                                    } disabled:opacity-60`}
+                                  >
+                                    {cfg.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* SMS Notice for paid */}
+                          {reg.paymentStatus === "paid" && (
+                            <div className="mt-2 flex items-center gap-1 text-[9px] text-green-600 bg-green-50 rounded-md px-2 py-1">
+                              <MessageSquare className="w-3 h-3" />
+                              입금 확인 SMS가 발송되었습니다
+                            </div>
+                          )}
                         </div>
-                        {reg.players?.map((p: any) => (
-                          <div key={p.id} className="flex items-center gap-2 text-[10px] text-gray-600 py-0.5">
-                            <span className="font-bold text-[#1a1a2e]">{p.name}</span>
-                            <span>{p.phone}</span>
-                            <span>{p.birthDate}</span>
-                            {p.giftSize && <Badge variant="outline" className="text-[8px]">{p.giftSize}</Badge>}
-                          </div>
-                        ))}
-                      </div>
-                    ))
+                      );
+                    })
                 )}
               </>
             )}
@@ -789,7 +1018,7 @@ export default function AdminPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-[#1a1a2e] truncate">{u.name ?? "이름 없음"}</p>
-                    <p className="text-[10px] text-gray-400 truncate">{u.email ?? u.phone ?? u.openId}</p>
+                    <p className="text-[10px] text-gray-400 truncate">{u.phone ?? u.email ?? u.openId}</p>
                   </div>
                   <select
                     value={u.role}

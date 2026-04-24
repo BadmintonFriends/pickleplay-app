@@ -56,6 +56,10 @@ export default function RegistrationCompletePage() {
     });
   };
 
+  const bankInfoText = tournament
+    ? [tournament.bankName, tournament.accountNumber, tournament.accountHolder].filter(Boolean).join(" ")
+    : "";
+
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-10">
       <AppHeader />
@@ -87,7 +91,7 @@ export default function RegistrationCompletePage() {
                       {latestReg.registrationNumber}
                     </span>
                     <button
-                      onClick={() => copyToClipboard(latestReg.registrationNumber)}
+                      onClick={() => copyToClipboard(latestReg.registrationNumber ?? "")}
                       className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors"
                     >
                       <Copy className="w-3 h-3 text-gray-600" />
@@ -100,7 +104,7 @@ export default function RegistrationCompletePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">대회명</span>
                   <span className="text-sm font-medium text-[#1a1a2e]">
-                    {latestReg.tournamentName || tournament?.name || "-"}
+                    {(latestReg as any).tournamentName || tournament?.name || "-"}
                   </span>
                 </div>
 
@@ -109,8 +113,8 @@ export default function RegistrationCompletePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">종목</span>
                   <span className="text-sm font-medium text-[#1a1a2e]">
-                    {latestReg.eventType === "doubles" ? "복식" : "단식"}
-                    {latestReg.skillLevel ? ` (${latestReg.skillLevel})` : ""}
+                    {(latestReg as any).eventType ?? ""}
+                    {(latestReg as any).skillLevel ? ` (${(latestReg as any).skillLevel})` : ""}
                   </span>
                 </div>
 
@@ -131,7 +135,7 @@ export default function RegistrationCompletePage() {
                   참가 선수
                 </h3>
                 <div className="space-y-2">
-                  {latestReg.players?.map((p: any, idx: number) => (
+                  {(latestReg as any).players?.map((p: any, idx: number) => (
                     <div key={idx} className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#C8E632]/20 flex items-center justify-center">
                         <span className="text-xs font-bold text-[#1a1a2e]">{idx + 1}</span>
@@ -164,7 +168,7 @@ export default function RegistrationCompletePage() {
         )}
 
         {/* Payment Info */}
-        {tournament?.bankInfo && (
+        {bankInfoText && (
           <Card className="border-0 shadow-sm rounded-2xl border-l-4 border-l-blue-500">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -175,21 +179,23 @@ export default function RegistrationCompletePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">입금 계좌</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#1a1a2e]">{tournament.bankInfo}</span>
+                    <span className="text-sm font-bold text-[#1a1a2e]">{bankInfoText}</span>
                     <button
-                      onClick={() => copyToClipboard(tournament.bankInfo!)}
+                      onClick={() => copyToClipboard(bankInfoText)}
                       className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors"
                     >
                       <Copy className="w-3 h-3 text-blue-600" />
                     </button>
                   </div>
                 </div>
-                {tournament.entryFee && (
+                {tournament?.feePerTeam && tournament.feePerTeam > 0 && (
                   <>
                     <div className="border-t border-blue-200" />
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">참가비</span>
-                      <span className="text-sm font-bold text-[#1a1a2e]">{tournament.entryFee}</span>
+                      <span className="text-sm font-bold text-[#1a1a2e]">
+                        {tournament.feePerTeam.toLocaleString()}원
+                      </span>
                     </div>
                   </>
                 )}
