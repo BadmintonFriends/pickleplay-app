@@ -1,3 +1,7 @@
+/*
+ * RegisterPage — PicklePlay Design System v1.0
+ * 다크 테마, Optic Yellow 액센트
+ */
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -19,14 +23,12 @@ export default function RegisterPage() {
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState("");
 
-  // 개인정보
   const [name, setName] = useState("");
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [birthDate, setBirthDate] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
-  // URL 파라미터에서 전화번호 자동 채움
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const phoneParam = params.get("phone");
@@ -73,7 +75,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (countdown <= 0) return;
-    const timer = setInterval(() => setCountdown(c => c - 1), 1000);
+    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
 
@@ -104,7 +106,6 @@ export default function RegisterPage() {
       setError("인증번호 6자리를 입력해주세요");
       return;
     }
-    // 인증번호 확인은 최종 register 시 서버에서 수행
     setStep("info");
     setError("");
   };
@@ -145,9 +146,9 @@ export default function RegisterPage() {
   if (authLoading) return null;
 
   const stepIcons = {
-    phone: <Phone className="w-7 h-7 text-[#1a1a2e]" />,
-    code: <ShieldCheck className="w-7 h-7 text-[#1a1a2e]" />,
-    info: <UserPlus className="w-7 h-7 text-[#1a1a2e]" />,
+    phone: <Phone className="w-7 h-7 text-primary" />,
+    code: <ShieldCheck className="w-7 h-7 text-primary" />,
+    info: <UserPlus className="w-7 h-7 text-primary" />,
   };
 
   const stepTitles = {
@@ -163,43 +164,55 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center px-4 py-3 bg-white border-b">
-        <button onClick={() => step === "phone" ? navigate("/") : setStep(step === "info" ? "code" : "phone")} className="p-1">
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+      <div className="flex items-center px-5 py-3 bg-background border-b border-line">
+        <button
+          onClick={() => (step === "phone" ? navigate("/") : setStep(step === "info" ? "code" : "phone"))}
+          className="p-1"
+        >
+          <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <h1 className="flex-1 text-center text-base font-semibold text-gray-900 pr-6">회원가입</h1>
+        <h1 className="flex-1 text-center text-base font-bold text-foreground pr-6">회원가입</h1>
       </div>
 
       {/* Progress */}
-      <div className="flex items-center justify-center gap-2 py-4 bg-white">
+      <div className="flex items-center justify-center gap-2 py-4 bg-background">
         {(["phone", "code", "info"] as Step[]).map((s, i) => (
           <div key={s} className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-              step === s ? "bg-[#1a1a2e] text-white" :
-              (["phone", "code", "info"].indexOf(step) > i) ? "bg-[#C8E632] text-[#1a1a2e]" :
-              "bg-gray-200 text-gray-400"
-            }`}>
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                step === s
+                  ? "bg-primary text-primary-foreground"
+                  : ["phone", "code", "info"].indexOf(step) > i
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-ink-3 text-muted-foreground"
+              }`}
+            >
               {["phone", "code", "info"].indexOf(step) > i ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
             </div>
-            {i < 2 && <div className={`w-8 h-0.5 ${["phone", "code", "info"].indexOf(step) > i ? "bg-[#C8E632]" : "bg-gray-200"}`} />}
+            {i < 2 && (
+              <div
+                className={`w-8 h-0.5 ${["phone", "code", "info"].indexOf(step) > i ? "bg-primary" : "bg-ink-3"}`}
+              />
+            )}
           </div>
         ))}
       </div>
 
       <div className="flex-1 flex items-start justify-center px-4 pt-4">
-        <Card className="w-full max-w-sm border-0 shadow-lg">
+        <Card className="w-full max-w-sm border-line-strong bg-card">
           <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-14 h-14 rounded-full bg-[#C8E632]/20 flex items-center justify-center mb-3">
+            <div className="mx-auto w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mb-3">
               {stepIcons[step]}
             </div>
-            <CardTitle className="text-lg text-gray-900">{stepTitles[step]}</CardTitle>
-            <CardDescription className="text-sm">
+            <CardTitle className="text-lg text-foreground">{stepTitles[step]}</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
               {stepDescs[step]}
               {step === "code" && (
-                <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
-                  인증번호는 국제번호 <span className="font-semibold">+1 760-647-8528</span>에서 발송됩니다.<br />
+                <div className="mt-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg text-xs text-muted-foreground leading-relaxed">
+                  인증번호는 국제번호 <span className="font-semibold text-foreground">+1 760-647-8528</span>에서 발송됩니다.
+                  <br />
                   문자가 오지 않는 경우, 국제발신 차단 여부를 확인해주세요.
                 </div>
               )}
@@ -215,14 +228,14 @@ export default function RegisterPage() {
                   value={phone}
                   onChange={handlePhoneChange}
                   maxLength={13}
-                  className="text-center text-lg tracking-wider"
+                  className="text-center text-lg tracking-wider bg-ink-3 border-line-strong text-foreground"
                   onKeyDown={(e) => e.key === "Enter" && handleSendCode()}
                 />
-                {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                {error && <p className="text-sm text-destructive text-center">{error}</p>}
                 <Button
                   onClick={handleSendCode}
                   disabled={sendCodeMutation.isPending || phone.replace(/\D/g, "").length < 10}
-                  className="w-full bg-[#1a1a2e] hover:bg-[#2a2a3e] text-white"
+                  className="w-full bg-primary hover:bg-optic-deep text-primary-foreground font-bold"
                 >
                   {sendCodeMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   인증번호 받기
@@ -241,35 +254,39 @@ export default function RegisterPage() {
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     maxLength={6}
                     autoComplete="one-time-code"
-                    className="text-center text-2xl tracking-[0.5em] font-mono"
+                    className="text-center text-2xl tracking-[0.5em] font-mono bg-ink-3 border-line-strong text-foreground"
                     onKeyDown={(e) => e.key === "Enter" && handleVerifyAndNext()}
                     autoFocus
                   />
                   {countdown > 0 && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                       {formatCountdown(countdown)}
                     </span>
                   )}
                 </div>
-                {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                {error && <p className="text-sm text-destructive text-center">{error}</p>}
                 <Button
                   onClick={handleVerifyAndNext}
                   disabled={code.length !== 6}
-                  className="w-full bg-[#1a1a2e] hover:bg-[#2a2a3e] text-white"
+                  className="w-full bg-primary hover:bg-optic-deep text-primary-foreground font-bold"
                 >
                   다음
                 </Button>
                 <div className="flex items-center justify-between">
                   <button
-                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
-                    className="text-sm text-gray-500 hover:text-gray-700"
+                    onClick={() => {
+                      setStep("phone");
+                      setCode("");
+                      setError("");
+                    }}
+                    className="text-sm text-muted-foreground hover:text-foreground"
                   >
                     전화번호 변경
                   </button>
                   <button
                     onClick={handleSendCode}
                     disabled={countdown > 0 || sendCodeMutation.isPending}
-                    className="text-sm text-[#1a1a2e] hover:underline disabled:text-gray-300"
+                    className="text-sm text-primary hover:underline disabled:text-muted-foreground"
                   >
                     {countdown > 0 ? `재발송 (${formatCountdown(countdown)})` : "인증번호 재발송"}
                   </button>
@@ -281,23 +298,24 @@ export default function RegisterPage() {
               <>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">이름</label>
+                    <label className="text-sm font-medium text-secondary-foreground mb-1 block">이름</label>
                     <Input
                       placeholder="홍길동"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      className="bg-ink-3 border-line-strong text-foreground"
                     />
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">성별</label>
+                    <label className="text-sm font-medium text-secondary-foreground mb-1 block">성별</label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setGender("male")}
                         className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                           gender === "male"
-                            ? "bg-[#1a1a2e] text-white border-[#1a1a2e]"
-                            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-ink-3 text-secondary-foreground border-line-strong hover:border-primary/50"
                         }`}
                       >
                         남성
@@ -306,8 +324,8 @@ export default function RegisterPage() {
                         onClick={() => setGender("female")}
                         className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                           gender === "female"
-                            ? "bg-[#1a1a2e] text-white border-[#1a1a2e]"
-                            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-ink-3 text-secondary-foreground border-line-strong hover:border-primary/50"
                         }`}
                       >
                         여성
@@ -316,7 +334,7 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">생년월일</label>
+                    <label className="text-sm font-medium text-secondary-foreground mb-1 block">생년월일</label>
                     <Input
                       type="text"
                       inputMode="numeric"
@@ -324,11 +342,12 @@ export default function RegisterPage() {
                       value={birthDate}
                       onChange={(e) => setBirthDate(formatBirthDate(e.target.value))}
                       maxLength={10}
+                      className="bg-ink-3 border-line-strong text-foreground"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-2 border-t">
+                <div className="space-y-3 pt-2 border-t border-line">
                   <div className="flex items-start gap-3">
                     <Checkbox
                       id="terms"
@@ -336,9 +355,12 @@ export default function RegisterPage() {
                       onCheckedChange={(v) => setTermsAccepted(!!v)}
                       className="mt-0.5"
                     />
-                    <label htmlFor="terms" className="text-sm text-gray-700 leading-tight cursor-pointer">
+                    <label htmlFor="terms" className="text-sm text-secondary-foreground leading-tight cursor-pointer">
                       <span className="font-medium">[필수]</span>{" "}
-                      <a href="/terms" target="_blank" className="text-blue-600 underline hover:text-blue-800">이용약관</a>에 동의합니다
+                      <a href="/terms" target="_blank" className="text-primary underline hover:text-optic-deep">
+                        이용약관
+                      </a>
+                      에 동의합니다
                     </label>
                   </div>
                   <div className="flex items-start gap-3">
@@ -348,18 +370,21 @@ export default function RegisterPage() {
                       onCheckedChange={(v) => setPrivacyAccepted(!!v)}
                       className="mt-0.5"
                     />
-                    <label htmlFor="privacy" className="text-sm text-gray-700 leading-tight cursor-pointer">
+                    <label htmlFor="privacy" className="text-sm text-secondary-foreground leading-tight cursor-pointer">
                       <span className="font-medium">[필수]</span>{" "}
-                      <a href="/privacy" target="_blank" className="text-blue-600 underline hover:text-blue-800">개인정보처리방침</a>에 동의합니다
+                      <a href="/privacy" target="_blank" className="text-primary underline hover:text-optic-deep">
+                        개인정보처리방침
+                      </a>
+                      에 동의합니다
                     </label>
                   </div>
                 </div>
 
-                {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                {error && <p className="text-sm text-destructive text-center">{error}</p>}
                 <Button
                   onClick={handleRegister}
                   disabled={registerMutation.isPending || !name || !gender || !birthDate || !termsAccepted || !privacyAccepted}
-                  className="w-full bg-[#1a1a2e] hover:bg-[#2a2a3e] text-white"
+                  className="w-full bg-primary hover:bg-optic-deep text-primary-foreground font-bold"
                 >
                   {registerMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   가입 완료
@@ -368,8 +393,8 @@ export default function RegisterPage() {
             )}
 
             {step !== "info" && (
-              <div className="pt-2 border-t text-center">
-                <p className="text-sm text-gray-500">
+              <div className="pt-2 border-t border-line text-center">
+                <p className="text-sm text-muted-foreground">
                   이미 회원이신가요?{" "}
                   <button
                     onClick={() => {
@@ -377,7 +402,7 @@ export default function RegisterPage() {
                       const returnTo = params.get("returnTo");
                       navigate(returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login");
                     }}
-                    className="text-[#1a1a2e] font-semibold hover:underline"
+                    className="text-primary font-semibold hover:underline"
                   >
                     로그인
                   </button>

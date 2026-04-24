@@ -1,12 +1,12 @@
 /*
- * AppLayout — PicklePlay "Clean Sport Utility" Design
- * - 모바일 퍼스트 카드 기반 레이아웃
- * - 하단 탭 네비게이션: 홈, 대회, 코트예약, 샵, 소셜
- * - 차트러스 라임(#C8E632) 액센트 활성 탭
- * - DM Sans 타이포그래피
+ * AppLayout — PicklePlay Design System v1.0
+ * - 모바일 퍼스트 다크 테마 레이아웃
+ * - 하단 탭 네비게이션: 홈, 대회, 코트예약, 샵, 프로필
+ * - Optic Yellow (#D4FF3D) 액센트 활성 탭
+ * - Lucide icons, stroke 2.2px
  */
 import { useLocation } from "wouter";
-import { Home, Trophy, MapPin, ShoppingBag, Users } from "lucide-react";
+import { Home, Trophy, MapPin, ShoppingBag, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -14,7 +14,7 @@ const tabs = [
   { path: "/tournament", label: "대회", icon: Trophy },
   { path: "/courts", label: "코트예약", icon: MapPin },
   { path: "/shop", label: "샵", icon: ShoppingBag },
-  { path: "/social", label: "소셜", icon: Users },
+  { path: "/mypage", label: "프로필", icon: User },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,18 +23,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col min-h-[100dvh] max-w-[480px] mx-auto bg-background relative lg:shadow-2xl lg:my-0 lg:rounded-none">
       {/* Main scrollable content area */}
-      <main className="flex-1 overflow-y-auto pb-20 no-scrollbar">
+      <main className="flex-1 overflow-y-auto pb-22 no-scrollbar">
         {children}
       </main>
 
       {/* Bottom Tab Navigation */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-gray-100 z-50">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-background border-t border-line z-50">
         <div className="flex items-center justify-around h-16 px-1">
           {tabs.map((tab) => {
             const isActive =
               tab.path === "/"
                 ? location === "/"
-                : location.startsWith(tab.path);
+                : tab.path === "/mypage"
+                  ? location === "/mypage"
+                  : location.startsWith(tab.path);
             const Icon = tab.icon;
 
             return (
@@ -43,27 +45,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 onClick={() => navigate(tab.path)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-200",
-                  isActive ? "text-foreground" : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 <div
                   className={cn(
                     "flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200",
-                    isActive && "bg-[#C8E632]"
+                    isActive && "bg-primary"
                   )}
                 >
                   <Icon
                     className={cn(
-                      "w-[18px] h-[18px] transition-all",
-                      isActive ? "text-[#1a1a2e]" : "text-gray-400"
+                      "w-[22px] h-[22px] transition-all",
+                      isActive
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground"
                     )}
-                    strokeWidth={isActive ? 2.5 : 1.8}
+                    strokeWidth={2.2}
                   />
                 </div>
                 <span
                   className={cn(
                     "text-[9px] tracking-wide transition-all",
-                    isActive ? "font-bold text-[#1a1a2e]" : "font-medium text-gray-400"
+                    isActive
+                      ? "font-bold text-primary"
+                      : "font-medium text-muted-foreground"
                   )}
                 >
                   {tab.label}

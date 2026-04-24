@@ -1,6 +1,9 @@
+/*
+ * TournamentDetailPage — PicklePlay Design System v1.0
+ * 다크 테마, Optic Yellow 액센트
+ */
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import AppHeader from "@/components/AppHeader";
 import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -9,7 +12,6 @@ import {
   ExternalLink, FileText, Clock, AlertCircle, CheckCircle2,
   ChevronLeft, Image as ImageIcon, LogIn,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
@@ -23,10 +25,10 @@ const fadeUp = {
 };
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-  draft: { label: "준비 중", color: "text-gray-600", bg: "bg-gray-100" },
-  open: { label: "접수 중", color: "text-green-700", bg: "bg-green-100" },
-  closed: { label: "접수 마감", color: "text-red-700", bg: "bg-red-100" },
-  cancelled: { label: "취소됨", color: "text-gray-500", bg: "bg-gray-100" },
+  draft: { label: "준비 중", color: "text-muted-foreground", bg: "bg-muted" },
+  open: { label: "접수 중", color: "text-court-green", bg: "bg-court-green/20" },
+  closed: { label: "접수 마감", color: "text-destructive", bg: "bg-destructive/20" },
+  cancelled: { label: "취소됨", color: "text-muted-foreground", bg: "bg-muted" },
 };
 
 export default function TournamentDetailPage() {
@@ -43,10 +45,10 @@ export default function TournamentDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#f8f9fa] min-h-screen">
+      <div className="bg-background min-h-screen">
         <AppHeader />
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-3 border-[#C8E632] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -54,12 +56,12 @@ export default function TournamentDetailPage() {
 
   if (!tournament) {
     return (
-      <div className="bg-[#f8f9fa] min-h-screen">
+      <div className="bg-background min-h-screen">
         <AppHeader />
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <AlertCircle className="w-12 h-12 text-gray-300 mb-3" />
-          <p className="text-sm font-bold text-gray-500">대회를 찾을 수 없습니다</p>
-          <button onClick={() => navigate("/tournament")} className="mt-4 text-xs text-[#8BA61E] font-semibold">
+          <AlertCircle className="w-12 h-12 text-muted-foreground mb-3" strokeWidth={2.2} />
+          <p className="text-sm font-bold text-muted-foreground">대회를 찾을 수 없습니다</p>
+          <button onClick={() => navigate("/tournament")} className="mt-4 text-xs text-primary font-semibold">
             대회 목록으로 돌아가기
           </button>
         </div>
@@ -73,7 +75,6 @@ export default function TournamentDetailPage() {
 
   const handleRegisterClick = () => {
     if (!isAuthenticated) {
-      // 비로그인 사용자에게 로그인 안내 후 리다이렉트
       navigate(`/login?returnTo=/tournament/${tournamentId}/register`);
       return;
     }
@@ -81,16 +82,16 @@ export default function TournamentDetailPage() {
   };
 
   return (
-    <div className="bg-[#f8f9fa]">
+    <div className="bg-background">
       <AppHeader />
 
       {/* Back + Title */}
       <motion.div className="px-4 pt-1 pb-3 flex items-center gap-2" initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <button onClick={() => navigate("/tournament")} className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
-          <ChevronLeft className="w-4 h-4 text-[#1a1a2e]" />
+        <button onClick={() => navigate("/tournament")} className="w-8 h-8 rounded-full bg-card border border-line-strong flex items-center justify-center">
+          <ChevronLeft className="w-4 h-4 text-foreground" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-[#1a1a2e] truncate">{tournament.name}</h1>
+          <h1 className="text-lg font-extrabold text-foreground truncate">{tournament.name}</h1>
         </div>
         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${status.bg} ${status.color}`}>
           {status.label}
@@ -112,7 +113,7 @@ export default function TournamentDetailPage() {
                   <button
                     key={i}
                     onClick={() => setPosterIndex(i)}
-                    className={`w-2 h-2 rounded-full transition-all ${i === posterIndex ? "bg-white w-5" : "bg-white/50"}`}
+                    className={`w-2 h-2 rounded-full transition-all ${i === posterIndex ? "bg-primary w-5" : "bg-white/50"}`}
                   />
                 ))}
               </div>
@@ -123,14 +124,14 @@ export default function TournamentDetailPage() {
 
       {/* Info Card */}
       <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
+        <div className="bg-card rounded-2xl p-4 border border-line-strong space-y-3">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#C8E632]/15 flex items-center justify-center shrink-0">
-              <Calendar className="w-4 h-4 text-[#8BA61E]" />
+            <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <Calendar className="w-4 h-4 text-primary" strokeWidth={2.2} />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">대회 일시</p>
-              <p className="text-sm font-bold text-[#1a1a2e] mt-0.5">
+              <p className="text-overline text-muted-foreground">대회 일시</p>
+              <p className="text-sm font-bold text-foreground mt-0.5">
                 {tournament.startDate === tournament.endDate
                   ? tournament.startDate
                   : `${tournament.startDate} ~ ${tournament.endDate}`}
@@ -139,24 +140,24 @@ export default function TournamentDetailPage() {
           </div>
 
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-              <MapPin className="w-4 h-4 text-blue-500" />
+            <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <MapPin className="w-4 h-4 text-primary" strokeWidth={2.2} />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">장소</p>
-              <p className="text-sm font-bold text-[#1a1a2e] mt-0.5">{tournament.venue}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{tournament.address}</p>
+              <p className="text-overline text-muted-foreground">장소</p>
+              <p className="text-sm font-bold text-foreground mt-0.5">{tournament.venue}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{tournament.address}</p>
             </div>
           </div>
 
           {tournament.feePerTeam > 0 && (
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                <Trophy className="w-4 h-4 text-amber-500" />
+              <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <Trophy className="w-4 h-4 text-primary" strokeWidth={2.2} />
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">참가비</p>
-                <p className="text-sm font-bold text-[#1a1a2e] mt-0.5">
+                <p className="text-overline text-muted-foreground">참가비</p>
+                <p className="text-sm font-bold text-foreground mt-0.5">
                   팀당 {tournament.feePerTeam.toLocaleString()}원
                 </p>
               </div>
@@ -165,16 +166,16 @@ export default function TournamentDetailPage() {
 
           {tournament.giftDescription && (
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
-                <ImageIcon className="w-4 h-4 text-purple-500" />
+              <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <ImageIcon className="w-4 h-4 text-primary" strokeWidth={2.2} />
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">참가 기념품</p>
-                <p className="text-sm font-bold text-[#1a1a2e] mt-0.5">{tournament.giftDescription}</p>
+                <p className="text-overline text-muted-foreground">참가 기념품</p>
+                <p className="text-sm font-bold text-foreground mt-0.5">{tournament.giftDescription}</p>
                 {sizeOptions.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {sizeOptions.map((s: string) => (
-                      <span key={s} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{s}</span>
+                      <span key={s} className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{s}</span>
                     ))}
                   </div>
                 )}
@@ -187,15 +188,15 @@ export default function TournamentDetailPage() {
       {/* Organizer Info */}
       {organizerInfo && (
         <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={3}>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="bg-card rounded-2xl p-4 border border-line-strong">
             {organizerInfo.hosts?.length > 0 && (
               <div className="mb-3">
-                <h3 className="text-sm font-bold text-[#1a1a2e] mb-2">주최 · 주관</h3>
+                <h3 className="text-sm font-bold text-foreground mb-2">주최 · 주관</h3>
                 <div className="space-y-1.5">
                   {organizerInfo.hosts.map((h: string) => (
                     <div key={h} className="flex items-center gap-2">
-                      <Trophy className="w-3.5 h-3.5 text-[#8BA61E]" />
-                      <span className="text-xs font-medium text-gray-700">{h}</span>
+                      <Trophy className="w-3.5 h-3.5 text-primary" strokeWidth={2.2} />
+                      <span className="text-xs font-medium text-secondary-foreground">{h}</span>
                     </div>
                   ))}
                 </div>
@@ -203,12 +204,12 @@ export default function TournamentDetailPage() {
             )}
             {organizerInfo.sponsors?.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-[#1a1a2e] mb-2">후원 · 협찬</h3>
+                <h3 className="text-sm font-bold text-foreground mb-2">후원 · 협찬</h3>
                 <div className="space-y-1.5">
                   {organizerInfo.sponsors.map((s: string) => (
                     <div key={s} className="flex items-center gap-2">
-                      <Users className="w-3.5 h-3.5 text-blue-400" />
-                      <span className="text-xs font-medium text-gray-700">{s}</span>
+                      <Users className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={2.2} />
+                      <span className="text-xs font-medium text-secondary-foreground">{s}</span>
                     </div>
                   ))}
                 </div>
@@ -220,31 +221,31 @@ export default function TournamentDetailPage() {
 
       {/* Events & Registration Status */}
       <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={4}>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">종목별 접수 현황</h3>
+        <div className="bg-card rounded-2xl p-4 border border-line-strong">
+          <h3 className="text-sm font-bold text-foreground mb-3">종목별 접수 현황</h3>
           {tournament.events.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-4">종목 정보가 아직 등록되지 않았습니다</p>
+            <p className="text-xs text-muted-foreground text-center py-4">종목 정보가 아직 등록되지 않았습니다</p>
           ) : (
             <div className="space-y-3">
               {tournament.events.map((event: any) => {
                 const pct = event.maxTeams > 0 ? Math.min((event.currentTeams / event.maxTeams) * 100, 100) : 0;
                 const isFull = event.currentTeams >= event.maxTeams;
                 return (
-                  <div key={event.id} className="p-3 bg-gray-50 rounded-xl">
+                  <div key={event.id} className="p-3 bg-ink-3 rounded-xl">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] font-bold border-[#C8E632] text-[#8BA61E]">
+                        <Badge variant="outline" className="text-[10px] font-bold border-primary text-primary">
                           {event.eventType}
                         </Badge>
-                        <span className="text-xs font-bold text-[#1a1a2e]">{event.skillLevel}</span>
+                        <span className="text-xs font-bold text-foreground">{event.skillLevel}</span>
                       </div>
-                      <span className={`text-[10px] font-bold ${isFull ? "text-red-500" : "text-[#8BA61E]"}`}>
+                      <span className={`text-[10px] font-bold ${isFull ? "text-destructive" : "text-primary"}`}>
                         {event.currentTeams}/{event.maxTeams}팀
                       </span>
                     </div>
                     <Progress value={pct} className="h-1.5" />
                     {event.dayLabel && (
-                      <p className="text-[10px] text-gray-400 mt-1">{event.dayLabel}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{event.dayLabel}</p>
                     )}
                   </div>
                 );
@@ -257,8 +258,8 @@ export default function TournamentDetailPage() {
       {/* Documents */}
       {tournament.documents && tournament.documents.length > 0 && (
         <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={5}>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">공문 · 문서</h3>
+          <div className="bg-card rounded-2xl p-4 border border-line-strong">
+            <h3 className="text-sm font-bold text-foreground mb-3">공문 · 문서</h3>
             <div className="space-y-2">
               {tournament.documents.map((doc: any) => (
                 <a
@@ -266,16 +267,16 @@ export default function TournamentDetailPage() {
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-3 p-3 bg-ink-3 rounded-xl hover:bg-muted transition-colors"
                 >
-                  <FileText className="w-5 h-5 text-red-400 shrink-0" />
+                  <FileText className="w-5 h-5 text-destructive shrink-0" strokeWidth={2.2} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#1a1a2e] truncate">{doc.title}</p>
-                    <p className="text-[10px] text-gray-400">
+                    <p className="text-xs font-bold text-foreground truncate">{doc.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
                       {doc.fileSize > 0 ? `${(doc.fileSize / 1024 / 1024).toFixed(1)}MB` : "PDF"}
                     </p>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 </a>
               ))}
             </div>
@@ -283,16 +284,16 @@ export default function TournamentDetailPage() {
         </motion.section>
       )}
 
-      {/* CTA: Register - 로그인 안내 포함 */}
+      {/* CTA: Register */}
       {tournament.status === "open" && (
         <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={6}>
           {!isAuthenticated ? (
             <div className="space-y-2.5">
-              <div className="bg-blue-50 rounded-xl p-3 flex items-start gap-2.5 border border-blue-100">
-                <LogIn className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div className="bg-primary/10 rounded-xl p-3 flex items-start gap-2.5 border border-primary/20">
+                <LogIn className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs font-bold text-blue-800">참가 신청을 위해 로그인이 필요합니다</p>
-                  <p className="text-[10px] text-blue-600 mt-0.5">
+                  <p className="text-xs font-bold text-foreground">참가 신청을 위해 로그인이 필요합니다</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
                     이미 계정이 있으시면 로그인, 처음이시면 회원가입을 진행해주세요.
                   </p>
                 </div>
@@ -300,14 +301,14 @@ export default function TournamentDetailPage() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => navigate(`/login?returnTo=/tournament/${tournamentId}/register`)}
-                  className="bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                  className="bg-primary text-primary-foreground text-sm font-extrabold py-3.5 rounded-xl hover:bg-optic-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   <LogIn className="w-4 h-4" />
                   로그인
                 </button>
                 <button
                   onClick={() => navigate(`/register?returnTo=/tournament/${tournamentId}/register`)}
-                  className="bg-[#1a1a2e] text-white text-sm font-black py-3.5 rounded-xl hover:bg-[#2a2a3e] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                  className="bg-secondary text-secondary-foreground text-sm font-extrabold py-3.5 rounded-xl hover:bg-ink-3 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   <Users className="w-4 h-4" />
                   회원가입
@@ -317,7 +318,7 @@ export default function TournamentDetailPage() {
           ) : (
             <button
               onClick={handleRegisterClick}
-              className="w-full bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="w-full bg-primary text-primary-foreground text-sm font-extrabold py-3.5 rounded-xl hover:bg-optic-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
             >
               <CheckCircle2 className="w-4 h-4" />
               참가 신청하기
@@ -330,7 +331,7 @@ export default function TournamentDetailPage() {
       <motion.section className="px-4 pb-6" initial="hidden" animate="visible" variants={fadeUp} custom={7}>
         <button
           onClick={() => window.open(`https://map.naver.com/p/search/${encodeURIComponent(tournament.venue)}`, "_blank")}
-          className="w-full bg-[#1a1a2e] text-white text-xs font-bold py-3 rounded-xl hover:bg-[#2a2a3e] transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
+          className="w-full bg-secondary text-secondary-foreground text-xs font-bold py-3 rounded-xl hover:bg-ink-3 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
         >
           <ExternalLink className="w-3.5 h-3.5" />
           장소 보기

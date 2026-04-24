@@ -281,10 +281,10 @@ export default function RegistrationPage() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#f8f9fa] min-h-screen">
+      <div className="bg-background min-h-screen">
         <AppHeader />
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-[#C8E632] animate-spin" />
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       </div>
     );
@@ -292,11 +292,11 @@ export default function RegistrationPage() {
 
   if (!tournament) {
     return (
-      <div className="bg-[#f8f9fa] min-h-screen">
+      <div className="bg-background min-h-screen">
         <AppHeader />
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <AlertCircle className="w-12 h-12 text-gray-300 mb-3" />
-          <p className="text-sm font-bold text-gray-500">대회를 찾을 수 없습니다</p>
+          <AlertCircle className="w-12 h-12 text-muted-foreground mb-3" />
+          <p className="text-sm font-bold text-muted-foreground">대회를 찾을 수 없습니다</p>
         </div>
       </div>
     );
@@ -304,12 +304,12 @@ export default function RegistrationPage() {
 
   if (tournament.status !== "open") {
     return (
-      <div className="bg-[#f8f9fa] min-h-screen">
+      <div className="bg-background min-h-screen">
         <AppHeader />
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <AlertCircle className="w-12 h-12 text-amber-300 mb-3" />
-          <p className="text-sm font-bold text-gray-500">현재 접수 기간이 아닙니다</p>
-          <button onClick={() => navigate(`/tournament/${tournamentId}`)} className="mt-4 text-xs text-[#8BA61E] font-semibold">
+          <p className="text-sm font-bold text-muted-foreground">현재 접수 기간이 아닙니다</p>
+          <button onClick={() => navigate(`/tournament/${tournamentId}`)} className="mt-4 text-xs text-primary font-semibold">
             대회 정보로 돌아가기
           </button>
         </div>
@@ -320,32 +320,32 @@ export default function RegistrationPage() {
   // 비로그인 사용자 안내 화면
   if (!isAuthenticated) {
     return (
-      <div className="bg-[#f8f9fa] min-h-screen">
+      <div className="bg-background min-h-screen">
         <AppHeader />
         <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-          <div className="w-20 h-20 rounded-full bg-[#C8E632]/20 flex items-center justify-center mb-4">
-            <User className="w-10 h-10 text-[#1a1a2e]" />
+          <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+            <User className="w-10 h-10 text-primary" />
           </div>
-          <h2 className="text-lg font-bold text-[#1a1a2e] mb-2">로그인이 필요합니다</h2>
-          <p className="text-sm text-gray-500 mb-1">참가 신청을 위해 로그인해주세요.</p>
-          <p className="text-xs text-gray-400 mb-6">아직 회원이 아니신가요? 간편하게 회원가입하세요!</p>
+          <h2 className="text-lg font-bold text-foreground mb-2">로그인이 필요합니다</h2>
+          <p className="text-sm text-muted-foreground mb-1">참가 신청을 위해 로그인해주세요.</p>
+          <p className="text-xs text-muted-foreground mb-6">아직 회원이 아니신가요? 간편하게 회원가입하세요!</p>
           <div className="flex gap-3 w-full max-w-xs">
             <button
               onClick={() => navigate(`/login?returnTo=/tournament/${tournamentId}/register`)}
-              className="flex-1 bg-[#1a1a2e] text-white text-sm font-bold py-3 rounded-xl hover:bg-[#2a2a3e] transition-colors"
+              className="flex-1 bg-ink text-white text-sm font-bold py-3 rounded-xl hover:bg-ink-3 transition-colors"
             >
               로그인
             </button>
             <button
               onClick={() => navigate(`/register?returnTo=/tournament/${tournamentId}/register`)}
-              className="flex-1 bg-[#C8E632] text-[#1a1a2e] text-sm font-bold py-3 rounded-xl hover:bg-[#b8d62a] transition-colors"
+              className="flex-1 bg-primary text-primary-foreground text-sm font-bold py-3 rounded-xl hover:bg-optic-deep transition-colors"
             >
               회원가입
             </button>
           </div>
           <button
             onClick={() => navigate(`/tournament/${tournamentId}`)}
-            className="mt-4 text-xs text-gray-400 hover:text-gray-600"
+            className="mt-4 text-xs text-muted-foreground hover:text-secondary-foreground"
           >
             대회 정보로 돌아가기
           </button>
@@ -355,29 +355,29 @@ export default function RegistrationPage() {
   }
 
   return (
-    <div className="bg-[#f8f9fa] pb-8">
+    <div className="bg-background pb-8">
       <AppHeader />
 
       {/* Header */}
       <motion.div className="px-4 pt-1 pb-3 flex items-center gap-2" initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <button onClick={() => navigate(`/tournament/${tournamentId}`)} className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
-          <ChevronLeft className="w-4 h-4 text-[#1a1a2e]" />
+        <button onClick={() => navigate(`/tournament/${tournamentId}`)} className="w-8 h-8 rounded-full bg-card border border-line-strong flex items-center justify-center">
+          <ChevronLeft className="w-4 h-4 text-foreground" />
         </button>
-        <h1 className="text-lg font-bold text-[#1a1a2e]">참가 신청</h1>
+        <h1 className="text-lg font-bold text-foreground">참가 신청</h1>
       </motion.div>
 
       {/* Tournament name */}
       <motion.div className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={0.5}>
-        <p className="text-xs text-gray-500 font-medium">{tournament.name}</p>
+        <p className="text-xs text-muted-foreground font-medium">{tournament.name}</p>
       </motion.div>
 
       {/* Tab Switcher */}
       <motion.div className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={1}>
-        <div className="bg-white rounded-xl p-1 flex gap-1 shadow-sm border border-gray-100">
+        <div className="bg-card rounded-xl p-1 flex gap-1  border border-line-strong">
           <button
             onClick={() => setTab("direct")}
             className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              tab === "direct" ? "bg-[#C8E632] text-[#1a1a2e]" : "text-gray-400 hover:text-gray-600"
+              tab === "direct" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-secondary-foreground"
             }`}
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -386,7 +386,7 @@ export default function RegistrationPage() {
           <button
             onClick={() => setTab("excel")}
             className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              tab === "excel" ? "bg-[#C8E632] text-[#1a1a2e]" : "text-gray-400 hover:text-gray-600"
+              tab === "excel" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-secondary-foreground"
             }`}
           >
             <Upload className="w-3.5 h-3.5" />
@@ -399,8 +399,8 @@ export default function RegistrationPage() {
       {tab === "direct" && (
         <motion.div className="px-4 space-y-4" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
           {/* Event Selection */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">종목 선택</h3>
+          <div className="bg-card rounded-2xl p-4  border border-line-strong">
+            <h3 className="text-sm font-bold text-foreground mb-3">종목 선택</h3>
             <div className="grid grid-cols-2 gap-2">
               {tournament.events.map((event: any) => {
                 const isFull = event.currentTeams >= event.maxTeams;
@@ -412,19 +412,19 @@ export default function RegistrationPage() {
                     onClick={() => handleEventChange(event.id)}
                     className={`p-3 rounded-xl text-left transition-all border-2 ${
                       isSelected
-                        ? "border-[#C8E632] bg-[#C8E632]/10"
+                        ? "border-primary bg-primary/10"
                         : isFull
-                        ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
-                        : "border-gray-100 bg-gray-50 hover:border-gray-200"
+                        ? "border-line-strong bg-ink-3 opacity-50 cursor-not-allowed"
+                        : "border-line-strong bg-ink-3 hover:border-line-strong"
                     }`}
                   >
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Badge variant="outline" className="text-[9px] font-bold border-[#C8E632] text-[#8BA61E]">
+                      <Badge variant="outline" className="text-[9px] font-bold border-primary text-primary">
                         {event.eventType}
                       </Badge>
                     </div>
-                    <p className="text-xs font-bold text-[#1a1a2e]">{event.skillLevel}</p>
-                    <p className={`text-[10px] mt-0.5 ${isFull ? "text-red-500 font-bold" : "text-gray-400"}`}>
+                    <p className="text-xs font-bold text-foreground">{event.skillLevel}</p>
+                    <p className={`text-[10px] mt-0.5 ${isFull ? "text-destructive font-bold" : "text-muted-foreground"}`}>
                       {isFull ? "마감" : `${event.currentTeams}/${event.maxTeams}팀`}
                     </p>
                   </button>
@@ -435,8 +435,8 @@ export default function RegistrationPage() {
 
           {/* Age Group Selection (if applicable) */}
           {tournament.hasAgeGroup && tournament.ageGroups && tournament.ageGroups.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">연령대 선택</h3>
+            <div className="bg-card rounded-2xl p-4  border border-line-strong">
+              <h3 className="text-sm font-bold text-foreground mb-3">연령대 선택</h3>
               <div className="grid grid-cols-2 gap-2">
                 {tournament.ageGroups.map((ag: any) => (
                   <button
@@ -444,11 +444,11 @@ export default function RegistrationPage() {
                     onClick={() => setSelectedAgeGroupId(ag.id)}
                     className={`p-3 rounded-xl text-left transition-all border-2 ${
                       selectedAgeGroupId === ag.id
-                        ? "border-[#C8E632] bg-[#C8E632]/10"
-                        : "border-gray-100 bg-gray-50 hover:border-gray-200"
+                        ? "border-primary bg-primary/10"
+                        : "border-line-strong bg-ink-3 hover:border-line-strong"
                     }`}
                   >
-                    <p className="text-xs font-bold text-[#1a1a2e]">{ag.label}</p>
+                    <p className="text-xs font-bold text-foreground">{ag.label}</p>
                   </button>
                 ))}
               </div>
@@ -456,17 +456,17 @@ export default function RegistrationPage() {
           )}
 
           {/* Self Participant Toggle */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="bg-card rounded-2xl p-4  border border-line-strong">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-[#1a1a2e]">본인 참가 여부</h3>
-                <p className="text-[10px] text-gray-400 mt-0.5">대리 신청 시 '아니오' 선택</p>
+                <h3 className="text-sm font-bold text-foreground">본인 참가 여부</h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">대리 신청 시 '아니오' 선택</p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsSelfParticipant(true)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    isSelfParticipant ? "bg-[#C8E632] text-[#1a1a2e]" : "bg-gray-100 text-gray-400"
+                    isSelfParticipant ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   }`}
                 >
                   예
@@ -474,7 +474,7 @@ export default function RegistrationPage() {
                 <button
                   onClick={() => setIsSelfParticipant(false)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    !isSelfParticipant ? "bg-[#C8E632] text-[#1a1a2e]" : "bg-gray-100 text-gray-400"
+                    !isSelfParticipant ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   }`}
                 >
                   아니오
@@ -485,61 +485,61 @@ export default function RegistrationPage() {
 
           {/* Player Forms */}
           {players.map((player, idx) => (
-            <div key={idx} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">
+            <div key={idx} className="bg-card rounded-2xl p-4  border border-line-strong">
+              <h3 className="text-sm font-bold text-foreground mb-3">
                 {players.length > 1 ? `선수 ${idx + 1}` : "선수 정보"}
               </h3>
               <div className="space-y-3">
                 <div>
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">이름</label>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">이름</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       value={player.name}
                       onChange={(e) => updatePlayer(idx, "name", e.target.value)}
                       placeholder="홍길동"
-                      className="w-full pl-10 pr-3 py-2.5 bg-gray-50 rounded-xl text-sm text-[#1a1a2e] placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#C8E632]/50 border border-gray-100"
+                      className="w-full pl-10 pr-3 py-2.5 bg-ink-3 rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 border border-line-strong"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">생년월일</label>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">생년월일</label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       value={player.birthDate}
                       onChange={(e) => updatePlayer(idx, "birthDate", formatBirth(e.target.value))}
                       placeholder="1990-01-01"
                       maxLength={10}
-                      className="w-full pl-10 pr-3 py-2.5 bg-gray-50 rounded-xl text-sm text-[#1a1a2e] placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#C8E632]/50 border border-gray-100"
+                      className="w-full pl-10 pr-3 py-2.5 bg-ink-3 rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 border border-line-strong"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">전화번호</label>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">전화번호</label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="tel"
                       value={player.phone}
                       onChange={(e) => updatePlayer(idx, "phone", formatPhone(e.target.value))}
                       placeholder="010-1234-5678"
                       maxLength={13}
-                      className="w-full pl-10 pr-3 py-2.5 bg-gray-50 rounded-xl text-sm text-[#1a1a2e] placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#C8E632]/50 border border-gray-100"
+                      className="w-full pl-10 pr-3 py-2.5 bg-ink-3 rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 border border-line-strong"
                     />
                   </div>
                 </div>
                 {sizeOptions.length > 0 && (
                   <div>
-                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">참가기념품 사이즈</label>
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">참가기념품 사이즈</label>
                     <div className="relative">
-                      <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <select
                         value={player.giftSize}
                         onChange={(e) => updatePlayer(idx, "giftSize", e.target.value)}
-                        className="w-full pl-10 pr-3 py-2.5 bg-gray-50 rounded-xl text-sm text-[#1a1a2e] focus:outline-none focus:ring-2 focus:ring-[#C8E632]/50 border border-gray-100 appearance-none"
+                        className="w-full pl-10 pr-3 py-2.5 bg-ink-3 rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 border border-line-strong appearance-none"
                       >
                         <option value="">사이즈 선택</option>
                         {sizeOptions.map(s => (
@@ -555,19 +555,19 @@ export default function RegistrationPage() {
 
           {/* Payment Info */}
           {tournament.feePerTeam > 0 && tournament.bankName && (
-            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+            <div className="bg-primary/10 rounded-2xl p-4 border border-primary/20">
               <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs font-bold text-amber-800">참가비 안내</p>
-                  <p className="text-[11px] text-amber-700 mt-1">
+                  <p className="text-xs font-bold text-foreground">참가비 안내</p>
+                  <p className="text-[11px] text-secondary-foreground mt-1">
                     팀당 {tournament.feePerTeam.toLocaleString()}원
                   </p>
-                  <p className="text-[11px] text-amber-700 mt-0.5">
+                  <p className="text-[11px] text-secondary-foreground mt-0.5">
                     {tournament.bankName} {tournament.accountNumber} ({tournament.accountHolder})
                   </p>
                   {tournament.paymentNote && (
-                    <p className="text-[10px] text-amber-600 mt-1">{tournament.paymentNote}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{tournament.paymentNote}</p>
                   )}
                 </div>
               </div>
@@ -578,7 +578,7 @@ export default function RegistrationPage() {
           <button
             onClick={handleDirectSubmit}
             disabled={submitting}
-            className="w-full bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+            className="w-full bg-primary text-primary-foreground text-sm font-black py-3.5 rounded-xl hover:bg-optic-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -594,9 +594,9 @@ export default function RegistrationPage() {
       {tab === "excel" && (
         <motion.div className="px-4 space-y-4" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
           {/* Template Download */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold text-[#1a1a2e] mb-2">엑셀 양식 다운로드</h3>
-            <p className="text-[10px] text-gray-400 mb-2">
+          <div className="bg-card rounded-2xl p-4  border border-line-strong">
+            <h3 className="text-sm font-bold text-foreground mb-2">엑셀 양식 다운로드</h3>
+            <p className="text-[10px] text-muted-foreground mb-2">
               아래 양식을 다운로드하여 작성 후 업로드해주세요.
             </p>
             <button
@@ -615,7 +615,7 @@ export default function RegistrationPage() {
                   toast.error("양식 다운로드에 실패했습니다");
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 bg-[#1a1a2e] text-white text-xs font-bold py-2.5 rounded-xl hover:bg-[#2a2a3e] transition-colors active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 bg-ink text-white text-xs font-bold py-2.5 rounded-xl hover:bg-ink-3 transition-colors active:scale-[0.98]"
             >
               <Download className="w-3.5 h-3.5" />
               양식 다운로드 (.xlsx)
@@ -623,14 +623,14 @@ export default function RegistrationPage() {
           </div>
 
           {/* Upload Area */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold text-[#1a1a2e] mb-2">엑셀 파일 업로드</h3>
-            <p className="text-[10px] text-gray-400 mb-3">
+          <div className="bg-card rounded-2xl p-4  border border-line-strong">
+            <h3 className="text-sm font-bold text-foreground mb-2">엑셀 파일 업로드</h3>
+            <p className="text-[10px] text-muted-foreground mb-3">
               양식: 종목 | 급수 | 선수1이름 | 선수1생년월일 | 선수1전화번호 | 선수1사이즈 | 선수2이름 | 선수2생년월일 | 선수2전화번호 | 선수2사이즈
             </p>
-            <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-[#C8E632] transition-colors bg-gray-50">
-              <Upload className="w-6 h-6 text-gray-300 mb-1" />
-              <span className="text-xs text-gray-400 font-medium">.xlsx 파일을 선택하세요</span>
+            <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-line-strong rounded-xl cursor-pointer hover:border-primary transition-colors bg-ink-3">
+              <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+              <span className="text-xs text-muted-foreground font-medium">.xlsx 파일을 선택하세요</span>
               <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} className="hidden" />
             </label>
           </div>
@@ -640,15 +640,15 @@ export default function RegistrationPage() {
             <>
               {/* Errors */}
               {excelErrors.length > 0 && (
-                <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
-                  <h4 className="text-xs font-bold text-red-700 mb-2">
+                <div className="bg-destructive/10 rounded-2xl p-4 border border-destructive/20">
+                  <h4 className="text-xs font-bold text-destructive mb-2">
                     검증 오류 ({excelErrors.filter(e => e.severity === "error").length}건)
                   </h4>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {excelErrors.map((err, i) => (
                       <div key={i} className="flex items-start gap-2">
-                        <AlertCircle className={`w-3 h-3 shrink-0 mt-0.5 ${err.severity === "error" ? "text-red-500" : "text-amber-500"}`} />
-                        <p className="text-[10px] text-red-700">
+                        <AlertCircle className={`w-3 h-3 shrink-0 mt-0.5 ${err.severity === "error" ? "text-destructive" : "text-primary"}`} />
+                        <p className="text-[10px] text-destructive">
                           행 {err.row}: [{err.field}] {err.message}
                         </p>
                       </div>
@@ -658,26 +658,26 @@ export default function RegistrationPage() {
               )}
 
               {/* Data Table */}
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 overflow-x-auto">
-                <h4 className="text-xs font-bold text-[#1a1a2e] mb-2">파싱 결과 ({excelRows.length}건)</h4>
+              <div className="bg-card rounded-2xl p-4  border border-line-strong overflow-x-auto">
+                <h4 className="text-xs font-bold text-foreground mb-2">파싱 결과 ({excelRows.length}건)</h4>
                 <table className="w-full text-[10px]">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-1.5 px-1 text-gray-400 font-semibold">#</th>
-                      <th className="text-left py-1.5 px-1 text-gray-400 font-semibold">종목</th>
-                      <th className="text-left py-1.5 px-1 text-gray-400 font-semibold">급수</th>
-                      <th className="text-left py-1.5 px-1 text-gray-400 font-semibold">선수1</th>
-                      <th className="text-left py-1.5 px-1 text-gray-400 font-semibold">선수2</th>
+                    <tr className="border-b border-line-strong">
+                      <th className="text-left py-1.5 px-1 text-muted-foreground font-semibold">#</th>
+                      <th className="text-left py-1.5 px-1 text-muted-foreground font-semibold">종목</th>
+                      <th className="text-left py-1.5 px-1 text-muted-foreground font-semibold">급수</th>
+                      <th className="text-left py-1.5 px-1 text-muted-foreground font-semibold">선수1</th>
+                      <th className="text-left py-1.5 px-1 text-muted-foreground font-semibold">선수2</th>
                     </tr>
                   </thead>
                   <tbody>
                     {excelRows.map((row, i) => (
-                      <tr key={i} className="border-b border-gray-50">
-                        <td className="py-1.5 px-1 text-gray-400">{i + 1}</td>
-                        <td className="py-1.5 px-1 font-medium text-[#1a1a2e]">{row.eventType}</td>
-                        <td className="py-1.5 px-1 text-gray-600">{row.skillLevel}</td>
-                        <td className="py-1.5 px-1 text-gray-600">{row.p1Name}</td>
-                        <td className="py-1.5 px-1 text-gray-600">{row.p2Name || "-"}</td>
+                      <tr key={i} className="border-b border-line">
+                        <td className="py-1.5 px-1 text-muted-foreground">{i + 1}</td>
+                        <td className="py-1.5 px-1 font-medium text-foreground">{row.eventType}</td>
+                        <td className="py-1.5 px-1 text-secondary-foreground">{row.skillLevel}</td>
+                        <td className="py-1.5 px-1 text-secondary-foreground">{row.p1Name}</td>
+                        <td className="py-1.5 px-1 text-secondary-foreground">{row.p2Name || "-"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -688,7 +688,7 @@ export default function RegistrationPage() {
               <button
                 onClick={handleExcelSubmit}
                 disabled={submitting || excelErrors.filter(e => e.severity === "error").length > 0}
-                className="w-full bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                className="w-full bg-primary text-primary-foreground text-sm font-black py-3.5 rounded-xl hover:bg-optic-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
               >
                 {submitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

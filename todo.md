@@ -131,3 +131,24 @@
 ## Phase 17: 회원가입 전화번호 자동 채움 + 비로그인 참가신청 안내 개선 (2026-04-24)
 - [x] RegisterPage에서 URL 파라미터 phone 자동 채움
 - [x] TournamentDetailPage 비로그인 시 로그인+회원가입 버튼 분리 안내 (2칼럼 그리드)
+
+## Phase 18: 디자인 시스템 v1.0 변경 (핸드오프 기반)
+- [x] 로고 CDN 업로드 (pasted_file_wNuLjp_04_logo_full_lockup.webp)
+- [x] Google Fonts CDN 추가 (Pretendard + Archivo Black)
+- [x] index.css 글로벌 테마 토큰 전면 교체 (다크 테마 기본, Optic Yellow #D4FF3D)
+- [x] ThemeContext defaultTheme을 dark로 변경
+- [x] AppHeader 디자인 업데이트 (로고, 다크 테마)
+- [x] AppLayout 하단 탭 네비게이션 디자인 업데이트
+- [x] HomePage 디자인 업데이트 (다크 테마, 새 타이포그래피)
+- [x] TournamentPage 디자인 업데이트
+- [x] TournamentDetailPage 디자인 업데이트
+- [x] LoginPage 디자인 업데이트
+- [x] RegisterPage 디자인 업데이트
+- [x] MyPage 디자인 업데이트
+- [x] RegistrationPage 디자인 업데이트
+- [x] RegistrationCompletePage 디자인 업데이트
+- [x] AdminPage 디자인 업데이트
+- [x] 커밍쑨 페이지들 (CourtsPage, ShopPage, SocialPage) 디자인 업데이트
+- [x] NotFound 페이지 디자인 업데이트
+- [x] TermsPage, PrivacyPage 디자인 업데이트
+- [x] vitest 54개 테스트 통과 확인

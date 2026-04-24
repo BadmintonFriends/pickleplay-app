@@ -1,8 +1,6 @@
 /*
- * CourtsPage — PicklePlay 코트 예약 (커밍쑨)
- * 디자인: Clean Sport Utility
- * - 6월 정식 오픈 예정 안내
- * - 주요 기능 미리보기
+ * CourtsPage — PicklePlay Design System v1.0
+ * 코트 예약 (커밍쑨)
  */
 import AppHeader from "@/components/AppHeader";
 import { MapPin, Search, Clock, Star, Navigation, Wifi } from "lucide-react";
@@ -13,8 +11,7 @@ const HERO_COURTS = "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
   visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
+    opacity: 1, y: 0,
     transition: { delay: i * 0.07, duration: 0.35, ease: [0, 0, 0.2, 1] as const },
   }),
 };
@@ -29,71 +26,63 @@ const upcomingFeatures = [
 
 export default function CourtsPage() {
   return (
-    <div className="bg-[#f8f9fa]">
+    <div className="bg-background">
       <AppHeader />
 
-      {/* 페이지 타이틀 */}
       <motion.div className="px-4 pt-1 pb-3" initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <h1 className="text-xl font-bold text-[#1a1a2e]">코트 예약</h1>
-        <p className="text-xs text-gray-400 mt-0.5">가까운 코트를 찾고 바로 예약하세요</p>
+        <h1 className="text-xl font-extrabold text-foreground">코트 예약</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">가까운 코트를 찾고 바로 예약하세요</p>
       </motion.div>
 
-      {/* 히어로 이미지 */}
       <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={1}>
         <div className="relative rounded-2xl overflow-hidden h-40">
           <img src={HERO_COURTS} alt="피클볼 코트" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a2e]/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/60 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-[#C8E632]" />
-              <span className="text-xs font-bold text-[#C8E632]">전국 코트 정보 준비 중</span>
+              <MapPin className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold text-primary">전국 코트 정보 준비 중</span>
             </div>
           </div>
         </div>
       </motion.section>
 
-      {/* 커밍쑨 메인 */}
       <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
-        <div className="bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
-          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
-            <MapPin className="w-7 h-7 text-blue-400" />
+        <div className="bg-card rounded-2xl p-5 text-center border border-line-strong">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+            <MapPin className="w-7 h-7 text-primary" />
           </div>
-          <h2 className="text-base font-bold text-[#1a1a2e]">코트 예약 서비스 준비 중</h2>
-          <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+          <h2 className="text-base font-bold text-foreground">코트 예약 서비스 준비 중</h2>
+          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
             전국 피클볼 코트 정보와 실시간 예약 시스템을
-            <br />
-            준비하고 있습니다.
+            <br />준비하고 있습니다.
           </p>
-          <div className="mt-4 inline-flex items-center gap-1.5 bg-[#1a1a2e] text-white text-xs font-bold px-4 py-2 rounded-full">
-            <Clock className="w-3.5 h-3.5 text-[#C8E632]" />
+          <div className="mt-4 inline-flex items-center gap-1.5 bg-ink text-foreground text-xs font-bold px-4 py-2 rounded-full">
+            <Clock className="w-3.5 h-3.5 text-primary" />
             2026년 중 오픈 예정
           </div>
         </div>
       </motion.section>
 
-      {/* 준비 중인 기능 */}
       <motion.section className="px-4 pb-6" initial="hidden" animate="visible" variants={fadeUp} custom={3}>
-        <h3 className="text-sm font-bold text-[#1a1a2e] mb-3">준비 중인 기능</h3>
+        <h3 className="text-sm font-bold text-foreground mb-3">준비 중인 기능</h3>
         <div className="space-y-2">
           {upcomingFeatures.map((f, idx) => {
             const Icon = f.icon;
             return (
               <motion.div
                 key={f.title}
-                className="bg-white rounded-xl p-3.5 flex items-center gap-3 shadow-sm border border-gray-100 opacity-70"
-                initial="hidden"
-                animate="visible"
-                variants={fadeUp}
-                custom={idx + 4}
+                className="bg-card rounded-xl p-3.5 flex items-center gap-3 border border-line-strong opacity-70"
+                initial="hidden" animate="visible" variants={fadeUp} custom={idx + 4}
               >
-                <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-gray-400" />
+                <div className="w-9 h-9 rounded-lg bg-ink-3 flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-[#1a1a2e]">{f.title}</h4>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{f.desc}</p>
+                  <h4 className="text-xs font-bold text-foreground">{f.title}</h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{f.desc}</p>
                 </div>
-                <span className="text-[9px] font-bold text-gray-300 bg-gray-50 px-2 py-0.5 rounded-full shrink-0">
+                <span className="text-[9px] font-bold text-muted-foreground bg-ink-3 px-2 py-0.5 rounded-full shrink-0">
                   SOON
                 </span>
               </motion.div>
