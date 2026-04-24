@@ -69,12 +69,12 @@ export default function MyRegistrationsPage() {
           </div>
           <h2 className="text-base font-bold text-[#1a1a2e] mb-1">로그인이 필요합니다</h2>
           <p className="text-xs text-gray-400 mb-6">접수 내역을 확인하려면 로그인해주세요</p>
-          <a
-            href={getLoginUrl()}
+          <button
+            onClick={() => navigate("/login?returnTo=/my-registrations")}
             className="bg-[#C8E632] text-[#1a1a2e] text-sm font-bold px-6 py-2.5 rounded-xl hover:bg-[#b8d62a] transition-colors"
           >
             로그인하기
-          </a>
+          </button>
         </div>
       </div>
     );

@@ -1,4 +1,4 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_MONTH_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, superAdminProcedure, router } from "./_core/trpc";
@@ -7,6 +7,8 @@ import * as db from "./db";
 import { storagePut } from "./storage";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
+import { sendVerificationCode, verifyCode, normalizePhoneToDigits } from "./sms";
+import { sdk } from "./_core/sdk";
 
 // ─── Validation schemas ──────────────────────────────────
 const playerSchema = z.object({
@@ -477,6 +479,113 @@ const adminRouter = router({
     }),
 });
 
+// ─── SMS Auth Router ───────────────────────────────────
+const smsAuthRouter = router({
+  /** 인증번호 발송 (로그인/회원가입 공통) */
+  sendCode: publicProcedure
+    .input(z.object({
+      phone: z.string().min(10, "전화번호를 입력해주세요"),
+    }))
+    .mutation(async ({ input }) => {
+      const phone = normalizePhoneToDigits(input.phone);
+      const result = await sendVerificationCode(phone);
+      if (!result.success) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: result.error || "인증번호 발송에 실패했습니다" });
+      }
+      // 기존 회원 여부 반환
+      const existingUser = await db.getUserByPhone(phone);
+      return { success: true, isExistingUser: !!existingUser };
+    }),
+
+  /** 로그인 (인증번호 검증 → 세션 발급) */
+  login: publicProcedure
+    .input(z.object({
+      phone: z.string().min(10),
+      code: z.string().length(4, "인증번호 4자리를 입력해주세요"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const phone = normalizePhoneToDigits(input.phone);
+      const verification = await verifyCode(phone, input.code);
+      if (!verification.success) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "인증번호가 올바르지 않습니다" });
+      }
+
+      const user = await db.getUserByPhone(phone);
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "가입되지 않은 번호입니다. 회원가입을 진행해주세요." });
+      }
+
+      // 세션 토큰 발급
+      const sessionToken = await sdk.createSessionToken(user.openId, {
+        name: user.name || "",
+        expiresInMs: ONE_MONTH_MS,
+      });
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_MONTH_MS });
+
+      // 마지막 로그인 시간 업데이트
+      await db.upsertUser({ openId: user.openId, lastSignedIn: new Date() });
+
+      return { success: true, user: { id: user.id, name: user.name, phone: user.phone, role: user.role } };
+    }),
+
+  /** 회원가입 (인증번호 검증 → 사용자 생성 → 세션 발급) */
+  register: publicProcedure
+    .input(z.object({
+      phone: z.string().min(10),
+      code: z.string().length(4, "인증번호 4자리를 입력해주세요"),
+      name: z.string().min(1, "이름을 입력해주세요"),
+      gender: z.enum(["male", "female"]),
+      birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "생년월일 형식: YYYY-MM-DD"),
+      termsAccepted: z.boolean().refine(v => v, "이용약관에 동의해주세요"),
+      privacyAccepted: z.boolean().refine(v => v, "개인정보처리방침에 동의해주세요"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const phone = normalizePhoneToDigits(input.phone);
+
+      // 인증번호 검증
+      const verification = await verifyCode(phone, input.code);
+      if (!verification.success) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "인증번호가 올바르지 않습니다" });
+      }
+
+      // 이미 가입된 번호인지 확인
+      const existingUser = await db.getUserByPhone(phone);
+      if (existingUser) {
+        throw new TRPCError({ code: "CONFLICT", message: "이미 가입된 전화번호입니다. 로그인해주세요." });
+      }
+
+      // 사용자 생성 (openId = phone 기반 고유값)
+      const openId = `phone_${phone}`;
+      await db.upsertUser({
+        openId,
+        name: input.name,
+        phone,
+        gender: input.gender,
+        birthDate: input.birthDate,
+        loginMethod: "phone",
+        termsAcceptedAt: new Date(),
+        privacyAcceptedAt: new Date(),
+        lastSignedIn: new Date(),
+      });
+
+      const user = await db.getUserByOpenId(openId);
+      if (!user) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "회원가입 처리 중 오류가 발생했습니다" });
+      }
+
+      // 세션 토큰 발급
+      const sessionToken = await sdk.createSessionToken(openId, {
+        name: input.name,
+        expiresInMs: ONE_MONTH_MS,
+      });
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_MONTH_MS });
+
+      return { success: true, user: { id: user.id, name: user.name, phone: user.phone, role: user.role } };
+    }),
+});
+
 // ─── App Router ─────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -488,6 +597,7 @@ export const appRouter = router({
       return { success: true } as const;
     }),
   }),
+  smsAuth: smsAuthRouter,
   tournament: tournamentRouter,
   registration: registrationRouter,
   admin: adminRouter,

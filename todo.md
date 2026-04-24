@@ -61,3 +61,22 @@
 - [x] 참가자 명단 엑셀 내보내기 기능 (AdminPage 접수관리 탭에 구현)
 - [x] 엑셀 양식 다운로드 버튼 (접수 페이지 엑셀 탭)
 - [x] vitest 테스트 업데이트 - 33개 테스트 통과
+
+## Phase 9: Twilio 기반 핸드폰 번호 로그인/회원가입 전환
+
+- [x] Twilio 환경변수 3개 등록 (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID)
+- [x] twilio 패키지 설치
+- [x] DB 스키마 마이그레이션 (users 테이블에 phone, gender, birthDate, termsAcceptedAt, privacyAcceptedAt 추가)
+- [x] server/sms.ts 생성 (Twilio Verify API 래퍼)
+- [x] server/_core/sdk.ts JWT 세션 생성/검증 수정 (OAuth 메서드 제거)
+- [x] smsAuth 라우터 추가 (sendCode, login, register)
+- [x] register 라우터 추가 (smsAuth.register 내 통합)
+- [x] OAuth 관련 코드 제거/비활성화
+- [x] Login 페이지 구현 (전화번호 → 인증번호 2단계)
+- [x] Register 페이지 구현 (전화번호 인증 → 개인정보+약관)
+- [x] AppHeader 로그인/회원가입 버튼 Twilio 연동
+- [x] const.ts getLoginUrl() 수정 (내부 /login 라우트로 변경)
+- [x] main.tsx 전역 에러 핸들러 수정
+- [x] 데모 계정 지원 (010-0000-0000 / 1324) - sms.ts에 이미 구현됨
+- [x] vitest 테스트 업데이트 - 46개 테스트 통과 (smsAuth 10개 추가)
+- [x] OAuth 관련 코드 완전 제거 (oauth.ts → no-op, sdk.ts OAuth 메서드 제거)

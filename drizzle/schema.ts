@@ -16,8 +16,12 @@ export const users = mysqlTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
-  phone: varchar("phone", { length: 20 }),
+  phone: varchar("phone", { length: 20 }).unique(),
   loginMethod: varchar("loginMethod", { length: 64 }),
+  gender: mysqlEnum("gender", ["male", "female"]),
+  birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
+  termsAcceptedAt: timestamp("termsAcceptedAt"),
+  privacyAcceptedAt: timestamp("privacyAcceptedAt"),
   role: mysqlEnum("role", ["user", "organizer", "admin", "super_admin"])
     .default("user")
     .notNull(),

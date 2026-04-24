@@ -102,11 +102,44 @@ vi.mock("./db", () => {
       { id: 1, openId: "owner-1", name: "관리자", email: "admin@test.com", role: "admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
     ]),
     updateUserRole: vi.fn().mockResolvedValue(undefined),
+    getUserByPhone: vi.fn().mockImplementation(async (phone: string) => {
+      if (phone === "01012345678") return {
+        id: 10, openId: "phone_01012345678", name: "테스트유저", phone: "01012345678",
+        role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+      };
+      return undefined;
+    }),
+    getUserByOpenId: vi.fn().mockImplementation(async (openId: string) => {
+      if (openId === "phone_01099998888") return {
+        id: 20, openId: "phone_01099998888", name: "신규유저", phone: "01099998888",
+        role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+      };
+      return undefined;
+    }),
+    upsertUser: vi.fn().mockResolvedValue(undefined),
   };
 });
 
 vi.mock("./storage", () => ({
   storagePut: vi.fn().mockResolvedValue({ url: "https://cdn.example.com/test.jpg", key: "test-key" }),
+}));
+
+vi.mock("./sms", () => ({
+  sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
+  verifyCode: vi.fn().mockImplementation(async (_phone: string, code: string) => {
+    return { success: code === "1234" };
+  }),
+  normalizePhoneToDigits: vi.fn().mockImplementation((phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("82")) return `0${digits.slice(2)}`;
+    return digits;
+  }),
+}));
+
+vi.mock("./_core/sdk", () => ({
+  sdk: {
+    createSessionToken: vi.fn().mockResolvedValue("mock-jwt-token"),
+  },
 }));
 
 // ─── Context helpers ────────────────────────────────────
@@ -506,7 +539,7 @@ describe("admin router", () => {
   });
 });
 
-// ─── Auth Router Tests ──────────────────────────────────
+// ─── Auth Router Tests ─────────// ─── Auth Router Tests ──────────────────────
 describe("auth router", () => {
   it("returns null for unauthenticated user", async () => {
     const caller = appRouter.createCaller(createPublicContext());
@@ -520,5 +553,133 @@ describe("auth router", () => {
     expect(result).not.toBeNull();
     expect(result?.name).toBe("테스트유저");
     expect(result?.role).toBe("user");
+  });
+});
+
+// ─── SMS Auth Router Tests ──────────────────
+describe("smsAuth router", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("sends verification code successfully", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.smsAuth.sendCode({ phone: "01012345678" });
+    expect(result.success).toBe(true);
+    expect(result.isExistingUser).toBe(true);
+  });
+
+  it("sends code for new phone number (not existing user)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.smsAuth.sendCode({ phone: "01099998888" });
+    expect(result.success).toBe(true);
+    expect(result.isExistingUser).toBe(false);
+  });
+
+  it("handles phone with dashes", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.smsAuth.sendCode({ phone: "010-1234-5678" });
+    expect(result.success).toBe(true);
+  });
+
+  it("logs in existing user with correct code", async () => {
+    const ctx = {
+      ...createPublicContext(),
+      res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
+    };
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.smsAuth.login({ phone: "01012345678", code: "1234" });
+    expect(result.success).toBe(true);
+    expect(result.user.name).toBe("테스트유저");
+    expect(ctx.res.cookie).toHaveBeenCalled();
+  });
+
+  it("rejects login with wrong code", async () => {
+    const ctx = {
+      ...createPublicContext(),
+      res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
+    };
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.smsAuth.login({ phone: "01012345678", code: "9999" })).rejects.toThrow("인증번호가 올바르지 않습니다");
+  });
+
+  it("rejects login for unregistered phone", async () => {
+    const ctx = {
+      ...createPublicContext(),
+      res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
+    };
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.smsAuth.login({ phone: "01099998888", code: "1234" })).rejects.toThrow("가입되지 않은");
+  });
+
+  it("registers new user with correct code", async () => {
+    const ctx = {
+      ...createPublicContext(),
+      res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
+    };
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.smsAuth.register({
+      phone: "01099998888",
+      code: "1234",
+      name: "신규유저",
+      gender: "male",
+      birthDate: "1990-01-01",
+      termsAccepted: true,
+      privacyAccepted: true,
+    });
+    expect(result.success).toBe(true);
+    expect(result.user.name).toBe("신규유저");
+    expect(ctx.res.cookie).toHaveBeenCalled();
+  });
+
+  it("rejects registration with wrong code", async () => {
+    const ctx = {
+      ...createPublicContext(),
+      res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
+    };
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.smsAuth.register({
+      phone: "01099998888",
+      code: "0000",
+      name: "신규",
+      gender: "female",
+      birthDate: "1995-06-15",
+      termsAccepted: true,
+      privacyAccepted: true,
+    })).rejects.toThrow("인증번호가 올바르지 않습니다");
+  });
+
+  it("rejects registration for already registered phone", async () => {
+    const ctx = {
+      ...createPublicContext(),
+      res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
+    };
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.smsAuth.register({
+      phone: "01012345678",
+      code: "1234",
+      name: "중복",
+      gender: "male",
+      birthDate: "1990-01-01",
+      termsAccepted: true,
+      privacyAccepted: true,
+    })).rejects.toThrow("이미 가입된");
+  });
+
+  it("rejects registration without terms acceptance", async () => {
+    const ctx = {
+      ...createPublicContext(),
+      res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
+    };
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.smsAuth.register({
+      phone: "01099998888",
+      code: "1234",
+      name: "신규",
+      gender: "male",
+      birthDate: "1990-01-01",
+      termsAccepted: false,
+      privacyAccepted: true,
+    })).rejects.toThrow();
   });
 });

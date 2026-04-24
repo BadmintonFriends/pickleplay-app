@@ -82,13 +82,13 @@ export default function AppHeader() {
             )}
           </div>
         ) : (
-          <a
-            href={getLoginUrl()}
+          <button
+            onClick={() => navigate("/login")}
             className="flex items-center gap-1.5 bg-[#1a1a2e] text-white text-[11px] font-bold px-3.5 py-1.5 rounded-full hover:bg-[#2a2a3e] transition-colors"
           >
             <LogIn className="w-3.5 h-3.5" />
             로그인 / 회원가입
-          </a>
+          </button>
         )}
       </div>
     </header>

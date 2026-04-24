@@ -14,10 +14,16 @@ import CourtsPage from "./pages/CourtsPage";
 import ShopPage from "./pages/ShopPage";
 import SocialPage from "./pages/SocialPage";
 import AdminPage from "./pages/AdminPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
 function Router() {
   return (
     <Switch>
+      {/* Auth routes - no AppLayout */}
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
+
       {/* Admin route - no AppLayout */}
       <Route path="/admin" component={AdminPage} />
       <Route path="/admin/:rest*" component={AdminPage} />

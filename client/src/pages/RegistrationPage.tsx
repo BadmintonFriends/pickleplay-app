@@ -143,7 +143,7 @@ export default function RegistrationPage() {
 
   const handleDirectSubmit = async () => {
     if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+      navigate(`/login?returnTo=/tournament/${tournamentId}/register`);
       return;
     }
     const err = validateDirect();
@@ -242,7 +242,7 @@ export default function RegistrationPage() {
 
   const handleExcelSubmit = async () => {
     if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+      navigate(`/login?returnTo=/tournament/${tournamentId}/register`);
       return;
     }
     const blockingErrors = excelErrors.filter(e => e.severity === "error");

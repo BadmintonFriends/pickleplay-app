@@ -74,7 +74,7 @@ export default function TournamentDetailPage() {
   const handleRegisterClick = () => {
     if (!isAuthenticated) {
       // 비로그인 사용자에게 로그인 안내 후 리다이렉트
-      window.location.href = getLoginUrl();
+      navigate(`/login?returnTo=/tournament/${tournamentId}/register`);
       return;
     }
     navigate(`/tournament/${tournamentId}/register`);

@@ -278,9 +278,9 @@ export default function AdminPage() {
         <Shield className="w-12 h-12 text-gray-300 mb-3" />
         <h2 className="text-base font-bold text-[#1a1a2e] mb-1">관리자 로그인 필요</h2>
         <p className="text-xs text-gray-400 mb-4">관리자 권한이 필요합니다</p>
-        <a href={getLoginUrl()} className="bg-[#C8E632] text-[#1a1a2e] text-sm font-bold px-6 py-2.5 rounded-xl">
+        <button onClick={() => navigate("/login?returnTo=/admin")} className="bg-[#C8E632] text-[#1a1a2e] text-sm font-bold px-6 py-2.5 rounded-xl">
           로그인
-        </a>
+        </button>
       </div>
     );
   }
