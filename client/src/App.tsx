@@ -7,23 +7,39 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import AppLayout from "./components/AppLayout";
 import HomePage from "./pages/HomePage";
 import TournamentPage from "./pages/TournamentPage";
+import TournamentDetailPage from "./pages/TournamentDetailPage";
+import RegistrationPage from "./pages/RegistrationPage";
+import MyRegistrationsPage from "./pages/MyRegistrationsPage";
 import CourtsPage from "./pages/CourtsPage";
 import ShopPage from "./pages/ShopPage";
 import SocialPage from "./pages/SocialPage";
+import AdminPage from "./pages/AdminPage";
 
 function Router() {
   return (
-    <AppLayout>
-      <Switch>
-        <Route path="/" component={HomePage} />
-        <Route path="/tournament" component={TournamentPage} />
-        <Route path="/courts" component={CourtsPage} />
-        <Route path="/shop" component={ShopPage} />
-        <Route path="/social" component={SocialPage} />
-        <Route path="/404" component={NotFound} />
-        <Route component={NotFound} />
-      </Switch>
-    </AppLayout>
+    <Switch>
+      {/* Admin route - no AppLayout */}
+      <Route path="/admin" component={AdminPage} />
+      <Route path="/admin/:rest*" component={AdminPage} />
+
+      {/* App routes with bottom tab layout */}
+      <Route>
+        <AppLayout>
+          <Switch>
+            <Route path="/" component={HomePage} />
+            <Route path="/tournament" component={TournamentPage} />
+            <Route path="/tournament/:id" component={TournamentDetailPage} />
+            <Route path="/tournament/:id/register" component={RegistrationPage} />
+            <Route path="/my-registrations" component={MyRegistrationsPage} />
+            <Route path="/courts" component={CourtsPage} />
+            <Route path="/shop" component={ShopPage} />
+            <Route path="/social" component={SocialPage} />
+            <Route path="/404" component={NotFound} />
+            <Route component={NotFound} />
+          </Switch>
+        </AppLayout>
+      </Route>
+    </Switch>
   );
 }
 
