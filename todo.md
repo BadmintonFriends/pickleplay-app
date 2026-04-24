@@ -96,3 +96,15 @@
 - [x] 인증번호 입력창에 autocomplete="one-time-code" 속성 추가 (Login/Register)
 - [x] 로그인 후 returnTo 경로 복원 검증 및 개선 (로그인↔회원가입 간 returnTo 전달)
 - [x] RegistrationPage 비로그인 시 로그인 안내 화면 표시
+
+## Phase 13: 이용약관, 마이페이지, 접수완료 페이지 (2026-04-24)
+- [x] 이용약관 페이지 (/terms)
+- [x] 개인정보처리방침 페이지 (/privacy)
+- [x] 회원가입 페이지에서 약관 링크 연결
+- [x] 마이페이지 (/mypage) - 프로필 정보 표시 및 수정
+- [x] 마이페이지 - 접수 내역 통합 표시
+- [x] 서버 프로필 수정 API (updateProfile)
+- [x] 참가 신청 완료 확인 페이지 (/tournament/:id/register/complete)
+- [x] RegistrationPage에서 접수 완료 시 확인 페이지로 이동
+- [x] App.tsx에 새 라우트 등록 (MyPage, Terms, Privacy, RegistrationComplete)
+- [x] vitest 테스트 업데이트 - 54개 테스트 통과 (user 라우터 8개 추가)

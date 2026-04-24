@@ -586,6 +586,34 @@ const smsAuthRouter = router({
     }),
 });
 
+// ─── User Router ────────────────────────────────────────
+const userRouter = router({
+  profile: protectedProcedure.query(async ({ ctx }) => {
+    const user = await db.getUserById(ctx.user.id);
+    if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "사용자를 찾을 수 없습니다" });
+    return {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      gender: user.gender,
+      birthDate: user.birthDate,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
+  }),
+
+  updateProfile: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1, "이름을 입력해주세요").optional(),
+      gender: z.enum(["male", "female"]).optional(),
+      birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "생년월일 형식: YYYY-MM-DD").optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await db.updateUserProfile(ctx.user.id, input);
+      return { success: true };
+    }),
+});
+
 // ─── App Router ─────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -598,6 +626,7 @@ export const appRouter = router({
     }),
   }),
   smsAuth: smsAuthRouter,
+  user: userRouter,
   tournament: tournamentRouter,
   registration: registrationRouter,
   admin: adminRouter,

@@ -325,7 +325,8 @@ export default function RegisterPage() {
                       className="mt-0.5"
                     />
                     <label htmlFor="terms" className="text-sm text-gray-700 leading-tight cursor-pointer">
-                      <span className="font-medium">[필수]</span> 이용약관에 동의합니다
+                      <span className="font-medium">[필수]</span>{" "}
+                      <a href="/terms" target="_blank" className="text-blue-600 underline hover:text-blue-800">이용약관</a>에 동의합니다
                     </label>
                   </div>
                   <div className="flex items-start gap-3">
@@ -336,7 +337,8 @@ export default function RegisterPage() {
                       className="mt-0.5"
                     />
                     <label htmlFor="privacy" className="text-sm text-gray-700 leading-tight cursor-pointer">
-                      <span className="font-medium">[필수]</span> 개인정보처리방침에 동의합니다
+                      <span className="font-medium">[필수]</span>{" "}
+                      <a href="/privacy" target="_blank" className="text-blue-600 underline hover:text-blue-800">개인정보처리방침</a>에 동의합니다
                     </label>
                   </div>
                 </div>

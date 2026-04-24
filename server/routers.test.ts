@@ -117,6 +117,20 @@ vi.mock("./db", () => {
       return undefined;
     }),
     upsertUser: vi.fn().mockResolvedValue(undefined),
+    getUserById: vi.fn().mockImplementation(async (id: number) => {
+      if (id === 1) return {
+        id: 1, openId: "owner-1", name: "관리자", phone: "01011112222",
+        gender: "male", birthDate: "1990-01-01", role: "admin",
+        createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+      };
+      if (id === 10) return {
+        id: 10, openId: "phone_01012345678", name: "테스트유저", phone: "01012345678",
+        gender: "male", birthDate: "1995-05-15", role: "user",
+        createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+      };
+      return undefined;
+    }),
+    updateUserProfile: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -681,5 +695,75 @@ describe("smsAuth router", () => {
       termsAccepted: false,
       privacyAccepted: true,
     })).rejects.toThrow();
+  });
+});
+// ─── User Router Tests ─────────────────────────────────
+describe("user router", () => {
+  const userCtx: TrpcContext = {
+    user: { id: 10, name: "테스트유저", role: "user", openId: "phone_01012345678" },
+    res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
+    req: {} as any,
+  };
+
+  const adminCtx: TrpcContext = {
+    user: { id: 1, name: "관리자", role: "admin", openId: "owner-1" },
+    res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
+    req: {} as any,
+  };
+
+  const anonCtx: TrpcContext = {
+    user: null,
+    res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
+    req: {} as any,
+  };
+
+  const caller = appRouter.createCaller;
+
+  it("profile - 인증된 사용자의 프로필을 반환한다", async () => {
+    const result = await caller(userCtx).user.profile();
+    expect(result).toBeDefined();
+    expect(result.id).toBe(10);
+    expect(result.name).toBe("테스트유저");
+    expect(result.phone).toBe("01012345678");
+    expect(result.gender).toBe("male");
+    expect(result.birthDate).toBe("1995-05-15");
+  });
+
+  it("profile - 비인증 사용자는 에러를 반환한다", async () => {
+    await expect(caller(anonCtx).user.profile()).rejects.toThrow();
+  });
+
+  it("updateProfile - 이름을 수정할 수 있다", async () => {
+    const result = await caller(userCtx).user.updateProfile({ name: "새이름" });
+    expect(result.success).toBe(true);
+  });
+
+  it("updateProfile - 성별을 수정할 수 있다", async () => {
+    const result = await caller(userCtx).user.updateProfile({ gender: "female" });
+    expect(result.success).toBe(true);
+  });
+
+  it("updateProfile - 생년월일을 수정할 수 있다", async () => {
+    const result = await caller(userCtx).user.updateProfile({ birthDate: "2000-12-25" });
+    expect(result.success).toBe(true);
+  });
+
+  it("updateProfile - 잘못된 생년월일 형식은 에러를 반환한다", async () => {
+    await expect(
+      caller(userCtx).user.updateProfile({ birthDate: "20001225" })
+    ).rejects.toThrow();
+  });
+
+  it("updateProfile - 비인증 사용자는 에러를 반환한다", async () => {
+    await expect(
+      caller(anonCtx).user.updateProfile({ name: "해커" })
+    ).rejects.toThrow();
+  });
+
+  it("profile - 관리자도 프로필을 조회할 수 있다", async () => {
+    const result = await caller(adminCtx).user.profile();
+    expect(result).toBeDefined();
+    expect(result.id).toBe(1);
+    expect(result.role).toBe("admin");
   });
 });

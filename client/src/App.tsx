@@ -16,6 +16,10 @@ import SocialPage from "./pages/SocialPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import MyPage from "./pages/MyPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import RegistrationCompletePage from "./pages/RegistrationCompletePage";
 
 function Router() {
   return (
@@ -23,6 +27,12 @@ function Router() {
       {/* Auth routes - no AppLayout */}
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
+
+      {/* Standalone pages - no AppLayout */}
+      <Route path="/mypage" component={MyPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/tournament/:id/register/complete" component={RegistrationCompletePage} />
 
       {/* Admin route - no AppLayout */}
       <Route path="/admin" component={AdminPage} />

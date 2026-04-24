@@ -95,6 +95,17 @@ export async function updateUserRole(userId: number, role: "user" | "organizer" 
   await db.update(users).set({ role }).where(eq(users.id, userId));
 }
 
+export async function updateUserProfile(userId: number, data: { name?: string; gender?: "male" | "female"; birthDate?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  const updateSet: Record<string, unknown> = {};
+  if (data.name !== undefined) updateSet.name = data.name;
+  if (data.gender !== undefined) updateSet.gender = data.gender;
+  if (data.birthDate !== undefined) updateSet.birthDate = data.birthDate;
+  if (Object.keys(updateSet).length === 0) return;
+  await db.update(users).set(updateSet).where(eq(users.id, userId));
+}
+
 // ─── Tournaments ─────────────────────────────────────────
 export async function createTournament(data: InsertTournament) {
   const db = await getDb();

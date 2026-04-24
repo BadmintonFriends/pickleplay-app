@@ -64,11 +64,11 @@ export default function AppHeader() {
             {menuOpen && (
               <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
                 <button
-                  onClick={() => { setMenuOpen(false); navigate("/my-registrations"); }}
+                  onClick={() => { setMenuOpen(false); navigate("/mypage"); }}
                   className="w-full text-left px-3 py-2 text-xs text-[#1a1a2e] hover:bg-gray-50 flex items-center gap-2"
                 >
                   <User className="w-3.5 h-3.5 text-gray-400" />
-                  내 접수 내역
+                  마이페이지
                 </button>
                 <div className="border-t border-gray-100 my-0.5" />
                 <button

@@ -58,7 +58,7 @@ export default function RegistrationPage() {
   const registerMutation = trpc.registration.create.useMutation({
     onSuccess: (data) => {
       toast.success("참가 신청이 완료되었습니다!", { description: `접수번호: ${data.registrationNumber}` });
-      navigate("/my-registrations");
+      navigate(`/tournament/${tournamentId}/register/complete`);
     },
     onError: (err) => {
       toast.error("접수 실패", { description: err.message });
@@ -69,7 +69,7 @@ export default function RegistrationPage() {
   const bulkRegisterMutation = trpc.registration.bulkCreate.useMutation({
     onSuccess: (data) => {
       toast.success(`${data.count}건 일괄 접수 완료!`);
-      navigate("/my-registrations");
+      navigate(`/tournament/${tournamentId}/register/complete`);
     },
     onError: (err) => {
       toast.error("일괄 접수 실패", { description: err.message });
