@@ -42,7 +42,7 @@ export default function RegistrationPage() {
   const [tab, setTab] = useState<TabType>("direct");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedAgeGroupId, setSelectedAgeGroupId] = useState<number | null>(null);
-  const [isSelfParticipant, setIsSelfParticipant] = useState(true);
+  // isSelfParticipant는 제출 시 참가자 전화번호와 로그인 사용자 전화번호를 자동 비교하여 결정
   const [players, setPlayers] = useState<PlayerForm[]>([emptyPlayer()]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -92,6 +92,28 @@ export default function RegistrationPage() {
     () => tournament?.sizeOptions ? JSON.parse(tournament.sizeOptions) : [],
     [tournament?.sizeOptions]
   );
+
+  // 종목 정렬: 종목 타입(남복→여복→혼복→남단→여단) > 급수(오픈부→2부→3부→신인부)
+  const sortedEvents = useMemo(() => {
+    if (!tournament?.events) return [];
+    const typeOrder: Record<string, number> = { "남복": 0, "여복": 1, "혼복": 2, "남단": 3, "여단": 4 };
+    const levelOrder: Record<string, number> = { "오픈부": 0, "1부": 1, "2부": 2, "3부": 3, "4부": 4, "신인부": 5 };
+    return [...tournament.events].sort((a: any, b: any) => {
+      const typeA = typeOrder[a.eventType] ?? 99;
+      const typeB = typeOrder[b.eventType] ?? 99;
+      if (typeA !== typeB) return typeA - typeB;
+      const levelA = levelOrder[a.skillLevel] ?? 99;
+      const levelB = levelOrder[b.skillLevel] ?? 99;
+      return levelA - levelB;
+    });
+  }, [tournament?.events]);
+
+  // 본인 참가 여부 자동 판단: 참가자 중 로그인 사용자 전화번호와 일치하는 선수가 있으면 본인 참가
+  const computeIsSelfParticipant = useCallback((): boolean => {
+    if (!user?.phone) return false;
+    const userPhone = user.phone.replace(/\D/g, "");
+    return players.some(p => p.phone.replace(/\D/g, "") === userPhone);
+  }, [user, players]);
 
   // Handle player count based on event type
   const handleEventChange = useCallback((eventId: number) => {
@@ -150,11 +172,12 @@ export default function RegistrationPage() {
     const err = validateDirect();
     if (err) { toast.error(err); return; }
     setSubmitting(true);
+    const isSelf = computeIsSelfParticipant();
     registerMutation.mutate({
       tournamentId,
       tournamentEventId: selectedEventId!,
       ageGroupId: selectedAgeGroupId ?? undefined,
-      isSelfParticipant,
+      isSelfParticipant: isSelf,
       players: players.map(p => ({
         name: p.name.trim(),
         birthDate: p.birthDate,
@@ -403,7 +426,7 @@ export default function RegistrationPage() {
           <div className="bg-card rounded-2xl p-4  border border-line-strong">
             <h3 className="text-sm font-bold text-foreground mb-3">종목 선택</h3>
             <div className="grid grid-cols-2 gap-2">
-              {tournament.events.map((event: any) => {
+              {sortedEvents.map((event: any) => {
                 const isFull = event.currentTeams >= event.maxTeams;
                 const isSelected = selectedEventId === event.id;
                 const ec = getEventColor(event.eventType);
@@ -457,33 +480,7 @@ export default function RegistrationPage() {
             </div>
           )}
 
-          {/* Self Participant Toggle */}
-          <div className="bg-card rounded-2xl p-4  border border-line-strong">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-foreground">본인 참가 여부</h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">대리 신청 시 '아니오' 선택</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsSelfParticipant(true)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    isSelfParticipant ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  예
-                </button>
-                <button
-                  onClick={() => setIsSelfParticipant(false)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    !isSelfParticipant ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  아니오
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* 본인 참가 여부는 선수 전화번호와 로그인 사용자 전화번호를 자동 비교하여 결정됩니다 */}
 
           {/* Player Forms */}
           {players.map((player, idx) => (
