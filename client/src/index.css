@@ -44,9 +44,9 @@
   --color-optic: oklch(0.92 0.22 120);
   --color-optic-foreground: oklch(0.13 0.01 0);
   --color-optic-deep: oklch(0.83 0.2 120);
-  --color-ink: oklch(0.13 0.01 0);
-  --color-ink-2: oklch(0.17 0.005 0);
-  --color-ink-3: oklch(0.22 0.005 0);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
   --color-court-green: oklch(0.40 0.10 155);
   --color-court-green-deep: oklch(0.30 0.08 155);
   --color-signal-red: oklch(0.58 0.22 25);
@@ -54,10 +54,49 @@
   --font-display: 'Archivo Black', sans-serif;
 }
 
-/* PicklePlay Dark Theme (default) */
+/* ===== Light Theme (default) ===== */
 :root {
   --radius: 0.75rem;
-  /* Dark theme tokens */
+  --background: oklch(0.98 0 0);
+  --foreground: oklch(0.13 0.01 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.01 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.01 0);
+  --primary: oklch(0.55 0.18 120);
+  --primary-foreground: oklch(0.13 0.01 0);
+  --secondary: oklch(0.95 0.005 0);
+  --secondary-foreground: oklch(0.30 0 0);
+  --muted: oklch(0.95 0.005 0);
+  --muted-foreground: oklch(0.50 0 0);
+  --accent: oklch(0.95 0.005 0);
+  --accent-foreground: oklch(0.13 0.01 0);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.90 0 0);
+  --input: oklch(0.90 0 0);
+  --ring: oklch(0.55 0.18 120);
+  --chart-1: oklch(0.55 0.18 120);
+  --chart-2: oklch(0.45 0.15 120);
+  --chart-3: oklch(0.40 0.10 155);
+  --chart-4: oklch(0.50 0 0);
+  --chart-5: oklch(0.70 0 0);
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.13 0.01 0);
+  --sidebar-primary: oklch(0.55 0.18 120);
+  --sidebar-primary-foreground: oklch(0.13 0.01 0);
+  --sidebar-accent: oklch(0.95 0.005 0);
+  --sidebar-accent-foreground: oklch(0.13 0.01 0);
+  --sidebar-border: oklch(0.90 0 0);
+  --sidebar-ring: oklch(0.55 0.18 120);
+  /* Ink shades for light mode */
+  --ink: oklch(0.95 0.005 0);
+  --ink-2: oklch(0.93 0.005 0);
+  --ink-3: oklch(0.96 0.005 0);
+}
+
+/* ===== Dark Theme ===== */
+.dark {
   --background: oklch(0.13 0.01 0);
   --foreground: oklch(0.98 0 0);
   --card: oklch(0.17 0.005 0);
@@ -90,6 +129,10 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.25 0 0 / 0.5);
   --sidebar-ring: oklch(0.92 0.22 120);
+  /* Ink shades for dark mode */
+  --ink: oklch(0.13 0.01 0);
+  --ink-2: oklch(0.17 0.005 0);
+  --ink-3: oklch(0.22 0.005 0);
 }
 
 @layer base {
@@ -147,6 +190,10 @@
 /* Desktop background for app container */
 @media (min-width: 1024px) {
   body {
+    background: oklch(0.95 0 0);
+  }
+  .dark body,
+  body:is(.dark *) {
     background: oklch(0.10 0.01 0);
   }
 }
@@ -176,12 +223,21 @@
   box-shadow: 0 0 24px rgba(212, 255, 61, 0.2);
 }
 
-/* Line divider tokens */
+/* Line divider tokens — theme-aware */
 .border-line {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--border);
 }
 
 .border-line-strong {
+  border-color: var(--input);
+}
+
+/* Dark-specific overrides for line dividers */
+.dark .border-line {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .border-line-strong {
   border-color: rgba(255, 255, 255, 0.15);
 }
 

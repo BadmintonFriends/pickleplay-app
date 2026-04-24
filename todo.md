@@ -152,3 +152,10 @@
 - [x] NotFound 페이지 디자인 업데이트
 - [x] TermsPage, PrivacyPage 디자인 업데이트
 - [x] vitest 54개 테스트 통과 확인
+
+## Phase 19: 다크모드/라이트모드 전환 기능 (2026-04-24)
+- [x] 라이트 테마 CSS 변수 정의 (index.css :root 블록)
+- [x] ThemeContext 전환 로직 구현 (localStorage 저장, 시스템 설정 감지)
+- [x] AppHeader에 다크/라이트 토글 버튼 추가
+- [x] 라이트 모드에서 전체 페이지 가독성 확인
+- [x] vitest 54개 테스트 통과 확인

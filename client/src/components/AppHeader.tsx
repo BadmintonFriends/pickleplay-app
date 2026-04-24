@@ -1,11 +1,12 @@
 /*
  * AppHeader — PicklePlay 상단 헤더 바
- * Design System v1.0: Ink 배경, Optic Yellow 액센트
+ * Design System v1.0: 다크/라이트 테마 전환 지원
  * - 좌측: P-Mark 로고 + PICKLEPLAY. 브랜드명 (Archivo Black Italic)
- * - 우측: 로그인/회원가입 버튼 또는 사용자 메뉴
+ * - 우측: 테마 토글 + 로그인/회원가입 버튼 또는 사용자 메뉴
  */
 import { useAuth } from "@/_core/hooks/useAuth";
-import { LogIn, User, LogOut } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { LogIn, User, LogOut, Sun, Moon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
 
@@ -14,6 +15,7 @@ const LOGO_URL =
 
 export default function AppHeader() {
   const { user, isAuthenticated, loading, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [, navigate] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -57,7 +59,22 @@ export default function AppHeader() {
           PICKLEPLAY<span className="text-primary">.</span>
         </span>
       </button>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
+        {/* Theme Toggle */}
+        {toggleTheme && (
+          <button
+            onClick={toggleTheme}
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary hover:bg-accent transition-colors"
+            aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-primary" />
+            ) : (
+              <Moon className="w-4 h-4 text-foreground" />
+            )}
+          </button>
+        )}
+
         {loading ? (
           <div className="w-16 h-7 bg-ink-3 rounded-full animate-pulse" />
         ) : isAuthenticated && user ? (
