@@ -73,14 +73,14 @@ const fadeUp = {
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   draft: { label: "준비 중", color: "bg-muted text-muted-foreground", icon: Settings },
-  open: { label: "접수 중", color: "bg-court-green/20 text-court-green", icon: PlayCircle },
+  open: { label: "접수 중", color: "bg-primary/20 text-primary", icon: PlayCircle },
   closed: { label: "접수 마감", color: "bg-primary/20 text-primary", icon: PauseCircle },
   cancelled: { label: "취소", color: "bg-destructive/20 text-destructive", icon: Ban },
 };
 
 const paymentStatusConfig: Record<string, { label: string; color: string }> = {
   unpaid: { label: "미입금", color: "bg-primary/10 text-primary border-primary/20" },
-  paid: { label: "입금완료", color: "bg-court-green/10 text-court-green border-court-green/20" },
+  paid: { label: "입금완료", color: "bg-primary/10 text-primary border-primary/20" },
   refunded: { label: "환불", color: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
@@ -851,7 +851,7 @@ export default function AdminPage() {
                   </div>
                   <button
                     onClick={handleExcelExport}
-                    className="flex items-center gap-1.5 bg-green-600 text-white text-[10px] font-bold px-3 py-2.5 rounded-xl hover:bg-green-700 transition-colors whitespace-nowrap"
+                    className="flex items-center gap-1.5 bg-primary text-white text-[10px] font-bold px-3 py-2.5 rounded-xl hover:bg-optic-deep transition-colors whitespace-nowrap"
                   >
                     <Download className="w-3.5 h-3.5" />
                     엑셀
@@ -866,7 +866,7 @@ export default function AdminPage() {
                       <p className="text-[9px] text-muted-foreground">전체</p>
                     </div>
                     <div className="bg-card rounded-lg p-2.5 text-center border border-line-strong">
-                      <p className="text-lg font-black text-court-green">{regData.filter((r: any) => r.paymentStatus === "paid").length}</p>
+                      <p className="text-lg font-black text-primary">{regData.filter((r: any) => r.paymentStatus === "paid").length}</p>
                       <p className="text-[9px] text-muted-foreground">입금완료</p>
                     </div>
                     <div className="bg-card rounded-lg p-2.5 text-center border border-line-strong">
@@ -986,7 +986,7 @@ export default function AdminPage() {
 
                           {/* SMS Notice for paid */}
                           {reg.paymentStatus === "paid" && (
-                            <div className="mt-2 flex items-center gap-1 text-[9px] text-court-green bg-green-50 rounded-md px-2 py-1">
+                            <div className="mt-2 flex items-center gap-1 text-[9px] text-primary bg-primary/10 rounded-md px-2 py-1">
                               <MessageSquare className="w-3 h-3" />
                               입금 확인 SMS가 발송되었습니다
                             </div>

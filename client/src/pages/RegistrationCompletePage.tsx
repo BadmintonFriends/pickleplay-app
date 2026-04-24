@@ -53,7 +53,7 @@ export default function RegistrationCompletePage() {
 
       <div className="px-4 pt-4 space-y-4">
         {/* Success Banner */}
-        <div className="bg-gradient-to-br from-court-green to-court-green/80 rounded-2xl p-6 text-center">
+        <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-6 text-center">
           <CheckCircle2 className="w-16 h-16 mx-auto mb-3 text-white opacity-90" />
           <h1 className="text-xl font-bold mb-1 text-white">참가 신청 완료!</h1>
           <p className="text-sm text-white/80">

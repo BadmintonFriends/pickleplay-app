@@ -19,13 +19,13 @@ import { useLocation } from "wouter";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   pending: { label: "입금대기", color: "bg-primary/20 text-primary" },
-  confirmed: { label: "참가확정", color: "bg-court-green/20 text-court-green" },
+  confirmed: { label: "참가확정", color: "bg-primary/20 text-primary" },
   cancelled: { label: "취소됨", color: "bg-destructive/20 text-destructive" },
 };
 
 const paymentLabels: Record<string, { label: string; color: string }> = {
   unpaid: { label: "미입금", color: "bg-primary/20 text-primary" },
-  paid: { label: "입금완료", color: "bg-court-green/20 text-court-green" },
+  paid: { label: "입금완료", color: "bg-primary/20 text-primary" },
   refunded: { label: "환불", color: "bg-muted text-muted-foreground" },
 };
 

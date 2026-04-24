@@ -21,13 +21,13 @@ const fadeUp = {
 
 const statusMap: Record<string, { label: string; icon: any; color: string; bg: string }> = {
   pending: { label: "접수 대기", icon: Clock, color: "text-primary", bg: "bg-primary/10" },
-  confirmed: { label: "접수 확정", icon: CheckCircle2, color: "text-court-green", bg: "bg-court-green/10" },
+  confirmed: { label: "접수 확정", icon: CheckCircle2, color: "text-primary", bg: "bg-primary/10" },
   cancelled: { label: "취소됨", icon: XCircle, color: "text-muted-foreground", bg: "bg-ink-3" },
 };
 
 const paymentMap: Record<string, { label: string; color: string; bg: string }> = {
   unpaid: { label: "미입금", color: "text-destructive", bg: "bg-destructive/10" },
-  paid: { label: "입금완료", color: "text-court-green", bg: "bg-court-green/10" },
+  paid: { label: "입금완료", color: "text-primary", bg: "bg-primary/10" },
   refunded: { label: "환불", color: "text-muted-foreground", bg: "bg-ink-3" },
 };
 

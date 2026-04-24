@@ -26,7 +26,7 @@ const fadeUp = {
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: "준비 중", color: "text-muted-foreground", bg: "bg-muted" },
-  open: { label: "접수 중", color: "text-court-green", bg: "bg-court-green/20" },
+  open: { label: "접수 중", color: "text-primary", bg: "bg-primary/20" },
   closed: { label: "접수 마감", color: "text-destructive", bg: "bg-destructive/20" },
   cancelled: { label: "취소됨", color: "text-muted-foreground", bg: "bg-muted" },
 };

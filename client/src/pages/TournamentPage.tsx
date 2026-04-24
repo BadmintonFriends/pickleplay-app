@@ -75,7 +75,7 @@ export default function TournamentPage() {
                         공식 대회
                       </span>
                       {t.status === "open" && (
-                        <span className="text-[10px] font-bold bg-court-green text-white px-2.5 py-1 rounded-full">
+                        <span className="text-[10px] font-bold bg-primary text-primary-foreground px-2.5 py-1 rounded-full">
                           접수 중
                         </span>
                       )}
@@ -113,12 +113,12 @@ export default function TournamentPage() {
 
                       {t.status === "open" && (
                         <div className="flex items-start gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-court-green/20 flex items-center justify-center shrink-0 mt-0.5">
-                            <CheckCircle2 className="w-4 h-4 text-court-green" strokeWidth={2.2} />
+                          <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <CheckCircle2 className="w-4 h-4 text-primary" strokeWidth={2.2} />
                           </div>
                           <div>
                             <p className="text-overline text-muted-foreground">참가 신청</p>
-                            <p className="text-sm font-bold text-court-green mt-0.5">접수 중</p>
+                            <p className="text-sm font-bold text-primary mt-0.5">접수 중</p>
                             <p className="text-xs text-muted-foreground mt-0.5">지금 바로 참가 신청하세요!</p>
                           </div>
                         </div>

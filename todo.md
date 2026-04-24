@@ -179,3 +179,10 @@
 - [x] 라이트 모드 페이지별 가독성 수정
 - [x] 브라우저 라이트/다크 전환 최종 검증
 - [x] vitest 테스트 통과 확인
+
+## Phase 21: 라이트 모드 primary 명도 낮춤 + 초록 서브 컬러 제거
+- [x] index.css 라이트 primary oklch 명도 낮춤 (0.92 → 0.82 수준)
+- [x] index.css court-green, secondary green 계열 변수 제거/대체
+- [x] 페이지에서 bg-court-green, text-court-green, bg-green-* 등 하드코딩 초록 제거
+- [x] 배지/태그 초록 색상을 primary 또는 중립 색상으로 대체
+- [x] 브라우저 검증 및 vitest 54개 통과 확인
