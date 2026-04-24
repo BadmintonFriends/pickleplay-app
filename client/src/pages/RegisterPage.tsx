@@ -26,6 +26,18 @@ export default function RegisterPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
+  // URL 파라미터에서 전화번호 자동 채움
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const phoneParam = params.get("phone");
+    if (phoneParam) {
+      const digits = phoneParam.replace(/\D/g, "");
+      if (digits.length >= 10) {
+        setPhone(formatPhone(digits));
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       navigate("/");

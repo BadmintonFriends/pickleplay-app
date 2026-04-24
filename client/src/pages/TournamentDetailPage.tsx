@@ -286,33 +286,43 @@ export default function TournamentDetailPage() {
       {/* CTA: Register - 로그인 안내 포함 */}
       {tournament.status === "open" && (
         <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={6}>
-          {!isAuthenticated && (
-            <div className="bg-blue-50 rounded-xl p-3 mb-3 flex items-start gap-2.5 border border-blue-100">
-              <LogIn className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-blue-800">로그인 후 참가 신청이 가능합니다</p>
-                <p className="text-[10px] text-blue-600 mt-0.5">
-                  아직 계정이 없으신가요? 간편하게 회원가입하고 참가 신청하세요!
-                </p>
+          {!isAuthenticated ? (
+            <div className="space-y-2.5">
+              <div className="bg-blue-50 rounded-xl p-3 flex items-start gap-2.5 border border-blue-100">
+                <LogIn className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-blue-800">참가 신청을 위해 로그인이 필요합니다</p>
+                  <p className="text-[10px] text-blue-600 mt-0.5">
+                    이미 계정이 있으시면 로그인, 처음이시면 회원가입을 진행해주세요.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => navigate(`/login?returnTo=/tournament/${tournamentId}/register`)}
+                  className="bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  <LogIn className="w-4 h-4" />
+                  로그인
+                </button>
+                <button
+                  onClick={() => navigate(`/register?returnTo=/tournament/${tournamentId}/register`)}
+                  className="bg-[#1a1a2e] text-white text-sm font-black py-3.5 rounded-xl hover:bg-[#2a2a3e] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  <Users className="w-4 h-4" />
+                  회원가입
+                </button>
               </div>
             </div>
+          ) : (
+            <button
+              onClick={handleRegisterClick}
+              className="w-full bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              참가 신청하기
+            </button>
           )}
-          <button
-            onClick={handleRegisterClick}
-            className="w-full bg-[#C8E632] text-[#1a1a2e] text-sm font-black py-3.5 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
-          >
-            {isAuthenticated ? (
-              <>
-                <CheckCircle2 className="w-4 h-4" />
-                참가 신청하기
-              </>
-            ) : (
-              <>
-                <LogIn className="w-4 h-4" />
-                로그인하고 참가 신청하기
-              </>
-            )}
-          </button>
         </motion.section>
       )}
 
