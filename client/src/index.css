@@ -41,9 +41,9 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   /* PicklePlay Design System v1.0 custom colors */
-  --color-optic: oklch(0.92 0.22 120);
-  --color-optic-foreground: oklch(0.13 0.01 0);
-  --color-optic-deep: oklch(0.83 0.2 120);
+  --color-optic: var(--optic);
+  --color-optic-foreground: var(--optic-foreground);
+  --color-optic-deep: var(--optic-deep);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
@@ -57,70 +57,92 @@
 /* ===== Light Theme (default) ===== */
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.13 0.01 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0.01 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.01 0);
-  --primary: oklch(0.55 0.18 120);
-  --primary-foreground: oklch(0.13 0.01 0);
-  --secondary: oklch(0.95 0.005 0);
-  --secondary-foreground: oklch(0.30 0 0);
-  --muted: oklch(0.95 0.005 0);
-  --muted-foreground: oklch(0.50 0 0);
-  --accent: oklch(0.95 0.005 0);
-  --accent-foreground: oklch(0.13 0.01 0);
-  --destructive: oklch(0.58 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.90 0 0);
-  --input: oklch(0.90 0 0);
-  --ring: oklch(0.55 0.18 120);
-  --chart-1: oklch(0.55 0.18 120);
-  --chart-2: oklch(0.45 0.15 120);
+  /* Core surfaces — warm gray base, cards slightly lighter */
+  --background: oklch(0.92 0.006 80);
+  --foreground: oklch(0.15 0.01 0);
+  --card: oklch(0.97 0.003 80);
+  --card-foreground: oklch(0.15 0.01 0);
+  --popover: oklch(0.97 0.003 80);
+  --popover-foreground: oklch(0.15 0.01 0);
+  /* Primary — bright Optic Yellow for light mode (형광 #D4FF3D) */
+  --primary: oklch(0.92 0.22 120);
+  --primary-foreground: oklch(0.18 0.01 0);
+  /* Secondary */
+  --secondary: oklch(0.88 0.01 80);
+  --secondary-foreground: oklch(0.20 0.01 0);
+  /* Muted */
+  --muted: oklch(0.88 0.005 80);
+  --muted-foreground: oklch(0.42 0.01 0);
+  /* Accent */
+  --accent: oklch(0.88 0.01 80);
+  --accent-foreground: oklch(0.15 0.01 0);
+  /* Destructive */
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  /* Borders & inputs */
+  --border: oklch(0.83 0.008 80);
+  --input: oklch(0.83 0.008 80);
+  --ring: oklch(0.85 0.20 120);
+  /* Charts */
+  --chart-1: oklch(0.85 0.20 120);
+  --chart-2: oklch(0.75 0.18 120);
   --chart-3: oklch(0.40 0.10 155);
-  --chart-4: oklch(0.50 0 0);
-  --chart-5: oklch(0.70 0 0);
-  --sidebar: oklch(0.98 0 0);
-  --sidebar-foreground: oklch(0.13 0.01 0);
-  --sidebar-primary: oklch(0.55 0.18 120);
-  --sidebar-primary-foreground: oklch(0.13 0.01 0);
-  --sidebar-accent: oklch(0.95 0.005 0);
-  --sidebar-accent-foreground: oklch(0.13 0.01 0);
-  --sidebar-border: oklch(0.90 0 0);
-  --sidebar-ring: oklch(0.55 0.18 120);
-  /* Ink shades for light mode */
-  --ink: oklch(0.95 0.005 0);
-  --ink-2: oklch(0.93 0.005 0);
-  --ink-3: oklch(0.96 0.005 0);
+  --chart-4: oklch(0.55 0 0);
+  --chart-5: oklch(0.72 0 0);
+  /* Sidebar */
+  --sidebar: oklch(0.92 0.006 80);
+  --sidebar-foreground: oklch(0.15 0.01 0);
+  --sidebar-primary: oklch(0.92 0.22 120);
+  --sidebar-primary-foreground: oklch(0.18 0.01 0);
+  --sidebar-accent: oklch(0.88 0.01 80);
+  --sidebar-accent-foreground: oklch(0.15 0.01 0);
+  --sidebar-border: oklch(0.83 0.008 80);
+  --sidebar-ring: oklch(0.85 0.20 120);
+  /* Ink shades for light mode — distinct warm gray */
+  --ink: oklch(0.88 0.006 80);
+  --ink-2: oklch(0.85 0.006 80);
+  --ink-3: oklch(0.90 0.005 80);
+  /* Optic brand colors — vivid for light too */
+  --optic: oklch(0.92 0.22 120);
+  --optic-foreground: oklch(0.18 0.01 0);
+  --optic-deep: oklch(0.83 0.20 120);
 }
 
 /* ===== Dark Theme ===== */
 .dark {
+  /* Core surfaces */
   --background: oklch(0.13 0.01 0);
   --foreground: oklch(0.98 0 0);
   --card: oklch(0.17 0.005 0);
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.17 0.005 0);
   --popover-foreground: oklch(0.98 0 0);
+  /* Primary — bright optic yellow for dark mode */
   --primary: oklch(0.92 0.22 120);
   --primary-foreground: oklch(0.13 0.01 0);
+  /* Secondary */
   --secondary: oklch(0.22 0.005 0);
   --secondary-foreground: oklch(0.85 0 0);
+  /* Muted */
   --muted: oklch(0.22 0.005 0);
   --muted-foreground: oklch(0.65 0 0);
+  /* Accent */
   --accent: oklch(0.22 0.005 0);
   --accent-foreground: oklch(0.98 0 0);
+  /* Destructive */
   --destructive: oklch(0.58 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
+  /* Borders & inputs */
   --border: oklch(0.25 0 0 / 0.5);
   --input: oklch(0.25 0 0 / 0.5);
   --ring: oklch(0.92 0.22 120);
+  /* Charts */
   --chart-1: oklch(0.92 0.22 120);
   --chart-2: oklch(0.83 0.2 120);
   --chart-3: oklch(0.40 0.10 155);
   --chart-4: oklch(0.65 0 0);
   --chart-5: oklch(0.45 0 0);
+  /* Sidebar */
   --sidebar: oklch(0.13 0.01 0);
   --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.92 0.22 120);
@@ -133,6 +155,10 @@
   --ink: oklch(0.13 0.01 0);
   --ink-2: oklch(0.17 0.005 0);
   --ink-3: oklch(0.22 0.005 0);
+  /* Optic brand colors — vivid for dark */
+  --optic: oklch(0.92 0.22 120);
+  --optic-foreground: oklch(0.13 0.01 0);
+  --optic-deep: oklch(0.83 0.2 120);
 }
 
 @layer base {
@@ -187,10 +213,10 @@
   }
 }
 
-/* Desktop background for app container */
+/* Desktop background for app container — theme-aware */
 @media (min-width: 1024px) {
   body {
-    background: oklch(0.95 0 0);
+    background: oklch(0.88 0.006 80);
   }
   .dark body,
   body:is(.dark *) {
@@ -214,12 +240,18 @@
   text-transform: uppercase;
 }
 
-/* Optic glow effect */
+/* Optic glow effect — theme-aware */
 .glow-optic {
+  box-shadow: 0 0 48px oklch(0.92 0.22 120 / 0.3);
+}
+.dark .glow-optic {
   box-shadow: 0 0 48px rgba(212, 255, 61, 0.35);
 }
 
 .glow-optic-sm {
+  box-shadow: 0 0 24px oklch(0.92 0.22 120 / 0.18);
+}
+.dark .glow-optic-sm {
   box-shadow: 0 0 24px rgba(212, 255, 61, 0.2);
 }
 
@@ -232,7 +264,6 @@
   border-color: var(--input);
 }
 
-/* Dark-specific overrides for line dividers */
 .dark .border-line {
   border-color: rgba(255, 255, 255, 0.08);
 }

@@ -159,3 +159,23 @@
 - [x] AppHeader에 다크/라이트 토글 버튼 추가
 - [x] 라이트 모드에서 전체 페이지 가독성 확인
 - [x] vitest 54개 테스트 통과 확인
+
+## Phase 20: 라이트 모드 메인 색상 최적화 (2026-04-24)
+- [ ] index.css 라이트 테마 primary 색상 조정 (가독성 개선)
+- [ ] 라이트 모드 glow/border-line/desktop-bg 유틸리티 테마 반응형 수정
+- [ ] HomePage 라이트 모드 최적화 (히어로, 카드, 배지)
+- [ ] TournamentPage 라이트 모드 최적화
+- [ ] TournamentDetailPage 라이트 모드 최적화
+- [ ] LoginPage/RegisterPage 라이트 모드 최적화
+- [ ] MyPage 라이트 모드 최적화
+- [ ] AdminPage 라이트 모드 최적화
+- [ ] 커밍쑨/기타 페이지 라이트 모드 최적화
+- [ ] 브라우저에서 라이트/다크 전환 최종 검증
+- [ ] vitest 54개 테스트 통과 확인
+
+## Phase 20b: 라이트 모드 밝은 형광 Optic Yellow 적용
+- [x] index.css 라이트 테마 primary를 밝은 형광 Optic Yellow(#D4FF3D)로 변경
+- [x] primary-foreground를 검정으로 (밝은 배경 위 어두운 텍스트)
+- [x] 라이트 모드 페이지별 가독성 수정
+- [x] 브라우저 라이트/다크 전환 최종 검증
+- [x] vitest 테스트 통과 확인
