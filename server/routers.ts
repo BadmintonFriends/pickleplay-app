@@ -538,7 +538,7 @@ const smsAuthRouter = router({
   login: publicProcedure
     .input(z.object({
       phone: z.string().min(10),
-      code: z.string().length(4, "인증번호 4자리를 입력해주세요"),
+      code: z.string().length(6, "인증번호 6자리를 입력해주세요"),
     }))
     .mutation(async ({ ctx, input }) => {
       const phone = normalizePhoneToDigits(input.phone);
@@ -570,7 +570,7 @@ const smsAuthRouter = router({
   register: publicProcedure
     .input(z.object({
       phone: z.string().min(10),
-      code: z.string().length(4, "인증번호 4자리를 입력해주세요"),
+      code: z.string().length(6, "인증번호 6자리를 입력해주세요"),
       name: z.string().min(1, "이름을 입력해주세요"),
       gender: z.enum(["male", "female"]),
       birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "생년월일 형식: YYYY-MM-DD"),

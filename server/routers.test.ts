@@ -141,7 +141,7 @@ vi.mock("./storage", () => ({
 vi.mock("./sms", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
   verifyCode: vi.fn().mockImplementation(async (_phone: string, code: string) => {
-    return { success: code === "1234" };
+    return { success: code === "123456" };
   }),
   normalizePhoneToDigits: vi.fn().mockImplementation((phone: string) => {
     const digits = phone.replace(/\D/g, "");
@@ -603,7 +603,7 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.smsAuth.login({ phone: "01012345678", code: "1234" });
+    const result = await caller.smsAuth.login({ phone: "01012345678", code: "123456" });
     expect(result.success).toBe(true);
     expect(result.user.name).toBe("테스트유저");
     expect(ctx.res.cookie).toHaveBeenCalled();
@@ -615,7 +615,7 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.smsAuth.login({ phone: "01012345678", code: "9999" })).rejects.toThrow("인증번호가 올바르지 않습니다");
+    await expect(caller.smsAuth.login({ phone: "01012345678", code: "999999" })).rejects.toThrow("인증번호가 올바르지 않습니다");
   });
 
   it("rejects login for unregistered phone", async () => {
@@ -624,7 +624,7 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.smsAuth.login({ phone: "01099998888", code: "1234" })).rejects.toThrow("가입되지 않은");
+    await expect(caller.smsAuth.login({ phone: "01099998888", code: "123456" })).rejects.toThrow("가입되지 않은");
   });
 
   it("registers new user with correct code", async () => {
@@ -635,7 +635,7 @@ describe("smsAuth router", () => {
     const caller = appRouter.createCaller(ctx);
     const result = await caller.smsAuth.register({
       phone: "01099998888",
-      code: "1234",
+      code: "123456",
       name: "신규유저",
       gender: "male",
       birthDate: "1990-01-01",
@@ -655,7 +655,7 @@ describe("smsAuth router", () => {
     const caller = appRouter.createCaller(ctx);
     await expect(caller.smsAuth.register({
       phone: "01099998888",
-      code: "0000",
+      code: "000000",
       name: "신규",
       gender: "female",
       birthDate: "1995-06-15",
@@ -672,7 +672,7 @@ describe("smsAuth router", () => {
     const caller = appRouter.createCaller(ctx);
     await expect(caller.smsAuth.register({
       phone: "01012345678",
-      code: "1234",
+      code: "123456",
       name: "중복",
       gender: "male",
       birthDate: "1990-01-01",
@@ -689,7 +689,7 @@ describe("smsAuth router", () => {
     const caller = appRouter.createCaller(ctx);
     await expect(caller.smsAuth.register({
       phone: "01099998888",
-      code: "1234",
+      code: "123456",
       name: "신규",
       gender: "male",
       birthDate: "1990-01-01",
