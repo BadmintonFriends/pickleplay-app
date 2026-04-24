@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Phone, ShieldCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, Phone, ShieldCheck, Loader2, UserPlus } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function LoginPage() {
@@ -15,37 +15,61 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState("");
+  const [showRegisterBanner, setShowRegisterBanner] = useState(false);
+
+  // returnTo 파라미터 추출 헬퍼
+  const getReturnTo = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("returnTo");
+  };
+
+  const buildRegisterUrl = () => {
+    const returnTo = getReturnTo();
+    const phoneDigits = phone.replace(/\D/g, "");
+    const params = new URLSearchParams();
+    if (returnTo) params.set("returnTo", returnTo);
+    if (phoneDigits.length >= 10) params.set("phone", phoneDigits);
+    const qs = params.toString();
+    return qs ? `/register?${qs}` : "/register";
+  };
 
   // 이미 로그인된 경우 홈으로 리다이렉트
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      const params = new URLSearchParams(window.location.search);
-      const returnTo = params.get("returnTo") || "/";
+      const returnTo = getReturnTo() || "/";
       navigate(returnTo);
     }
   }, [isAuthenticated, authLoading, navigate]);
 
   const sendCodeMutation = trpc.smsAuth.sendCode.useMutation({
     onSuccess: (data) => {
-      setStep("code");
-      setCountdown(180);
-      setError("");
       if (!data.isExistingUser) {
-        setError("가입되지 않은 번호입니다. 회원가입을 진행해주세요.");
+        // 미가입 번호 → 회원가입 안내 배너 표시
+        setShowRegisterBanner(true);
+        setError("");
+        // 인증번호 단계로 넘어가지 않음
+      } else {
+        setStep("code");
+        setCountdown(180);
+        setError("");
+        setShowRegisterBanner(false);
       }
     },
-    onError: (err) => setError(err.message),
+    onError: (err) => {
+      setError(err.message);
+      setShowRegisterBanner(false);
+    },
   });
 
   const loginMutation = trpc.smsAuth.login.useMutation({
     onSuccess: () => {
-      const params = new URLSearchParams(window.location.search);
-      const returnTo = params.get("returnTo") || "/";
+      const returnTo = getReturnTo() || "/";
       window.location.href = returnTo;
     },
     onError: (err) => {
       if (err.message.includes("가입되지 않은")) {
-        setError("가입되지 않은 번호입니다. 회원가입을 진행해주세요.");
+        setShowRegisterBanner(true);
+        setError("");
       } else {
         setError(err.message);
       }
@@ -69,6 +93,8 @@ export default function LoginPage() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
     setPhone(formatted);
+    setShowRegisterBanner(false);
+    setError("");
   };
 
   const handleSendCode = () => {
@@ -136,6 +162,31 @@ export default function LoginPage() {
           </CardHeader>
 
           <CardContent className="space-y-4">
+            {/* 미가입 번호 회원가입 안내 배너 */}
+            {showRegisterBanner && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <UserPlus className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900">가입되지 않은 번호입니다</p>
+                    <p className="text-xs text-blue-700 mt-0.5">
+                      입력하신 번호로 가입된 계정이 없습니다.<br />
+                      아래 버튼을 눌러 간편하게 회원가입하세요!
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate(buildRegisterUrl())}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  회원가입하기
+                </Button>
+              </div>
+            )}
+
             {step === "phone" ? (
               <>
                 <Input
@@ -193,7 +244,7 @@ export default function LoginPage() {
                 </Button>
                 <div className="flex items-center justify-between">
                   <button
-                    onClick={() => { setStep("phone"); setCode(""); setError(""); }}
+                    onClick={() => { setStep("phone"); setCode(""); setError(""); setShowRegisterBanner(false); }}
                     className="text-sm text-gray-500 hover:text-gray-700"
                   >
                     전화번호 변경
@@ -213,11 +264,7 @@ export default function LoginPage() {
               <p className="text-sm text-gray-500">
                 아직 회원이 아니신가요?{" "}
                 <button
-                  onClick={() => {
-                    const params = new URLSearchParams(window.location.search);
-                    const returnTo = params.get("returnTo");
-                    navigate(returnTo ? `/register?returnTo=${encodeURIComponent(returnTo)}` : "/register");
-                  }}
+                  onClick={() => navigate(buildRegisterUrl())}
                   className="text-[#1a1a2e] font-semibold hover:underline"
                 >
                   회원가입
