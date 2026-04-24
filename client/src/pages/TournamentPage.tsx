@@ -7,9 +7,10 @@
  */
 import AppHeader from "@/components/AppHeader";
 import { trpc } from "@/lib/trpc";
-import { Calendar, MapPin, Clock, Users, Trophy, ChevronRight, ExternalLink, Heart, CheckCircle2, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Clock, Users, Trophy, ChevronRight, ExternalLink, Heart, CheckCircle2, Loader2, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 const INDOOR_COURT = "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/indoor-court-iz6SgKFnxedoJfL48eVfzZ.webp";
 
@@ -24,7 +25,16 @@ const fadeUp = {
 
 export default function TournamentPage() {
   const [, navigate] = useLocation();
+  const { isAuthenticated } = useAuth();
   const { data: tournaments, isLoading } = trpc.tournament.list.useQuery();
+
+  const handleRegisterClick = (tournamentId: number) => {
+    if (!isAuthenticated) {
+      navigate(`/login?returnTo=/tournament/${tournamentId}/register`);
+      return;
+    }
+    navigate(`/tournament/${tournamentId}/register`);
+  };
 
   return (
     <div className="bg-[#f8f9fa]">
@@ -124,11 +134,14 @@ export default function TournamentPage() {
                       </button>
                       {t.status === "open" && (
                         <button
-                          onClick={() => navigate(`/tournament/${t.id}/register`)}
+                          onClick={() => handleRegisterClick(t.id)}
                           className="flex-1 bg-[#C8E632] text-[#1a1a2e] text-xs font-bold py-3 rounded-xl hover:bg-[#b8d62a] transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          참가 신청
+                          {isAuthenticated ? (
+                            <><CheckCircle2 className="w-3.5 h-3.5" /> 참가 신청</>
+                          ) : (
+                            <><LogIn className="w-3.5 h-3.5" /> 로그인 후 신청</>
+                          )}
                         </button>
                       )}
                     </div>

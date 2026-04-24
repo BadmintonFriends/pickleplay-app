@@ -169,6 +169,7 @@ export default function LoginPage() {
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     maxLength={6}
+                    autoComplete="one-time-code"
                     className="text-center text-2xl tracking-[0.5em] font-mono"
                     onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                     autoFocus
@@ -212,7 +213,11 @@ export default function LoginPage() {
               <p className="text-sm text-gray-500">
                 아직 회원이 아니신가요?{" "}
                 <button
-                  onClick={() => navigate("/register")}
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search);
+                    const returnTo = params.get("returnTo");
+                    navigate(returnTo ? `/register?returnTo=${encodeURIComponent(returnTo)}` : "/register");
+                  }}
                   className="text-[#1a1a2e] font-semibold hover:underline"
                 >
                   회원가입

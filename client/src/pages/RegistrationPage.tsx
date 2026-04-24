@@ -317,6 +317,43 @@ export default function RegistrationPage() {
     );
   }
 
+  // 비로그인 사용자 안내 화면
+  if (!isAuthenticated) {
+    return (
+      <div className="bg-[#f8f9fa] min-h-screen">
+        <AppHeader />
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="w-20 h-20 rounded-full bg-[#C8E632]/20 flex items-center justify-center mb-4">
+            <User className="w-10 h-10 text-[#1a1a2e]" />
+          </div>
+          <h2 className="text-lg font-bold text-[#1a1a2e] mb-2">로그인이 필요합니다</h2>
+          <p className="text-sm text-gray-500 mb-1">참가 신청을 위해 로그인해주세요.</p>
+          <p className="text-xs text-gray-400 mb-6">아직 회원이 아니신가요? 간편하게 회원가입하세요!</p>
+          <div className="flex gap-3 w-full max-w-xs">
+            <button
+              onClick={() => navigate(`/login?returnTo=/tournament/${tournamentId}/register`)}
+              className="flex-1 bg-[#1a1a2e] text-white text-sm font-bold py-3 rounded-xl hover:bg-[#2a2a3e] transition-colors"
+            >
+              로그인
+            </button>
+            <button
+              onClick={() => navigate(`/register?returnTo=/tournament/${tournamentId}/register`)}
+              className="flex-1 bg-[#C8E632] text-[#1a1a2e] text-sm font-bold py-3 rounded-xl hover:bg-[#b8d62a] transition-colors"
+            >
+              회원가입
+            </button>
+          </div>
+          <button
+            onClick={() => navigate(`/tournament/${tournamentId}`)}
+            className="mt-4 text-xs text-gray-400 hover:text-gray-600"
+          >
+            대회 정보로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#f8f9fa] pb-8">
       <AppHeader />

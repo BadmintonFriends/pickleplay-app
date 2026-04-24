@@ -30,7 +30,7 @@ export function normalizePhoneToDigits(phone: string): string {
 
 // ─── Demo Account ──────────────────────────────────────
 const DEMO_PHONE = "01000000000";
-const DEMO_CODE = "1324";
+const DEMO_CODE = "132400";
 
 export function isDemoAccount(phone: string): boolean {
   return normalizePhoneToDigits(phone) === DEMO_PHONE;

@@ -46,7 +46,9 @@ export default function RegisterPage() {
 
   const registerMutation = trpc.smsAuth.register.useMutation({
     onSuccess: () => {
-      window.location.href = "/";
+      const params = new URLSearchParams(window.location.search);
+      const returnTo = params.get("returnTo") || "/";
+      window.location.href = returnTo;
     },
     onError: (err) => {
       if (err.message.includes("이미 가입된")) {
@@ -226,6 +228,7 @@ export default function RegisterPage() {
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     maxLength={6}
+                    autoComplete="one-time-code"
                     className="text-center text-2xl tracking-[0.5em] font-mono"
                     onKeyDown={(e) => e.key === "Enter" && handleVerifyAndNext()}
                     autoFocus
@@ -355,7 +358,11 @@ export default function RegisterPage() {
                 <p className="text-sm text-gray-500">
                   이미 회원이신가요?{" "}
                   <button
-                    onClick={() => navigate("/login")}
+                    onClick={() => {
+                      const params = new URLSearchParams(window.location.search);
+                      const returnTo = params.get("returnTo");
+                      navigate(returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login");
+                    }}
                     className="text-[#1a1a2e] font-semibold hover:underline"
                   >
                     로그인
