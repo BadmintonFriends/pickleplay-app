@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, or } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -9,8 +9,6 @@ import {
   tournamentDocuments, InsertTournamentDocument,
   registrations, InsertRegistration,
   players, InsertPlayer,
-  kprRatings, InsertKprRating,
-  matchResults, InsertMatchResult,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -413,119 +411,4 @@ export async function decrementEventTeamCount(eventId: number) {
   await db.update(tournamentEvents)
     .set({ currentTeams: sql`GREATEST(${tournamentEvents.currentTeams} - 1, 0)` })
     .where(eq(tournamentEvents.id, eventId));
-}
-
-
-// ─── KPR (Korea Pickleball Ranking) ─────────────────────
-
-/** 사용자의 KPR 레이팅 조회 (없으면 null) */
-export async function getKprRating(userId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  const rows = await db.select().from(kprRatings).where(eq(kprRatings.userId, userId)).limit(1);
-  return rows[0] || null;
-}
-
-/** KPR 레이팅 생성 또는 업데이트 */
-export async function upsertKprRating(data: InsertKprRating): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db
-    .insert(kprRatings)
-    .values(data)
-    .onDuplicateKeyUpdate({
-      set: {
-        rating: sql`VALUES(rating)`,
-        totalMatches: sql`VALUES(totalMatches)`,
-        wins: sql`VALUES(wins)`,
-        losses: sql`VALUES(losses)`,
-        winStreak: sql`VALUES(winStreak)`,
-        bestRating: sql`VALUES(bestRating)`,
-        tier: sql`VALUES(tier)`,
-      },
-    });
-}
-
-/** 사용자의 KPR 레이팅 초기화 (회원가입 시) - KPL 3.00 시작 */
-export async function initKprRating(userId: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const existing = await getKprRating(userId);
-  if (!existing) {
-    await db.insert(kprRatings).values({ userId, rating: "3.00", bestRating: "3.00" });
-  }
-}
-
-/** KPR 랭킹 상위 N명 조회 */
-export async function getKprLeaderboard(limit = 20) {
-  const db = await getDb();
-  if (!db) return [];
-  const rows = await db
-    .select({
-      userId: kprRatings.userId,
-      rating: kprRatings.rating,
-      totalMatches: kprRatings.totalMatches,
-      wins: kprRatings.wins,
-      losses: kprRatings.losses,
-      winStreak: kprRatings.winStreak,
-      tier: kprRatings.tier,
-      userName: users.name,
-    })
-    .from(kprRatings)
-    .innerJoin(users, eq(kprRatings.userId, users.id))
-    .orderBy(desc(kprRatings.rating))
-    .limit(limit);
-  return rows;
-}
-
-/** 사용자의 최근 경기 기록 조회 */
-export async function getRecentMatches(userId: number, limit = 10) {
-  const db = await getDb();
-  if (!db) return [];
-  const rows = await db
-    .select()
-    .from(matchResults)
-    .where(
-      or(
-        eq(matchResults.winner1Id, userId),
-        eq(matchResults.winner2Id, userId),
-        eq(matchResults.loser1Id, userId),
-        eq(matchResults.loser2Id, userId),
-      )
-    )
-    .orderBy(desc(matchResults.createdAt))
-    .limit(limit);
-  return rows;
-}
-
-/** 전체 KPR 참가자 수 */
-export async function getKprTotalParticipants() {
-  const db = await getDb();
-  if (!db) return 0;
-  const rows = await db.select({ count: sql<number>`COUNT(*)` }).from(kprRatings);
-  return rows[0]?.count || 0;
-}
-
-/** 사용자의 KPR 순위 조회 */
-export async function getKprRank(userId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  const userRating = await getKprRating(userId);
-  if (!userRating) return null;
-  const rows = await db
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(kprRatings)
-    .where(sql`${kprRatings.rating} > ${userRating.rating}`);
-  return (rows[0]?.count || 0) + 1;
-}
-
-/** KPL 7.00 스케일 기반 티어 계산 */
-export function calculateTier(rating: number): "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Master" | "Champion" {
-  if (rating >= 6.50) return "Champion";
-  if (rating >= 6.00) return "Master";
-  if (rating >= 5.50) return "Diamond";
-  if (rating >= 5.00) return "Platinum";
-  if (rating >= 4.50) return "Gold";
-  if (rating >= 4.00) return "Silver";
-  return "Bronze";
 }
