@@ -137,12 +137,12 @@ export default function LoginPage() {
       <div className="flex-1 flex items-start justify-center px-4 pt-12">
         <Card className="w-full max-w-sm border-line-strong bg-card">
           <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-              {step === "phone" ? (
-                <Phone className="w-7 h-7 text-primary" />
-              ) : (
-                <ShieldCheck className="w-7 h-7 text-primary" />
-              )}
+            <div className="mx-auto w-12 h-12 flex items-center justify-center mb-3">
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/logo-light_733385d9.png"
+                alt="PicklePlay"
+                className="w-10 h-10 object-contain"
+              />
             </div>
             <CardTitle className="text-lg text-foreground">
               {step === "phone" ? "전화번호 입력" : "인증번호 입력"}

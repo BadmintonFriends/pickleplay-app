@@ -10,8 +10,10 @@ import { LogIn, User, LogOut, Sun, Moon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
 
-const LOGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/pickleplay-logo-v3-SMF7wNMcxKCcJyRoNPaahQ.webp";
+const LOGO_LIGHT_URL =
+  "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/logo-light_733385d9.png";
+const LOGO_DARK_URL =
+  "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/logo-light_733385d9.png";
 
 export default function AppHeader() {
   const { user, isAuthenticated, loading, logout } = useAuth();
@@ -43,9 +45,9 @@ export default function AppHeader() {
         className="flex items-center gap-2"
       >
         <img
-          src={LOGO_URL}
+          src={theme === "dark" ? LOGO_DARK_URL : LOGO_LIGHT_URL}
           alt="PicklePlay"
-          className="w-8 h-8 rounded-full object-cover"
+          className="w-7 h-7 object-contain"
         />
         <span
           className="text-base text-foreground tracking-tight"
