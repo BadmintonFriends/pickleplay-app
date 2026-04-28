@@ -124,7 +124,19 @@ export async function getTournamentById(id: number) {
 export async function getAllTournaments() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(tournaments).orderBy(desc(tournaments.startDate));
+  const allTournaments = await db.select().from(tournaments).orderBy(desc(tournaments.startDate));
+  // Attach first poster image for each tournament
+  const allPosters = await db.select().from(tournamentPosters).orderBy(tournamentPosters.sortOrder);
+  const posterMap = new Map<number, string>();
+  for (const p of allPosters) {
+    if (!posterMap.has(p.tournamentId)) {
+      posterMap.set(p.tournamentId, p.imageUrl);
+    }
+  }
+  return allTournaments.map(t => ({
+    ...t,
+    posterUrl: posterMap.get(t.id) ?? null,
+  }));
 }
 
 export async function updateTournament(id: number, data: Partial<InsertTournament>) {

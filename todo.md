@@ -206,3 +206,7 @@
 ## Phase 24: SEO 메타 태그 추가
 - [x] meta description 태그 추가 (50~160자)
 - [x] meta keywords 태그 추가
+
+## Phase 25: 대회 목록 포스터 썸네일 표시
+- [x] TournamentPage 카드에 포스터 이미지 썸네일 표시
+- [x] 포스터 없는 경우 기본 플레이스홀더 표시

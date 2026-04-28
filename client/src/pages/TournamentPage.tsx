@@ -68,7 +68,7 @@ export default function TournamentPage() {
                 <div className="bg-card rounded-2xl overflow-hidden border border-line-strong">
                   {/* 대회 이미지 */}
                   <div className="relative h-44 overflow-hidden cursor-pointer" onClick={() => navigate(`/tournament/${t.id}`)}>
-                    <img src={INDOOR_COURT} alt={t.venue} className="w-full h-full object-cover" />
+                    <img src={t.posterUrl || INDOOR_COURT} alt={t.name} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
                       <span className="text-[10px] font-bold bg-primary text-primary-foreground px-2.5 py-1 rounded-full">
