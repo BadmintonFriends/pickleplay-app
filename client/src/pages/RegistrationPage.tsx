@@ -6,7 +6,7 @@ import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   ChevronLeft, Upload, Edit3, AlertCircle, CheckCircle2,
-  User, Phone, Calendar, Gift, Loader2, Info, Download,
+  User, Phone, Calendar, Gift, Loader2, Info, Download, Ruler, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,7 @@ export default function RegistrationPage() {
   const [excelRows, setExcelRows] = useState<any[]>([]);
   const [excelErrors, setExcelErrors] = useState<any[]>([]);
   const [excelParsed, setExcelParsed] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   const { data: tournament, isLoading } = trpc.tournament.detail.useQuery(
     { id: tournamentId },
@@ -532,7 +533,19 @@ export default function RegistrationPage() {
                 </div>
                 {sizeOptions.length > 0 && (
                   <div>
-                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">참가기념품 사이즈</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">참가기념품 사이즈</label>
+                      {tournament.sizeGuideImageUrl && idx === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSizeGuideOpen(true)}
+                          className="text-[10px] text-primary font-semibold hover:underline flex items-center gap-1"
+                        >
+                          <Ruler className="w-3 h-3" />
+                          사이즈표 보기
+                        </button>
+                      )}
+                    </div>
                     <div className="relative">
                       <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <select
@@ -699,6 +712,24 @@ export default function RegistrationPage() {
             </>
           )}
         </motion.div>
+      )}
+      {/* Size Guide Modal */}
+      {sizeGuideOpen && tournament?.sizeGuideImageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setSizeGuideOpen(false)}>
+          <div className="relative max-w-lg w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setSizeGuideOpen(false)}
+              className="absolute -top-3 -right-3 bg-foreground text-background rounded-full p-1.5 shadow-lg z-10 hover:opacity-80 transition-opacity"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={tournament.sizeGuideImageUrl}
+              alt="사이즈표"
+              className="w-full rounded-xl shadow-2xl"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

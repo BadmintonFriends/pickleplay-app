@@ -59,6 +59,9 @@ export const tournaments = mysqlTable("tournaments", {
   accountNumber: varchar("accountNumber", { length: 100 }),
   accountHolder: varchar("accountHolder", { length: 100 }),
   paymentNote: text("paymentNote"),
+  // Size guide image
+  sizeGuideImageUrl: varchar("sizeGuideImageUrl", { length: 1000 }),
+  sizeGuideFileKey: varchar("sizeGuideFileKey", { length: 500 }),
   // Status
   status: mysqlEnum("status", ["draft", "open", "closed", "cancelled"])
     .default("draft")

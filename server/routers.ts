@@ -361,6 +361,8 @@ const adminRouter = router({
       accountNumber: z.string().optional(),
       accountHolder: z.string().optional(),
       paymentNote: z.string().optional(),
+      sizeGuideImageUrl: z.string().optional(),
+      sizeGuideFileKey: z.string().optional(),
       status: z.enum(["draft", "open", "closed", "cancelled"]).default("draft"),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -392,6 +394,8 @@ const adminRouter = router({
         accountNumber: z.string().optional(),
         accountHolder: z.string().optional(),
         paymentNote: z.string().optional(),
+        sizeGuideImageUrl: z.string().optional(),
+        sizeGuideFileKey: z.string().optional(),
         status: z.enum(["draft", "open", "closed", "cancelled"]).optional(),
       }),
     }))
@@ -492,6 +496,34 @@ const adminRouter = router({
         sortOrder: input.sortOrder,
       });
       return { id, url };
+    }),
+
+  uploadSizeGuide: adminProcedure
+    .input(z.object({
+      tournamentId: z.number(),
+      base64Data: z.string(),
+      contentType: z.string().default("image/png"),
+    }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.base64Data, "base64");
+      const ext = input.contentType.includes("png") ? "png" : "jpg";
+      const fileKey = `tournaments/${input.tournamentId}/size-guide/${nanoid()}.${ext}`;
+      const { url } = await storagePut(fileKey, buffer, input.contentType);
+      await db.updateTournament(input.tournamentId, {
+        sizeGuideImageUrl: url,
+        sizeGuideFileKey: fileKey,
+      });
+      return { url, fileKey };
+    }),
+
+  deleteSizeGuide: adminProcedure
+    .input(z.object({ tournamentId: z.number() }))
+    .mutation(async ({ input }) => {
+      await db.updateTournament(input.tournamentId, {
+        sizeGuideImageUrl: null,
+        sizeGuideFileKey: null,
+      });
+      return { success: true };
     }),
 
   deleteDocument: adminProcedure

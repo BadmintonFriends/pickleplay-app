@@ -97,6 +97,9 @@ export default function AdminPage() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const posterInputRef = useRef<HTMLInputElement>(null);
+  const sizeGuideInputRef = useRef<HTMLInputElement>(null);
+  const [sizeGuidePreview, setSizeGuidePreview] = useState<string | null>(null);
+  const [uploadingSizeGuide, setUploadingSizeGuide] = useState(false);
 
   // Tournament form state
   const [formMode, setFormMode] = useState<TournamentFormMode>("list");
@@ -172,6 +175,15 @@ export default function AdminPage() {
   const setEventsMutation = trpc.admin.setEvents.useMutation();
   const setAgeGroupsMutation = trpc.admin.setAgeGroups.useMutation();
 
+  const uploadSizeGuideMutation = trpc.admin.uploadSizeGuide.useMutation({
+    onSuccess: () => { toast.success("사이즈표가 업로드되었습니다!"); },
+    onError: (err: any) => toast.error("사이즈표 업로드 실패: " + err.message),
+  });
+  const deleteSizeGuideMutation = trpc.admin.deleteSizeGuide.useMutation({
+    onSuccess: () => { toast.success("사이즈표가 삭제되었습니다!"); },
+    onError: (err: any) => toast.error("사이즈표 삭제 실패: " + err.message),
+  });
+
   const resetForm = () => {
     setFormMode("list");
     setEditingId(null);
@@ -179,6 +191,7 @@ export default function AdminPage() {
     setEvents([emptyEvent()]);
     setAgeGroups([]);
     setPosterPreviews([]);
+    setSizeGuidePreview(null);
   };
 
   const startCreate = () => {
@@ -199,6 +212,7 @@ export default function AdminPage() {
       organizerHosts: orgInfo.hosts?.join(", ") ?? "",
       organizerSponsors: orgInfo.sponsors?.join(", ") ?? "",
     });
+    setSizeGuidePreview(t.sizeGuideImageUrl ?? null);
     try {
       const detail = await utils.tournament.detail.fetch({ id: t.id });
       if (detail.events.length > 0) {
@@ -268,6 +282,57 @@ export default function AdminPage() {
     } finally {
       setUploadingPoster(false);
       if (posterInputRef.current) posterInputRef.current.value = "";
+    }
+  };
+
+  const handleSizeGuideUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!editingId) {
+      toast.error("대회를 먼저 생성한 후 사이즈표를 업로드해주세요");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("이미지 파일만 업로드 가능합니다");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("10MB 이하 파일만 업로드 가능합니다");
+      return;
+    }
+    setUploadingSizeGuide(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const [header, b64] = base64.split(",");
+      const ct = header.match(/data:(.*?);/)?.[1] || "image/png";
+      const result = await uploadSizeGuideMutation.mutateAsync({
+        tournamentId: editingId,
+        base64Data: b64,
+        contentType: ct,
+      });
+      setSizeGuidePreview(result.url);
+      utils.tournament.list.invalidate();
+    } catch (err) {
+      console.error("Size guide upload error:", err);
+    } finally {
+      setUploadingSizeGuide(false);
+      if (sizeGuideInputRef.current) sizeGuideInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteSizeGuide = async () => {
+    if (!editingId) return;
+    try {
+      await deleteSizeGuideMutation.mutateAsync({ tournamentId: editingId });
+      setSizeGuidePreview(null);
+      utils.tournament.list.invalidate();
+    } catch (err) {
+      console.error("Size guide delete error:", err);
     }
   };
 
@@ -656,8 +721,47 @@ export default function AdminPage() {
               <div>
                 <label className="text-[10px] font-semibold text-muted-foreground block mb-1">사이즈 옵션 (쉼표 구분)</label>
                 <input value={form.sizeOptions} onChange={e => setForm(p => ({...p, sizeOptions: e.target.value}))}
-                  className="w-full px-3 py-2 bg-ink-3 rounded-lg text-xs border border-line-strong focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder='예: S, M, L, XL, 2XL, 3XL' />
+                  className="w-full px-3 py-2 bg-ink-3 rounded-lg text-xs border border-line-strong focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder='예: XS, S, M, L, XL, 2XL, 3XL' />
               </div>
+              {/* Size Guide Image Upload */}
+              {form.sizeOptions && (
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground block mb-1">사이즈표 이미지 (선택사항)</label>
+                  {sizeGuidePreview ? (
+                    <div className="relative">
+                      <img src={sizeGuidePreview} alt="사이즈표" className="w-full rounded-lg border border-line-strong" />
+                      <button
+                        type="button"
+                        onClick={handleDeleteSizeGuide}
+                        className="absolute top-2 right-2 bg-destructive text-white rounded-full p-1 hover:bg-destructive/80 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => sizeGuideInputRef.current?.click()}
+                      className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-line-strong rounded-xl cursor-pointer hover:border-primary transition-colors bg-ink-3"
+                    >
+                      {uploadingSizeGuide ? (
+                        <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+                          <span className="text-[10px] text-muted-foreground">사이즈표 이미지 업로드</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    ref={sizeGuideInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleSizeGuideUpload}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Bank Info */}

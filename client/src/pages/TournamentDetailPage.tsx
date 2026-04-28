@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, MapPin, Users, Trophy, ChevronRight,
   ExternalLink, FileText, Clock, AlertCircle, CheckCircle2,
-  ChevronLeft, Image as ImageIcon, LogIn,
+  ChevronLeft, Image as ImageIcon, LogIn, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -39,6 +39,7 @@ export default function TournamentDetailPage() {
   const tournamentId = Number(params?.id);
   const [posterIndex, setPosterIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   const { data: tournament, isLoading } = trpc.tournament.detail.useQuery(
     { id: tournamentId },
@@ -188,6 +189,14 @@ export default function TournamentDetailPage() {
                       <span key={s} className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{s}</span>
                     ))}
                   </div>
+                )}
+                {tournament.sizeGuideImageUrl && (
+                  <button
+                    onClick={() => setSizeGuideOpen(true)}
+                    className="text-[10px] text-primary font-semibold hover:underline mt-1.5 flex items-center gap-1"
+                  >
+                    사이즈표 보기
+                  </button>
                 )}
               </div>
             </div>
@@ -416,6 +425,25 @@ export default function TournamentDetailPage() {
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* Size Guide Modal */}
+      {sizeGuideOpen && tournament.sizeGuideImageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setSizeGuideOpen(false)}>
+          <div className="relative max-w-lg w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setSizeGuideOpen(false)}
+              className="absolute -top-3 -right-3 bg-foreground text-background rounded-full p-1.5 shadow-lg z-10 hover:opacity-80 transition-opacity"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={tournament.sizeGuideImageUrl}
+              alt="사이즈표"
+              className="w-full rounded-xl shadow-2xl"
+            />
+          </div>
         </div>
       )}
     </div>
