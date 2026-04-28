@@ -8,6 +8,7 @@ import {
   boolean,
   bigint,
   json,
+  decimal,
 } from "drizzle-orm/mysql-core";
 
 // ─── Users ───────────────────────────────────────────────
@@ -165,3 +166,55 @@ export const players = mysqlTable("players", {
 
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
+
+// ─── KPR (Korea Pickleball Ranking) ─────────────────────
+// KPL (Korea Pickleball Level) 7.00 스케일. 모든 사용자 초기 3.00점.
+export const kprRatings = mysqlTable("kpr_ratings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // FK to users.id
+  rating: decimal("rating", { precision: 4, scale: 2 }).default("3.00").notNull(), // KPL rating (초기 3.00, 최대 7.00)
+  ratingDelta: decimal("ratingDelta", { precision: 4, scale: 2 }).default("0.00").notNull(), // 지난 주 대비 변동량
+  totalMatches: int("totalMatches").default(0).notNull(), // 총 경기 수
+  wins: int("wins").default(0).notNull(),
+  losses: int("losses").default(0).notNull(),
+  winStreak: int("winStreak").default(0).notNull(), // 현재 연승
+  bestRating: decimal("bestRating", { precision: 4, scale: 2 }).default("3.00").notNull(), // 최고 레이팅
+  weeklyRankDelta: int("weeklyRankDelta").default(0).notNull(), // 이번 주 순위 변동
+  tier: mysqlEnum("tier", [
+    "Bronze",
+    "Silver",
+    "Gold",
+    "Platinum",
+    "Diamond",
+    "Master",
+    "Champion",
+  ]).default("Bronze").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type KprRating = typeof kprRatings.$inferSelect;
+export type InsertKprRating = typeof kprRatings.$inferInsert;
+
+// ─── Match Results (경기 결과) ──────────────────────────
+export const matchResults = mysqlTable("match_results", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournamentId"), // nullable (비대회 경기 가능)
+  tournamentEventId: int("tournamentEventId"), // nullable
+  // 경기 참가자 (복식: 팀 단위, 단식: 개인)
+  winner1Id: int("winner1Id").notNull(), // FK to users.id
+  winner2Id: int("winner2Id"), // nullable (단식일 경우)
+  loser1Id: int("loser1Id").notNull(), // FK to users.id
+  loser2Id: int("loser2Id"), // nullable (단식일 경우)
+  // 스코어
+  winnerScore: int("winnerScore").notNull(),
+  loserScore: int("loserScore").notNull(),
+  // 레이팅 변동
+  ratingChange: int("ratingChange").default(0).notNull(), // 승자 기준 변동량
+  matchDate: varchar("matchDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  matchType: mysqlEnum("matchType", ["singles", "doubles"]).default("doubles").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MatchResult = typeof matchResults.$inferSelect;
+export type InsertMatchResult = typeof matchResults.$inferInsert;

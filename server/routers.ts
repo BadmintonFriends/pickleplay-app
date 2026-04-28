@@ -651,6 +651,85 @@ const userRouter = router({
     }),
 });
 
+// ─── KPR Router ───────────────────────────────────────
+const kprRouter = router({
+  /** 내 KPR 대시보드 데이터 (로그인 필수) */
+  myDashboard: protectedProcedure.query(async ({ ctx }) => {
+    // KPR 레이팅 조회 (없으면 자동 초기화)
+    let rating = await db.getKprRating(ctx.user.id);
+    if (!rating) {
+      await db.initKprRating(ctx.user.id);
+      rating = await db.getKprRating(ctx.user.id);
+    }
+    if (!rating) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "KPR 데이터 초기화 실패" });
+    }
+
+    const rank = await db.getKprRank(ctx.user.id);
+    const totalParticipants = await db.getKprTotalParticipants();
+    const recentMatches = await db.getRecentMatches(ctx.user.id, 5);
+
+    const winRate = rating.totalMatches > 0
+      ? Math.round((rating.wins / rating.totalMatches) * 100)
+      : 0;
+
+    // decimal 필드는 string으로 반환되므로 number로 변환
+    const ratingNum = parseFloat(String(rating.rating));
+    const bestRatingNum = parseFloat(String(rating.bestRating));
+    const ratingDeltaNum = parseFloat(String(rating.ratingDelta));
+
+    return {
+      rating: ratingNum,
+      ratingMax: 7.00,
+      ratingDelta: ratingDeltaNum,
+      tier: rating.tier,
+      totalMatches: rating.totalMatches,
+      wins: rating.wins,
+      losses: rating.losses,
+      winRate,
+      winStreak: rating.winStreak,
+      bestRating: bestRatingNum,
+      rank,
+      totalParticipants,
+      weeklyRankDelta: rating.weeklyRankDelta,
+      recentMatches: recentMatches.map(m => ({
+        id: m.id,
+        matchDate: m.matchDate,
+        matchType: m.matchType,
+        winnerScore: m.winnerScore,
+        loserScore: m.loserScore,
+        ratingChange: m.ratingChange,
+        isWin: m.winner1Id === ctx.user.id || m.winner2Id === ctx.user.id,
+      })),
+    };
+  }),
+
+  /** KPR 리더보드 (공개) */
+  leaderboard: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
+    .query(async ({ input }) => {
+      const limit = input?.limit ?? 20;
+      const rows = await db.getKprLeaderboard(limit);
+      return rows.map((r, idx) => ({
+        rank: idx + 1,
+        userId: r.userId,
+        userName: r.userName,
+        rating: parseFloat(String(r.rating)),
+        totalMatches: r.totalMatches,
+        wins: r.wins,
+        losses: r.losses,
+        winRate: r.totalMatches > 0 ? Math.round((r.wins / r.totalMatches) * 100) : 0,
+        tier: r.tier,
+      }));
+    }),
+
+  /** KPR 통계 요약 (공개) */
+  stats: publicProcedure.query(async () => {
+    const totalParticipants = await db.getKprTotalParticipants();
+    return { totalParticipants };
+  }),
+});
+
 // ─── App Router ─────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
@@ -667,6 +746,7 @@ export const appRouter = router({
   tournament: tournamentRouter,
   registration: registrationRouter,
   admin: adminRouter,
+  kpr: kprRouter,
 });
 
 export type AppRouter = typeof appRouter;

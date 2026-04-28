@@ -131,6 +131,31 @@ vi.mock("./db", () => {
       return undefined;
     }),
     updateUserProfile: vi.fn().mockResolvedValue(undefined),
+    // KPR functions
+    getKprRating: vi.fn().mockImplementation(async (userId: number) => {
+      if (userId === 10) return {
+        id: 1, userId: 10, rating: "3.00", ratingDelta: "0.00", totalMatches: 0, wins: 0, losses: 0,
+        winStreak: 0, bestRating: "3.00", weeklyRankDelta: 0, tier: "Bronze",
+        createdAt: new Date(), updatedAt: new Date(),
+      };
+      return null;
+    }),
+    initKprRating: vi.fn().mockResolvedValue(undefined),
+    getKprRank: vi.fn().mockResolvedValue(1),
+    getKprTotalParticipants: vi.fn().mockResolvedValue(2),
+    getRecentMatches: vi.fn().mockResolvedValue([]),
+    getKprLeaderboard: vi.fn().mockResolvedValue([
+      { userId: 10, rating: "3.00", totalMatches: 0, wins: 0, losses: 0, winStreak: 0, tier: "Bronze", userName: "테스트유저" },
+    ]),
+    calculateTier: vi.fn().mockImplementation((rating: number) => {
+      if (rating >= 6.50) return "Champion";
+      if (rating >= 6.00) return "Master";
+      if (rating >= 5.50) return "Diamond";
+      if (rating >= 5.00) return "Platinum";
+      if (rating >= 4.50) return "Gold";
+      if (rating >= 4.00) return "Silver";
+      return "Bronze";
+    }),
   };
 });
 
@@ -766,5 +791,81 @@ describe("user router", () => {
     expect(result).toBeDefined();
     expect(result.id).toBe(1);
     expect(result.role).toBe("admin");
+  });
+});
+
+
+// ─── KPR Router Tests ──────────────────────────────────
+describe("kpr router", () => {
+  it("myDashboard - 로그인 사용자의 KPR 대시보드를 반환한다", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.kpr.myDashboard();
+    expect(result).toBeDefined();
+    expect(result.rating).toBe(3.00);
+    expect(result.ratingMax).toBe(7.00);
+    expect(result.ratingDelta).toBe(0.00);
+    expect(result.tier).toBe("Bronze");
+    expect(result.totalMatches).toBe(0);
+    expect(result.wins).toBe(0);
+    expect(result.losses).toBe(0);
+    expect(result.winRate).toBe(0);
+    expect(result.winStreak).toBe(0);
+    expect(result.bestRating).toBe(3.00);
+    expect(result.rank).toBe(1);
+    expect(result.totalParticipants).toBe(2);
+    expect(result.weeklyRankDelta).toBe(0);
+    expect(result.recentMatches).toEqual([]);
+  });
+
+  it("myDashboard - 비로그인 시 에러를 반환한다", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.kpr.myDashboard()
+    ).rejects.toThrow();
+  });
+
+  it("leaderboard - 공개 리더보드를 반환한다", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.kpr.leaderboard();
+    expect(result).toBeDefined();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].rank).toBe(1);
+    expect(result[0].userName).toBe("테스트유저");
+    expect(result[0].rating).toBe(3.00);
+    expect(result[0].tier).toBe("Bronze");
+  });
+
+  it("leaderboard - limit 파라미터를 지원한다", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.kpr.leaderboard({ limit: 5 });
+    expect(result).toBeDefined();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("stats - 공개 통계를 반환한다", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.kpr.stats();
+    expect(result).toBeDefined();
+    expect(result.totalParticipants).toBe(2);
+  });
+
+  it("myDashboard - KPR 레이팅이 없으면 자동 초기화한다", async () => {
+    const dbMock = await import("./db");
+    // 첨 호출은 null, 두 번째 호출은 초기화된 데이터 반환
+    (dbMock.getKprRating as any)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 2, userId: 10, rating: "3.00", ratingDelta: "0.00", totalMatches: 0, wins: 0, losses: 0,
+        winStreak: 0, bestRating: "3.00", weeklyRankDelta: 0, tier: "Bronze",
+        createdAt: new Date(), updatedAt: new Date(),
+      });
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.kpr.myDashboard();
+    expect(result).toBeDefined();
+    expect(result.rating).toBe(3.00);
+    expect(result.ratingMax).toBe(7.00);
+    expect(dbMock.initKprRating).toHaveBeenCalledWith(10);
   });
 });
