@@ -651,7 +651,65 @@ const userRouter = router({
     }),
 });
 
-// ─── App Router ─────────────────────────────────────────
+// ─── KPR Router ─────────────────────────────────────────────
+const KPL_MAX = 7.00;
+
+const kprRouter = router({
+  /** 로그인 사용자의 KPR 대시보드 */
+  myDashboard: protectedProcedure.query(async ({ ctx }) => {
+    let rating = await db.getKprRating(ctx.user.id);
+    if (!rating) {
+      await db.initKprRating(ctx.user.id);
+      rating = await db.getKprRating(ctx.user.id);
+    }
+    const rank = await db.getKprRank(ctx.user.id);
+    const totalParticipants = await db.getKprTotalParticipants();
+    const recentMatches = await db.getRecentMatches(ctx.user.id);
+    return {
+      rating: Number(rating!.rating),
+      ratingMax: KPL_MAX,
+      ratingDelta: Number(rating!.ratingDelta),
+      totalMatches: rating!.totalMatches,
+      wins: rating!.wins,
+      losses: rating!.losses,
+      winRate: rating!.totalMatches > 0 ? Math.round((rating!.wins / rating!.totalMatches) * 100) : 0,
+      winStreak: rating!.winStreak,
+      bestRating: Number(rating!.bestRating),
+      tier: rating!.tier,
+      rank,
+      totalParticipants,
+      weeklyRankDelta: rating!.weeklyRankDelta,
+      recentMatches,
+    };
+  }),
+
+  /** 공개 리더보드 */
+  leaderboard: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
+    .query(async ({ input }) => {
+      const limit = input?.limit ?? 20;
+      const rows = await db.getKprLeaderboard(limit);
+      return rows.map((r, idx) => ({
+        rank: idx + 1,
+        userId: r.userId,
+        userName: r.userName ?? "미등록",
+        rating: Number(r.rating),
+        totalMatches: r.totalMatches,
+        wins: r.wins,
+        losses: r.losses,
+        winStreak: r.winStreak,
+        tier: r.tier,
+      }));
+    }),
+
+  /** 공개 통계 */
+  stats: publicProcedure.query(async () => {
+    const totalParticipants = await db.getKprTotalParticipants();
+    return { totalParticipants };
+  }),
+});
+
+// ─── App Router ─────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -667,6 +725,6 @@ export const appRouter = router({
   tournament: tournamentRouter,
   registration: registrationRouter,
   admin: adminRouter,
+  kpr: kprRouter,
 });
-
 export type AppRouter = typeof appRouter;

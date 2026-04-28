@@ -1,56 +1,333 @@
 /*
- * HomePage — PicklePlay Design System v1.0
- * 다크 테마, Optic Yellow 액센트, Archivo Black 디스플레이
+ * HomePage — PicklePlay KPR Dashboard
+ * 스포티한 다크 UI: 원형 프로그레스 + 큰 숫자 + 3열 스탯
  */
 import AppHeader from "@/components/AppHeader";
-import { Trophy, MapPin, ShoppingBag, Users, Zap, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import {
+  Trophy,
+  MapPin,
+  ShoppingBag,
+  Users,
+  ArrowRight,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Flame,
+  Target,
+  Swords,
+  Crown,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
-const HERO_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/93379316/QZUsZsvEpqV3TZCzpUyULD/hero-courts-FbYNhChEfY5c4b7aad6Cn3.webp";
+/* ─── Tier config ─── */
+const TIER_CONFIG: Record<string, { color: string; glow: string }> = {
+  Bronze:   { color: "#CD7F32", glow: "rgba(205,127,50,0.3)" },
+  Silver:   { color: "#C0C0C0", glow: "rgba(192,192,192,0.3)" },
+  Gold:     { color: "#FFD700", glow: "rgba(255,215,0,0.3)" },
+  Platinum: { color: "#E5E4E2", glow: "rgba(229,228,226,0.3)" },
+  Diamond:  { color: "#B9F2FF", glow: "rgba(185,242,255,0.3)" },
+  Master:   { color: "#FF6B6B", glow: "rgba(255,107,107,0.3)" },
+  Champion: { color: "#FFD700", glow: "rgba(255,215,0,0.4)" },
+};
 
+/* ─── Circular Progress Ring ─── */
+function RatingRing({
+  rating,
+  max,
+  size = 180,
+  strokeWidth = 10,
+  tier,
+}: {
+  rating: number;
+  max: number;
+  size?: number;
+  strokeWidth?: number;
+  tier: string;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(rating / max, 1);
+  const offset = circumference * (1 - progress);
+  const tierCfg = TIER_CONFIG[tier] ?? TIER_CONFIG.Bronze;
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        {/* Background track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          className="text-white/8"
+          strokeWidth={strokeWidth}
+        />
+        {/* Progress arc */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={tierCfg.color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{
+            transition: "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)",
+            filter: `drop-shadow(0 0 8px ${tierCfg.glow})`,
+          }}
+        />
+      </svg>
+      {/* Center content */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="text-5xl font-black text-foreground tracking-tighter leading-none"
+          style={{ fontFamily: "'Archivo Black', sans-serif" }}
+        >
+          {rating.toFixed(2)}
+        </span>
+        <span className="text-xs text-muted-foreground mt-1 font-mono tracking-wider">
+          / {max.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Animation variants ─── */
 const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.08, duration: 0.4, ease: [0, 0, 0.2, 1] as const },
+    transition: { delay: i * 0.07, duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] },
   }),
 };
 
+/* ─── Feature list ─── */
 const features = [
-  {
-    icon: Trophy,
-    title: "대회",
-    desc: "전국 피클볼 대회 정보를 한눈에",
-    path: "/tournament",
-    isOpen: true,
-  },
-  {
-    icon: MapPin,
-    title: "코트 예약",
-    desc: "가까운 코트를 찾고 바로 예약",
-    path: "/courts",
-    isOpen: false,
-  },
-  {
-    icon: ShoppingBag,
-    title: "샵",
-    desc: "패들, 볼, 의류 등 장비 쇼핑",
-    path: "/shop",
-    isOpen: false,
-  },
-  {
-    icon: Users,
-    title: "소셜",
-    desc: "피클볼 커뮤니티와 함께하세요",
-    path: "/social",
-    isOpen: false,
-  },
+  { icon: Trophy, title: "대회", desc: "전국 피클볼 대회 정보를 한눈에", path: "/tournament", isOpen: true },
+  { icon: MapPin, title: "코트 예약", desc: "가까운 코트를 찾고 바로 예약", path: "/courts", isOpen: false },
+  { icon: ShoppingBag, title: "샵", desc: "패들, 볼, 의류 등 장비 쇼핑", path: "/shop", isOpen: false },
+  { icon: Users, title: "소셜", desc: "피클볼 커뮤니티와 함께하세요", path: "/social", isOpen: false },
 ];
 
+/* ─── KPR Dashboard (로그인 사용자) ─── */
+function KprDashboard() {
+  const { data, isLoading } = trpc.kpr.myDashboard.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="mx-4 mt-3">
+        <div className="bg-card rounded-2xl p-6 border border-border animate-pulse">
+          <div className="flex justify-center">
+            <div className="w-[180px] h-[180px] rounded-full bg-muted" />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 rounded-xl bg-muted" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const tierCfg = TIER_CONFIG[data.tier] ?? TIER_CONFIG.Bronze;
+  const deltaIcon =
+    data.ratingDelta > 0 ? <TrendingUp className="w-3.5 h-3.5" /> :
+    data.ratingDelta < 0 ? <TrendingDown className="w-3.5 h-3.5" /> :
+    <Minus className="w-3.5 h-3.5" />;
+  const deltaColor =
+    data.ratingDelta > 0 ? "text-green-400" :
+    data.ratingDelta < 0 ? "text-red-400" :
+    "text-muted-foreground";
+  const rankDeltaText =
+    data.weeklyRankDelta > 0 ? `▲${data.weeklyRankDelta}` :
+    data.weeklyRankDelta < 0 ? `▼${Math.abs(data.weeklyRankDelta)}` :
+    "—";
+
+  return (
+    <motion.div
+      className="mx-4 mt-3"
+      initial="hidden"
+      animate="visible"
+      variants={fadeUp}
+      custom={0}
+    >
+      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        {/* Header label */}
+        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span
+              className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase"
+              style={{ fontFamily: "'Archivo Black', sans-serif" }}
+            >
+              KPL · Korea Pickleball Ranking
+            </span>
+          </div>
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{
+              color: tierCfg.color,
+              backgroundColor: tierCfg.glow,
+              border: `1px solid ${tierCfg.color}40`,
+            }}
+          >
+            {data.tier}
+          </span>
+        </div>
+
+        {/* Rating Ring */}
+        <div className="flex justify-center py-2">
+          <RatingRing rating={data.rating} max={data.ratingMax} tier={data.tier} />
+        </div>
+
+        {/* Rating delta */}
+        <div className="flex justify-center pb-3">
+          <div className={`flex items-center gap-1 text-xs font-semibold ${deltaColor}`}>
+            {deltaIcon}
+            <span>{data.ratingDelta > 0 ? "+" : ""}{data.ratingDelta.toFixed(2)}</span>
+            <span className="text-muted-foreground ml-1">최근 변동</span>
+          </div>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 gap-px bg-border/30">
+          <StatCell icon={<Crown className="w-4 h-4 text-primary" />} value={`#${data.rank}`} label="한국 랭킹" sub={`이번 주 ${rankDeltaText}`} />
+          <StatCell icon={<Swords className="w-4 h-4 text-primary" />} value={`${data.totalMatches}`} label="총 경기" sub={`${data.wins}승 ${data.losses}패`} />
+          <StatCell icon={<Target className="w-4 h-4 text-primary" />} value={`${data.winRate}%`} label="승률" sub={data.winStreak > 0 ? `${data.winStreak}연승 중` : "—"} />
+        </div>
+
+        {/* Best rating footer */}
+        <div className="px-5 py-3 flex items-center justify-between bg-muted/30">
+          <div className="flex items-center gap-1.5">
+            <Flame className="w-3.5 h-3.5 text-orange-400" />
+            <span className="text-[11px] text-muted-foreground">최고 기록</span>
+          </div>
+          <span className="text-[11px] font-bold text-foreground">{data.bestRating.toFixed(2)}</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Stat Cell ─── */
+function StatCell({
+  icon,
+  value,
+  label,
+  sub,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+  sub: string;
+}) {
+  return (
+    <div className="bg-card px-3 py-3.5 flex flex-col items-center text-center">
+      {icon}
+      <span className="text-lg font-black text-foreground mt-1 leading-none">{value}</span>
+      <span className="text-[10px] text-muted-foreground mt-1">{label}</span>
+      <span className="text-[9px] text-muted-foreground/70 mt-0.5">{sub}</span>
+    </div>
+  );
+}
+
+/* ─── KPR Intro (비로그인) ─── */
+function KprIntro() {
+  const [, navigate] = useLocation();
+
+  return (
+    <motion.div
+      className="mx-4 mt-3"
+      initial="hidden"
+      animate="visible"
+      variants={fadeUp}
+      custom={0}
+    >
+      <div className="bg-card rounded-2xl border border-border overflow-hidden relative">
+        {/* Header */}
+        <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary" />
+          <span
+            className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase"
+            style={{ fontFamily: "'Archivo Black', sans-serif" }}
+          >
+            KPL · Korea Pickleball Ranking
+          </span>
+        </div>
+
+        {/* Blurred preview */}
+        <div className="relative px-5 py-6">
+          <div className="flex justify-center opacity-30 blur-sm select-none pointer-events-none">
+            <RatingRing rating={3.0} max={7.0} tier="Bronze" />
+          </div>
+
+          {/* Overlay CTA */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-[2px]">
+            <div className="text-center px-6">
+              <h3 className="text-base font-bold text-foreground mb-1">
+                나의 피클볼 실력을 확인하세요
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                KPL은 대회 경기 데이터를 기반으로 한<br />
+                한국 피클볼 공식 랭킹 시스템입니다
+              </p>
+              <div className="flex gap-2 justify-center">
+                <button
+                  onClick={() => navigate("/login")}
+                  className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-bold px-4 py-2.5 rounded-full hover:bg-optic-deep transition-colors"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  로그인
+                </button>
+                <button
+                  onClick={() => navigate("/register")}
+                  className="flex items-center gap-1.5 bg-secondary text-secondary-foreground text-xs font-bold px-4 py-2.5 rounded-full hover:bg-accent transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  회원가입
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Info footer */}
+        <div className="grid grid-cols-3 gap-px bg-border/30">
+          <div className="bg-card px-3 py-3 text-center">
+            <p className="text-sm font-bold text-foreground">7.00</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">최고 등급</p>
+          </div>
+          <div className="bg-card px-3 py-3 text-center">
+            <p className="text-sm font-bold text-foreground">7단계</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">티어 시스템</p>
+          </div>
+          <div className="bg-card px-3 py-3 text-center">
+            <p className="text-sm font-bold text-foreground">ELO</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">레이팅 방식</p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Main HomePage ─── */
 export default function HomePage() {
+  const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
 
   const handleFeatureClick = (f: (typeof features)[0]) => {
@@ -62,86 +339,25 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen pb-24">
       <AppHeader />
 
-      {/* 히어로 섹션 */}
-      <motion.section
-        className="relative mx-4 mt-2 rounded-2xl overflow-hidden h-52"
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={0}
-      >
-        <img src={HERO_IMG} alt="피클볼 코트" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Zap className="w-4 h-4 text-primary" />
-            <span className="text-overline text-primary">대회 참가 신청 오픈</span>
-          </div>
-          <h1 className="text-2xl font-extrabold text-white leading-tight">
-            피클볼의 모든 것,
-            <br />
-            <span className="text-primary">PicklePlay</span>
-          </h1>
-        </div>
-      </motion.section>
-
-      {/* 서비스 안내 배너 */}
-      <motion.section
-        className="mx-4 mt-4"
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={1}
-      >
-        <div className="bg-card rounded-2xl p-5 text-center border border-line-strong">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <CheckCircle2 className="w-4 h-4 text-primary" />
-            <span className="text-overline text-primary">Now Open</span>
-          </div>
-          <h2
-            className="text-lg text-foreground mb-1"
-            style={{
-              fontFamily: "'Archivo Black', sans-serif",
-              fontStyle: "italic",
-              textTransform: "uppercase",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            TOURNAMENT<span className="text-primary">.</span>
-          </h2>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            지금 바로 피클볼 대회에 참가 신청하세요.
-            <br />
-            코트 예약, 장비 쇼핑, 커뮤니티는 2026년 중 오픈 예정입니다.
-          </p>
-
-          {/* 통계 박스 */}
-          <div className="grid grid-cols-3 gap-2.5 mt-4">
-            <div className="bg-ink-3 rounded-xl py-3">
-              <p
-                className="text-xl text-primary"
-                style={{ fontFamily: "'Archivo Black', sans-serif", fontStyle: "italic" }}
-              >
-                OPEN
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">대회 접수</p>
-            </div>
-            <div className="bg-ink-3 rounded-xl py-3">
-              <p className="text-2xl font-extrabold text-foreground">4</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">주요 기능</p>
-            </div>
-            <div className="bg-ink-3 rounded-xl py-3">
-              <p className="text-2xl font-extrabold text-foreground">1</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">등록 대회</p>
+      {/* KPR Section */}
+      {loading ? (
+        <div className="mx-4 mt-3">
+          <div className="bg-card rounded-2xl p-6 border border-border animate-pulse">
+            <div className="flex justify-center">
+              <div className="w-[180px] h-[180px] rounded-full bg-muted" />
             </div>
           </div>
         </div>
-      </motion.section>
+      ) : isAuthenticated ? (
+        <KprDashboard />
+      ) : (
+        <KprIntro />
+      )}
 
-      {/* 주요 기능 미리보기 */}
+      {/* 주요 기능 */}
       <motion.section
         className="px-4 mt-5"
         initial="hidden"
@@ -156,7 +372,7 @@ export default function HomePage() {
             return (
               <motion.button
                 key={f.title}
-                className="w-full bg-card rounded-xl p-4 flex items-center gap-3.5 border border-line-strong text-left hover:border-primary/50 transition-all active:scale-[0.98]"
+                className="w-full bg-card rounded-xl p-4 flex items-center gap-3.5 border border-border text-left hover:border-primary/50 transition-all active:scale-[0.98]"
                 initial="hidden"
                 animate="visible"
                 variants={fadeUp}

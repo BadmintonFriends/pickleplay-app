@@ -131,6 +131,19 @@ vi.mock("./db", () => {
       return undefined;
     }),
     updateUserProfile: vi.fn().mockResolvedValue(undefined),
+    // KPR functions
+    getKprRating: vi.fn().mockResolvedValue({
+      id: 1, userId: 10, rating: "3.00", ratingDelta: "0.00", totalMatches: 0, wins: 0, losses: 0,
+      winStreak: 0, bestRating: "3.00", weeklyRankDelta: 0, tier: "Bronze",
+      createdAt: new Date(), updatedAt: new Date(),
+    }),
+    initKprRating: vi.fn().mockResolvedValue(undefined),
+    getKprLeaderboard: vi.fn().mockResolvedValue([
+      { userId: 10, rating: "3.00", totalMatches: 0, wins: 0, losses: 0, winStreak: 0, tier: "Bronze", userName: "테스트유저" },
+    ]),
+    getKprTotalParticipants: vi.fn().mockResolvedValue(2),
+    getKprRank: vi.fn().mockResolvedValue(1),
+    getRecentMatches: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -766,5 +779,68 @@ describe("user router", () => {
     expect(result).toBeDefined();
     expect(result.id).toBe(1);
     expect(result.role).toBe("admin");
+  });
+});
+
+
+// ─── KPR Router Tests ──────────────────────────────────
+describe("kpr router", () => {
+  const caller = appRouter.createCaller;
+
+  const userCtx = {
+    user: {
+      id: 10, openId: "test-user-1", email: "user@test.com", name: "테스트유저",
+      phone: "01012345678", loginMethod: "manus" as const, role: "user" as const,
+      createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+    },
+    req: { protocol: "https", headers: {} } as any,
+    res: { clearCookie: vi.fn() } as any,
+  };
+
+  const anonCtx = {
+    user: null,
+    req: { protocol: "https", headers: {} } as any,
+    res: { clearCookie: vi.fn() } as any,
+  };
+
+  it("myDashboard - 로그인 사용자의 KPR 대시보드를 반환한다", async () => {
+    const result = await caller(userCtx).kpr.myDashboard();
+    expect(result).toBeDefined();
+    expect(result.rating).toBe(3.00);
+    expect(result.ratingMax).toBe(7.00);
+    expect(result.tier).toBe("Bronze");
+    expect(result.rank).toBe(1);
+    expect(result.totalParticipants).toBe(2);
+    expect(result.winRate).toBe(0);
+    expect(typeof result.ratingDelta).toBe("number");
+    expect(typeof result.bestRating).toBe("number");
+    expect(Array.isArray(result.recentMatches)).toBe(true);
+  });
+
+  it("myDashboard - 비인증 사용자는 에러를 반환한다", async () => {
+    await expect(caller(anonCtx).kpr.myDashboard()).rejects.toThrow();
+  });
+
+  it("leaderboard - 공개 리더보드를 반환한다", async () => {
+    const result = await caller(anonCtx).kpr.leaderboard();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toMatchObject({
+      rank: 1,
+      userId: 10,
+      userName: "테스트유저",
+      rating: 3.00,
+      tier: "Bronze",
+    });
+  });
+
+  it("leaderboard - limit 파라미터를 지원한다", async () => {
+    const result = await caller(anonCtx).kpr.leaderboard({ limit: 5 });
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("stats - 공개 통계를 반환한다", async () => {
+    const result = await caller(anonCtx).kpr.stats();
+    expect(result.totalParticipants).toBe(2);
   });
 });

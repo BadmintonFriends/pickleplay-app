@@ -9,6 +9,8 @@ import {
   tournamentDocuments, InsertTournamentDocument,
   registrations, InsertRegistration,
   players, InsertPlayer,
+  kprRatings, InsertKprRating,
+  matchResults,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -411,4 +413,78 @@ export async function decrementEventTeamCount(eventId: number) {
   await db.update(tournamentEvents)
     .set({ currentTeams: sql`GREATEST(${tournamentEvents.currentTeams} - 1, 0)` })
     .where(eq(tournamentEvents.id, eventId));
+}
+
+
+// ─── KPR (Korea Pickleball Ranking) helpers ──────────────
+
+/** 사용자의 KPR 레이팅 조회 */
+export async function getKprRating(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(kprRatings).where(eq(kprRatings.userId, userId)).limit(1);
+  return rows[0] ?? null;
+}
+
+/** KPR 레이팅 초기화 (신규 가입 시) */
+export async function initKprRating(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(kprRatings).values({ userId });
+}
+
+/** 전체 리더보드 (rating 내림차순) */
+export async function getKprLeaderboard(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      userId: kprRatings.userId,
+      rating: kprRatings.rating,
+      totalMatches: kprRatings.totalMatches,
+      wins: kprRatings.wins,
+      losses: kprRatings.losses,
+      winStreak: kprRatings.winStreak,
+      tier: kprRatings.tier,
+      userName: users.name,
+    })
+    .from(kprRatings)
+    .leftJoin(users, eq(kprRatings.userId, users.id))
+    .orderBy(desc(kprRatings.rating))
+    .limit(limit);
+}
+
+/** 전체 참가자 수 */
+export async function getKprTotalParticipants(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select({ cnt: sql<number>`COUNT(*)` }).from(kprRatings);
+  return rows[0]?.cnt ?? 0;
+}
+
+/** 사용자의 순위 */
+export async function getKprRank(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const userRating = await getKprRating(userId);
+  if (!userRating) return 0;
+  const rows = await db
+    .select({ cnt: sql<number>`COUNT(*)` })
+    .from(kprRatings)
+    .where(sql`${kprRatings.rating} > ${userRating.rating}`);
+  return (rows[0]?.cnt ?? 0) + 1;
+}
+
+/** 사용자의 최근 경기 기록 */
+export async function getRecentMatches(userId: number, limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(matchResults)
+    .where(
+      sql`${matchResults.winner1Id} = ${userId} OR ${matchResults.winner2Id} = ${userId} OR ${matchResults.loser1Id} = ${userId} OR ${matchResults.loser2Id} = ${userId}`
+    )
+    .orderBy(desc(matchResults.matchDate))
+    .limit(limit);
 }

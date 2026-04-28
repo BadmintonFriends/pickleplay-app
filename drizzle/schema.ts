@@ -8,6 +8,7 @@ import {
   boolean,
   bigint,
   json,
+  decimal,
 } from "drizzle-orm/mysql-core";
 
 // ─── Users ───────────────────────────────────────────────
@@ -165,3 +166,45 @@ export const players = mysqlTable("players", {
 
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
+
+// ─── KPR (Korea Pickleball Ranking) ─────────────────────
+// KPL 7.00 스케일. 모든 사용자 초기 3.00점.
+export const kprRatings = mysqlTable("kpr_ratings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  rating: decimal("rating", { precision: 4, scale: 2 }).default("3.00").notNull(),
+  ratingDelta: decimal("ratingDelta", { precision: 4, scale: 2 }).default("0.00").notNull(),
+  totalMatches: int("totalMatches").default(0).notNull(),
+  wins: int("wins").default(0).notNull(),
+  losses: int("losses").default(0).notNull(),
+  winStreak: int("winStreak").default(0).notNull(),
+  bestRating: decimal("bestRating", { precision: 4, scale: 2 }).default("3.00").notNull(),
+  weeklyRankDelta: int("weeklyRankDelta").default(0).notNull(),
+  tier: mysqlEnum("tier", [
+    "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Champion",
+  ]).default("Bronze").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type KprRating = typeof kprRatings.$inferSelect;
+export type InsertKprRating = typeof kprRatings.$inferInsert;
+
+// ─── Match Results ───────────────────────────────
+export const matchResults = mysqlTable("match_results", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournamentId"),
+  matchDate: timestamp("matchDate").defaultNow().notNull(),
+  matchType: mysqlEnum("matchType", ["singles", "doubles", "mixed"]).default("doubles").notNull(),
+  winner1Id: int("winner1Id").notNull(),
+  winner2Id: int("winner2Id"),
+  loser1Id: int("loser1Id").notNull(),
+  loser2Id: int("loser2Id"),
+  winnerScore: int("winnerScore").notNull(),
+  loserScore: int("loserScore").notNull(),
+  ratingChange: int("ratingChange").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MatchResult = typeof matchResults.$inferSelect;
+export type InsertMatchResult = typeof matchResults.$inferInsert;

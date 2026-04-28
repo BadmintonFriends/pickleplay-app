@@ -29,6 +29,27 @@
       "when": 1777036842571,
       "tag": "0003_clear_doctor_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1777368921344,
+      "tag": "0004_curvy_kid_colt",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1777369437716,
+      "tag": "0005_busy_nightshade",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1777370264571,
+      "tag": "0006_faulty_scalphunter",
+      "breakpoints": true
     }
   ]
 }
