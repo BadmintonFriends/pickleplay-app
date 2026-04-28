@@ -38,6 +38,7 @@ export default function TournamentDetailPage() {
   const { isAuthenticated } = useAuth();
   const tournamentId = Number(params?.id);
   const [posterIndex, setPosterIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const { data: tournament, isLoading } = trpc.tournament.detail.useQuery(
     { id: tournamentId },
@@ -102,12 +103,20 @@ export default function TournamentDetailPage() {
       {/* Poster Carousel */}
       {tournament.posters && tournament.posters.length > 0 && (
         <motion.section className="px-4 pb-4" initial="hidden" animate="visible" variants={fadeUp} custom={1}>
-          <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: "4/5" }}>
+          <div
+            className="relative rounded-2xl overflow-hidden cursor-pointer"
+            style={{ aspectRatio: "4/5" }}
+            onClick={() => setLightboxOpen(true)}
+          >
             <img
               src={tournament.posters[posterIndex]?.imageUrl}
               alt={`포스터 ${posterIndex + 1}`}
               className="w-full h-full object-cover"
             />
+            <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1">
+              <ImageIcon className="w-3 h-3" />
+              크게 보기
+            </div>
             {tournament.posters.length > 1 && (
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
                 {tournament.posters.map((_: any, i: number) => (
@@ -360,6 +369,55 @@ export default function TournamentDetailPage() {
           장소 보기
         </button>
       </motion.section>
+
+      {/* Poster Lightbox Modal */}
+      {lightboxOpen && tournament.posters && tournament.posters.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <span className="text-xl font-bold">&times;</span>
+          </button>
+
+          {/* Counter */}
+          {tournament.posters.length > 1 && (
+            <div className="absolute top-4 left-4 z-10 bg-white/10 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
+              {posterIndex + 1} / {tournament.posters.length}
+            </div>
+          )}
+
+          {/* Image */}
+          <img
+            src={tournament.posters[posterIndex]?.imageUrl}
+            alt={`\ud3ec\uc2a4\ud130 ${posterIndex + 1}`}
+            className="max-w-[95vw] max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Prev/Next buttons */}
+          {tournament.posters.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); setPosterIndex((prev: number) => (prev - 1 + tournament.posters.length) % tournament.posters.length); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setPosterIndex((prev: number) => (prev + 1) % tournament.posters.length); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -210,3 +210,7 @@
 ## Phase 25: 대회 목록 포스터 썸네일 표시
 - [x] TournamentPage 카드에 포스터 이미지 썸네일 표시
 - [x] 포스터 없는 경우 기본 플레이스홀더 표시
+
+## Phase 26: 포스터 이미지 정렬 + 전체보기 모달
+- [x] TournamentPage 카드 포스터 이미지 object-position 상단/중앙 정렬
+- [x] TournamentDetailPage 포스터 클릭 시 전체 이미지 모달(라이트박스) 구현
