@@ -168,21 +168,18 @@ export type Player = typeof players.$inferSelect;
 export type InsertPlayer = typeof players.$inferInsert;
 
 // ─── KPR (Korea Pickleball Ranking) ─────────────────────
-// KPL 7.00 스케일. 모든 사용자 초기 3.00점.
+// KPR 체스 ELO식 단일 점수. 초기 1000점, 상한 없음.
 export const kprRatings = mysqlTable("kpr_ratings", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  rating: decimal("rating", { precision: 4, scale: 2 }).default("3.00").notNull(),
-  ratingDelta: decimal("ratingDelta", { precision: 4, scale: 2 }).default("0.00").notNull(),
+  rating: int("rating").default(1000).notNull(),
+  ratingDelta: int("ratingDelta").default(0).notNull(),
   totalMatches: int("totalMatches").default(0).notNull(),
   wins: int("wins").default(0).notNull(),
   losses: int("losses").default(0).notNull(),
   winStreak: int("winStreak").default(0).notNull(),
-  bestRating: decimal("bestRating", { precision: 4, scale: 2 }).default("3.00").notNull(),
+  bestRating: int("bestRating").default(1000).notNull(),
   weeklyRankDelta: int("weeklyRankDelta").default(0).notNull(),
-  tier: mysqlEnum("tier", [
-    "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Champion",
-  ]).default("Bronze").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

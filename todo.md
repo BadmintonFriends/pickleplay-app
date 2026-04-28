@@ -249,3 +249,9 @@
 - [x] 스포티한 KPR 대시보드 UI 구현 (원형 프로그레스 링 + 큰 숫자 + 3열 스탯 그리드)
 - [x] 비로그인 시 KPL 소개 + 로그인 유도 UI (블러 처리 + CTA)
 - [x] vitest 테스트 업데이트 - 59건 전체 PASS (KPR 5건 추가)
+
+## Phase 32: KPR 점수 체계 수정 (체스 ELO식 단일 점수)
+- [x] DB 스키마 수정 (rating int 1000, bestRating int 1000, tier 컨럼 제거)
+- [x] 서버 API 수정 (KPR 라우터 + DB 헬퍼 - 단일 점수, Unranked)
+- [x] HomePage UI 수정 (큰 숫자 하나, 프로그레스 링 제거, 대회 전적 0이면 Unranked)
+- [x] vitest 테스트 업데이트 - 59건 전체 PASS

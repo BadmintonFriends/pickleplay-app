@@ -133,13 +133,13 @@ vi.mock("./db", () => {
     updateUserProfile: vi.fn().mockResolvedValue(undefined),
     // KPR functions
     getKprRating: vi.fn().mockResolvedValue({
-      id: 1, userId: 10, rating: "3.00", ratingDelta: "0.00", totalMatches: 0, wins: 0, losses: 0,
-      winStreak: 0, bestRating: "3.00", weeklyRankDelta: 0, tier: "Bronze",
+      id: 1, userId: 10, rating: 1000, ratingDelta: 0, totalMatches: 0, wins: 0, losses: 0,
+      winStreak: 0, bestRating: 1000, weeklyRankDelta: 0,
       createdAt: new Date(), updatedAt: new Date(),
     }),
     initKprRating: vi.fn().mockResolvedValue(undefined),
     getKprLeaderboard: vi.fn().mockResolvedValue([
-      { userId: 10, rating: "3.00", totalMatches: 0, wins: 0, losses: 0, winStreak: 0, tier: "Bronze", userName: "테스트유저" },
+      { userId: 10, rating: 1000, totalMatches: 0, wins: 0, losses: 0, winStreak: 0, userName: "테스트유저" },
     ]),
     getKprTotalParticipants: vi.fn().mockResolvedValue(2),
     getKprRank: vi.fn().mockResolvedValue(1),
@@ -806,14 +806,14 @@ describe("kpr router", () => {
   it("myDashboard - 로그인 사용자의 KPR 대시보드를 반환한다", async () => {
     const result = await caller(userCtx).kpr.myDashboard();
     expect(result).toBeDefined();
-    expect(result.rating).toBe(3.00);
-    expect(result.ratingMax).toBe(7.00);
-    expect(result.tier).toBe("Bronze");
-    expect(result.rank).toBe(1);
+    expect(result.rating).toBe(1000);
+    expect(result.isUnranked).toBe(true); // totalMatches === 0
+    expect(result.rank).toBe(0); // Unranked이므로 0
     expect(result.totalParticipants).toBe(2);
     expect(result.winRate).toBe(0);
     expect(typeof result.ratingDelta).toBe("number");
     expect(typeof result.bestRating).toBe("number");
+    expect(result.bestRating).toBe(1000);
     expect(Array.isArray(result.recentMatches)).toBe(true);
   });
 
@@ -821,17 +821,11 @@ describe("kpr router", () => {
     await expect(caller(anonCtx).kpr.myDashboard()).rejects.toThrow();
   });
 
-  it("leaderboard - 공개 리더보드를 반환한다", async () => {
+  it("leaderboard - 대회 전적 없는 사용자는 리더보드에 표시되지 않는다", async () => {
     const result = await caller(anonCtx).kpr.leaderboard();
     expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result[0]).toMatchObject({
-      rank: 1,
-      userId: 10,
-      userName: "테스트유저",
-      rating: 3.00,
-      tier: "Bronze",
-    });
+    // mock에서 totalMatches: 0이므로 필터링됨
+    expect(result.length).toBe(0);
   });
 
   it("leaderboard - limit 파라미터를 지원한다", async () => {

@@ -651,9 +651,7 @@ const userRouter = router({
     }),
 });
 
-// ─── KPR Router ─────────────────────────────────────────────
-const KPL_MAX = 7.00;
-
+// ─── KPR Router (체스 ELO식 단일 점수, 초기 1000점) ─────────────
 const kprRouter = router({
   /** 로그인 사용자의 KPR 대시보드 */
   myDashboard: protectedProcedure.query(async ({ ctx }) => {
@@ -662,20 +660,20 @@ const kprRouter = router({
       await db.initKprRating(ctx.user.id);
       rating = await db.getKprRating(ctx.user.id);
     }
-    const rank = await db.getKprRank(ctx.user.id);
+    const isUnranked = rating!.totalMatches === 0;
+    const rank = isUnranked ? 0 : await db.getKprRank(ctx.user.id);
     const totalParticipants = await db.getKprTotalParticipants();
     const recentMatches = await db.getRecentMatches(ctx.user.id);
     return {
-      rating: Number(rating!.rating),
-      ratingMax: KPL_MAX,
-      ratingDelta: Number(rating!.ratingDelta),
+      rating: rating!.rating,
+      ratingDelta: rating!.ratingDelta,
       totalMatches: rating!.totalMatches,
       wins: rating!.wins,
       losses: rating!.losses,
       winRate: rating!.totalMatches > 0 ? Math.round((rating!.wins / rating!.totalMatches) * 100) : 0,
       winStreak: rating!.winStreak,
-      bestRating: Number(rating!.bestRating),
-      tier: rating!.tier,
+      bestRating: rating!.bestRating,
+      isUnranked,
       rank,
       totalParticipants,
       weeklyRankDelta: rating!.weeklyRankDelta,
@@ -683,23 +681,24 @@ const kprRouter = router({
     };
   }),
 
-  /** 공개 리더보드 */
+  /** 공개 리더보드 (대회 전적 있는 사람만) */
   leaderboard: publicProcedure
     .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
     .query(async ({ input }) => {
       const limit = input?.limit ?? 20;
       const rows = await db.getKprLeaderboard(limit);
-      return rows.map((r, idx) => ({
-        rank: idx + 1,
-        userId: r.userId,
-        userName: r.userName ?? "미등록",
-        rating: Number(r.rating),
-        totalMatches: r.totalMatches,
-        wins: r.wins,
-        losses: r.losses,
-        winStreak: r.winStreak,
-        tier: r.tier,
-      }));
+      return rows
+        .filter((r) => r.totalMatches > 0)
+        .map((r, idx) => ({
+          rank: idx + 1,
+          userId: r.userId,
+          userName: r.userName ?? "미등록",
+          rating: r.rating,
+          totalMatches: r.totalMatches,
+          wins: r.wins,
+          losses: r.losses,
+          winStreak: r.winStreak,
+        }));
     }),
 
   /** 공개 통계 */

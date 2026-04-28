@@ -1,6 +1,7 @@
 /*
  * HomePage — PicklePlay KPR Dashboard
- * 스포티한 다크 UI: 원형 프로그레스 + 큰 숫자 + 3열 스탯
+ * 체스 ELO식 단일 점수 (초기 1000점, 상한 없음)
+ * 대회 전적 없으면 Unranked
  */
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -24,83 +25,6 @@ import {
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-
-/* ─── Tier config ─── */
-const TIER_CONFIG: Record<string, { color: string; glow: string }> = {
-  Bronze:   { color: "#CD7F32", glow: "rgba(205,127,50,0.3)" },
-  Silver:   { color: "#C0C0C0", glow: "rgba(192,192,192,0.3)" },
-  Gold:     { color: "#FFD700", glow: "rgba(255,215,0,0.3)" },
-  Platinum: { color: "#E5E4E2", glow: "rgba(229,228,226,0.3)" },
-  Diamond:  { color: "#B9F2FF", glow: "rgba(185,242,255,0.3)" },
-  Master:   { color: "#FF6B6B", glow: "rgba(255,107,107,0.3)" },
-  Champion: { color: "#FFD700", glow: "rgba(255,215,0,0.4)" },
-};
-
-/* ─── Circular Progress Ring ─── */
-function RatingRing({
-  rating,
-  max,
-  size = 180,
-  strokeWidth = 10,
-  tier,
-}: {
-  rating: number;
-  max: number;
-  size?: number;
-  strokeWidth?: number;
-  tier: string;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(rating / max, 1);
-  const offset = circumference * (1 - progress);
-  const tierCfg = TIER_CONFIG[tier] ?? TIER_CONFIG.Bronze;
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        {/* Background track */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          className="text-white/8"
-          strokeWidth={strokeWidth}
-        />
-        {/* Progress arc */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={tierCfg.color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{
-            transition: "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)",
-            filter: `drop-shadow(0 0 8px ${tierCfg.glow})`,
-          }}
-        />
-      </svg>
-      {/* Center content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span
-          className="text-5xl font-black text-foreground tracking-tighter leading-none"
-          style={{ fontFamily: "'Archivo Black', sans-serif" }}
-        >
-          {rating.toFixed(2)}
-        </span>
-        <span className="text-xs text-muted-foreground mt-1 font-mono tracking-wider">
-          / {max.toFixed(2)}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Animation variants ─── */
 const fadeUp = {
@@ -128,9 +52,7 @@ function KprDashboard() {
     return (
       <div className="mx-4 mt-3">
         <div className="bg-card rounded-2xl p-6 border border-border animate-pulse">
-          <div className="flex justify-center">
-            <div className="w-[180px] h-[180px] rounded-full bg-muted" />
-          </div>
+          <div className="h-24 bg-muted rounded-xl" />
           <div className="mt-4 grid grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 rounded-xl bg-muted" />
@@ -143,7 +65,6 @@ function KprDashboard() {
 
   if (!data) return null;
 
-  const tierCfg = TIER_CONFIG[data.tier] ?? TIER_CONFIG.Bronze;
   const deltaIcon =
     data.ratingDelta > 0 ? <TrendingUp className="w-3.5 h-3.5" /> :
     data.ratingDelta < 0 ? <TrendingDown className="w-3.5 h-3.5" /> :
@@ -167,57 +88,83 @@ function KprDashboard() {
     >
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         {/* Header label */}
-        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span
-              className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase"
-              style={{ fontFamily: "'Archivo Black', sans-serif" }}
-            >
-              KPL · Korea Pickleball Ranking
-            </span>
-          </div>
+        <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{
-              color: tierCfg.color,
-              backgroundColor: tierCfg.glow,
-              border: `1px solid ${tierCfg.color}40`,
-            }}
+            className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase"
+            style={{ fontFamily: "'Archivo Black', sans-serif" }}
           >
-            {data.tier}
+            KPR · Korea Pickleball Ranking
           </span>
         </div>
 
-        {/* Rating Ring */}
-        <div className="flex justify-center py-2">
-          <RatingRing rating={data.rating} max={data.ratingMax} tier={data.tier} />
-        </div>
-
-        {/* Rating delta */}
-        <div className="flex justify-center pb-3">
-          <div className={`flex items-center gap-1 text-xs font-semibold ${deltaColor}`}>
-            {deltaIcon}
-            <span>{data.ratingDelta > 0 ? "+" : ""}{data.ratingDelta.toFixed(2)}</span>
-            <span className="text-muted-foreground ml-1">최근 변동</span>
-          </div>
+        {/* Rating Score — 큰 숫자 하나 */}
+        <div className="px-5 py-5 flex flex-col items-center">
+          {data.isUnranked ? (
+            <>
+              <span
+                className="text-2xl font-black text-muted-foreground tracking-wider uppercase"
+                style={{ fontFamily: "'Archivo Black', sans-serif" }}
+              >
+                Unranked
+              </span>
+              <span className="text-xs text-muted-foreground mt-2">
+                대회에 참가하면 랭킹이 부여됩니다
+              </span>
+            </>
+          ) : (
+            <>
+              <span
+                className="text-6xl font-black text-foreground tracking-tighter leading-none"
+                style={{ fontFamily: "'Archivo Black', sans-serif" }}
+              >
+                {data.rating.toLocaleString()}
+              </span>
+              <span className="text-xs text-muted-foreground mt-1.5 font-mono tracking-wider">
+                KPR POINTS
+              </span>
+              {/* Rating delta */}
+              <div className={`flex items-center gap-1 text-xs font-semibold mt-2 ${deltaColor}`}>
+                {deltaIcon}
+                <span>{data.ratingDelta > 0 ? "+" : ""}{data.ratingDelta}</span>
+                <span className="text-muted-foreground ml-1">최근 변동</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-px bg-border/30">
-          <StatCell icon={<Crown className="w-4 h-4 text-primary" />} value={`#${data.rank}`} label="한국 랭킹" sub={`이번 주 ${rankDeltaText}`} />
-          <StatCell icon={<Swords className="w-4 h-4 text-primary" />} value={`${data.totalMatches}`} label="총 경기" sub={`${data.wins}승 ${data.losses}패`} />
-          <StatCell icon={<Target className="w-4 h-4 text-primary" />} value={`${data.winRate}%`} label="승률" sub={data.winStreak > 0 ? `${data.winStreak}연승 중` : "—"} />
+          <StatCell
+            icon={<Crown className="w-4 h-4 text-primary" />}
+            value={data.isUnranked ? "—" : `#${data.rank}`}
+            label="한국 랭킹"
+            sub={data.isUnranked ? "Unranked" : `이번 주 ${rankDeltaText}`}
+          />
+          <StatCell
+            icon={<Swords className="w-4 h-4 text-primary" />}
+            value={`${data.totalMatches}`}
+            label="총 경기"
+            sub={`${data.wins}승 ${data.losses}패`}
+          />
+          <StatCell
+            icon={<Target className="w-4 h-4 text-primary" />}
+            value={`${data.winRate}%`}
+            label="승률"
+            sub={data.winStreak > 0 ? `${data.winStreak}연승 중` : "—"}
+          />
         </div>
 
         {/* Best rating footer */}
-        <div className="px-5 py-3 flex items-center justify-between bg-muted/30">
-          <div className="flex items-center gap-1.5">
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
-            <span className="text-[11px] text-muted-foreground">최고 기록</span>
+        {!data.isUnranked && (
+          <div className="px-5 py-3 flex items-center justify-between bg-muted/30">
+            <div className="flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-[11px] text-muted-foreground">최고 기록</span>
+            </div>
+            <span className="text-[11px] font-bold text-foreground">{data.bestRating.toLocaleString()}</span>
           </div>
-          <span className="text-[11px] font-bold text-foreground">{data.bestRating.toFixed(2)}</span>
-        </div>
+        )}
       </div>
     </motion.div>
   );
@@ -265,14 +212,22 @@ function KprIntro() {
             className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase"
             style={{ fontFamily: "'Archivo Black', sans-serif" }}
           >
-            KPL · Korea Pickleball Ranking
+            KPR · Korea Pickleball Ranking
           </span>
         </div>
 
         {/* Blurred preview */}
         <div className="relative px-5 py-6">
-          <div className="flex justify-center opacity-30 blur-sm select-none pointer-events-none">
-            <RatingRing rating={3.0} max={7.0} tier="Bronze" />
+          <div className="flex flex-col items-center opacity-30 blur-sm select-none pointer-events-none">
+            <span
+              className="text-6xl font-black text-foreground tracking-tighter leading-none"
+              style={{ fontFamily: "'Archivo Black', sans-serif" }}
+            >
+              1,000
+            </span>
+            <span className="text-xs text-muted-foreground mt-1.5 font-mono tracking-wider">
+              KPR POINTS
+            </span>
           </div>
 
           {/* Overlay CTA */}
@@ -282,7 +237,7 @@ function KprIntro() {
                 나의 피클볼 실력을 확인하세요
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                KPL은 대회 경기 데이터를 기반으로 한<br />
+                KPR은 대회 경기 데이터를 기반으로 한<br />
                 한국 피클볼 공식 랭킹 시스템입니다
               </p>
               <div className="flex gap-2 justify-center">
@@ -308,16 +263,16 @@ function KprIntro() {
         {/* Info footer */}
         <div className="grid grid-cols-3 gap-px bg-border/30">
           <div className="bg-card px-3 py-3 text-center">
-            <p className="text-sm font-bold text-foreground">7.00</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">최고 등급</p>
-          </div>
-          <div className="bg-card px-3 py-3 text-center">
-            <p className="text-sm font-bold text-foreground">7단계</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">티어 시스템</p>
+            <p className="text-sm font-bold text-foreground">1,000</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">초기 점수</p>
           </div>
           <div className="bg-card px-3 py-3 text-center">
             <p className="text-sm font-bold text-foreground">ELO</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">레이팅 방식</p>
+          </div>
+          <div className="bg-card px-3 py-3 text-center">
+            <p className="text-sm font-bold text-foreground">대회</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">기반 산정</p>
           </div>
         </div>
       </div>
@@ -346,9 +301,7 @@ export default function HomePage() {
       {loading ? (
         <div className="mx-4 mt-3">
           <div className="bg-card rounded-2xl p-6 border border-border animate-pulse">
-            <div className="flex justify-center">
-              <div className="w-[180px] h-[180px] rounded-full bg-muted" />
-            </div>
+            <div className="h-24 bg-muted rounded-xl" />
           </div>
         </div>
       ) : isAuthenticated ? (

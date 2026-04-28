@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "fa1d67bd-37eb-4d2b-af2e-c3e9b3801e90",
-  "prevId": "15b38fd0-d190-4c0c-be7b-6e2ce87ea480",
+  "id": "f0f51705-29e2-40b1-9001-13a15d7157f9",
+  "prevId": "fa1d67bd-37eb-4d2b-af2e-c3e9b3801e90",
   "tables": {
     "kpr_ratings": {
       "name": "kpr_ratings",
@@ -23,19 +23,19 @@
         },
         "rating": {
           "name": "rating",
-          "type": "decimal(4,2)",
+          "type": "int",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'3.00'"
+          "default": 1000
         },
         "ratingDelta": {
           "name": "ratingDelta",
-          "type": "decimal(4,2)",
+          "type": "int",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'0.00'"
+          "default": 0
         },
         "totalMatches": {
           "name": "totalMatches",
@@ -71,11 +71,11 @@
         },
         "bestRating": {
           "name": "bestRating",
-          "type": "decimal(4,2)",
+          "type": "int",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'3.00'"
+          "default": 1000
         },
         "weeklyRankDelta": {
           "name": "weeklyRankDelta",
@@ -84,14 +84,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
-        },
-        "tier": {
-          "name": "tier",
-          "type": "enum('Bronze','Silver','Gold','Platinum','Diamond','Master','Champion')",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'Bronze'"
         },
         "createdAt": {
           "name": "createdAt",

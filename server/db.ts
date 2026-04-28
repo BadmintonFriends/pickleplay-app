@@ -445,7 +445,6 @@ export async function getKprLeaderboard(limit = 20) {
       wins: kprRatings.wins,
       losses: kprRatings.losses,
       winStreak: kprRatings.winStreak,
-      tier: kprRatings.tier,
       userName: users.name,
     })
     .from(kprRatings)
