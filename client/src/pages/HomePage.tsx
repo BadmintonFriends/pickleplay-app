@@ -89,9 +89,9 @@ function KprDashboard() {
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         {/* Header label */}
         <div className="px-5 pt-4 pb-2 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <span
-            className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase"
+            className="text-[10px] font-bold tracking-[0.15em] text-red-500 uppercase"
             style={{ fontFamily: "'Archivo Black', sans-serif" }}
           >
             KPR · Korea Pickleball Ranking
