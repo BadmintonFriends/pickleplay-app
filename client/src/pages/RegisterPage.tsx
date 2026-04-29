@@ -355,7 +355,7 @@ export default function RegisterPage() {
                       onCheckedChange={(v) => setTermsAccepted(!!v)}
                       className="mt-0.5"
                     />
-                    <label htmlFor="terms" className="text-sm text-secondary-foreground leading-tight cursor-pointer">
+                    <label htmlFor="terms" className="text-sm text-foreground leading-tight cursor-pointer">
                       <span className="font-medium">[필수]</span>{" "}
                       <a href="/terms" target="_blank" className="text-primary underline hover:text-optic-deep">
                         이용약관
@@ -370,7 +370,7 @@ export default function RegisterPage() {
                       onCheckedChange={(v) => setPrivacyAccepted(!!v)}
                       className="mt-0.5"
                     />
-                    <label htmlFor="privacy" className="text-sm text-secondary-foreground leading-tight cursor-pointer">
+                    <label htmlFor="privacy" className="text-sm text-foreground leading-tight cursor-pointer">
                       <span className="font-medium">[필수]</span>{" "}
                       <a href="/privacy" target="_blank" className="text-primary underline hover:text-optic-deep">
                         개인정보처리방침
