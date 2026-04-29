@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, sql, or, like, ne, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -11,6 +11,12 @@ import {
   players, InsertPlayer,
   kprRatings, InsertKprRating,
   matchResults,
+  posts, InsertPost,
+  postImages, InsertPostImage,
+  comments, InsertComment,
+  postLikes,
+  reports, InsertReport,
+  notifications, InsertNotification,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -486,4 +492,238 @@ export async function getRecentMatches(userId: number, limit = 5) {
     )
     .orderBy(desc(matchResults.matchDate))
     .limit(limit);
+}
+
+
+// ─── Nickname ──────────────────────────────────────────
+export async function updateNickname(userId: number, nickname: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ nickname }).where(eq(users.id, userId));
+}
+
+export async function isNicknameAvailable(nickname: string, excludeUserId?: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const conditions = [eq(users.nickname, nickname)];
+  if (excludeUserId) conditions.push(ne(users.id, excludeUserId));
+  const rows = await db.select({ id: users.id }).from(users).where(and(...conditions)).limit(1);
+  return rows.length === 0;
+}
+
+// ─── Community: Posts ──────────────────────────────────
+export async function createPost(data: InsertPost) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(posts).values(data);
+  return result[0].insertId;
+}
+
+export async function getPostById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listPosts(opts: { cursor?: number; limit: number; search?: string }) {
+  const db = await getDb();
+  if (!db) return { items: [], nextCursor: null };
+  const { cursor, limit, search } = opts;
+
+  const conditions: any[] = [];
+  if (cursor) conditions.push(sql`${posts.id} < ${cursor}`);
+  if (search) conditions.push(or(like(posts.title, `%${search}%`), like(posts.content, `%${search}%`)));
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const rows = await db.select().from(posts).where(where).orderBy(desc(posts.id)).limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
+  return { items, nextCursor };
+}
+
+export async function updatePost(id: number, data: Partial<InsertPost>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(posts).set(data).where(eq(posts.id, id));
+}
+
+export async function deletePost(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  // Delete related data first
+  await db.delete(postImages).where(eq(postImages.postId, id));
+  await db.delete(comments).where(eq(comments.postId, id));
+  await db.delete(postLikes).where(eq(postLikes.postId, id));
+  await db.delete(posts).where(eq(posts.id, id));
+}
+
+// ─── Community: Post Images ────────────────────────────
+export async function createPostImage(data: InsertPostImage) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(postImages).values(data);
+  return result[0].insertId;
+}
+
+export async function getImagesByPost(postId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(postImages).where(eq(postImages.postId, postId)).orderBy(asc(postImages.sortOrder));
+}
+
+export async function deletePostImage(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(postImages).where(eq(postImages.id, id));
+}
+
+export async function deletePostImagesByPost(postId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(postImages).where(eq(postImages.postId, postId));
+}
+
+// ─── Community: Comments ───────────────────────────────
+export async function createComment(data: InsertComment) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(comments).values(data);
+  // Increment comment count
+  await db.update(posts).set({ commentCount: sql`${posts.commentCount} + 1` }).where(eq(posts.id, data.postId));
+  return result[0].insertId;
+}
+
+export async function getCommentsByPost(postId: number, opts: { cursor?: number; limit: number }) {
+  const db = await getDb();
+  if (!db) return { items: [], nextCursor: null };
+  const conditions: any[] = [eq(comments.postId, postId)];
+  if (opts.cursor) conditions.push(sql`${comments.id} > ${opts.cursor}`);
+  const rows = await db.select().from(comments).where(and(...conditions)).orderBy(asc(comments.id)).limit(opts.limit + 1);
+  const hasMore = rows.length > opts.limit;
+  const items = hasMore ? rows.slice(0, opts.limit) : rows;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
+  return { items, nextCursor };
+}
+
+export async function deleteComment(id: number, postId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(comments).where(eq(comments.id, id));
+  await db.update(posts).set({ commentCount: sql`GREATEST(${posts.commentCount} - 1, 0)` }).where(eq(posts.id, postId));
+}
+
+// ─── Community: Likes ──────────────────────────────────
+export async function toggleLike(postId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const existing = await db.select().from(postLikes)
+    .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId))).limit(1);
+  if (existing.length > 0) {
+    await db.delete(postLikes).where(eq(postLikes.id, existing[0].id));
+    await db.update(posts).set({ likeCount: sql`GREATEST(${posts.likeCount} - 1, 0)` }).where(eq(posts.id, postId));
+    return false; // unliked
+  } else {
+    await db.insert(postLikes).values({ postId, userId });
+    await db.update(posts).set({ likeCount: sql`${posts.likeCount} + 1` }).where(eq(posts.id, postId));
+    return true; // liked
+  }
+}
+
+export async function hasUserLiked(postId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select().from(postLikes)
+    .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId))).limit(1);
+  return rows.length > 0;
+}
+
+export async function getLikedPostIds(userId: number, postIds: number[]): Promise<number[]> {
+  const db = await getDb();
+  if (!db || postIds.length === 0) return [];
+  const rows = await db.select({ postId: postLikes.postId }).from(postLikes)
+    .where(and(eq(postLikes.userId, userId), sql`${postLikes.postId} IN (${sql.join(postIds.map(id => sql`${id}`), sql`, `)})`));
+  return rows.map(r => r.postId);
+}
+
+// ─── Community: Reports ────────────────────────────────
+export async function createReport(data: InsertReport) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  // Check duplicate
+  const existing = await db.select().from(reports)
+    .where(and(
+      eq(reports.reporterId, data.reporterId),
+      eq(reports.targetType, data.targetType!),
+      eq(reports.targetId, data.targetId),
+    )).limit(1);
+  if (existing.length > 0) throw new Error("DUPLICATE_REPORT");
+  const result = await db.insert(reports).values(data);
+  return result[0].insertId;
+}
+
+export async function listReports(opts: { status?: string; limit: number; offset: number }) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const conditions: any[] = [];
+  if (opts.status) conditions.push(eq(reports.status, opts.status as any));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const [items, countResult] = await Promise.all([
+    db.select().from(reports).where(where).orderBy(desc(reports.createdAt)).limit(opts.limit).offset(opts.offset),
+    db.select({ cnt: sql<number>`COUNT(*)` }).from(reports).where(where),
+  ]);
+  return { items, total: countResult[0]?.cnt ?? 0 };
+}
+
+export async function updateReport(id: number, data: Partial<InsertReport>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(reports).set(data).where(eq(reports.id, id));
+}
+
+// ─── Community: Notifications ──────────────────────────
+export async function createNotification(data: InsertNotification) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(notifications).values(data);
+}
+
+export async function listNotifications(userId: number, opts: { cursor?: number; limit: number }) {
+  const db = await getDb();
+  if (!db) return { items: [], nextCursor: null };
+  const conditions: any[] = [eq(notifications.userId, userId)];
+  if (opts.cursor) conditions.push(sql`${notifications.id} < ${opts.cursor}`);
+  const rows = await db.select().from(notifications).where(and(...conditions)).orderBy(desc(notifications.id)).limit(opts.limit + 1);
+  const hasMore = rows.length > opts.limit;
+  const items = hasMore ? rows.slice(0, opts.limit) : rows;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
+  return { items, nextCursor };
+}
+
+export async function markNotificationRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications).set({ isRead: true }).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, userId));
+}
+
+export async function getUnreadNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select({ cnt: sql<number>`COUNT(*)` }).from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+  return rows[0]?.cnt ?? 0;
+}
+
+export async function updatePushEnabled(userId: number, enabled: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ pushEnabled: enabled }).where(eq(users.id, userId));
 }

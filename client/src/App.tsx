@@ -13,6 +13,9 @@ import MyRegistrationsPage from "./pages/MyRegistrationsPage";
 import CourtsPage from "./pages/CourtsPage";
 import ShopPage from "./pages/ShopPage";
 import SocialPage from "./pages/SocialPage";
+import PostDetailPage from "./pages/PostDetailPage";
+import PostWritePage from "./pages/PostWritePage";
+import NotificationsPage from "./pages/NotificationsPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -50,6 +53,10 @@ function Router() {
             <Route path="/courts" component={CourtsPage} />
             <Route path="/shop" component={ShopPage} />
             <Route path="/social" component={SocialPage} />
+            <Route path="/social/write" component={PostWritePage} />
+            <Route path="/social/notifications" component={NotificationsPage} />
+            <Route path="/social/post/:id" component={PostDetailPage} />
+            <Route path="/social/post/:id/edit" component={PostWritePage} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />
           </Switch>

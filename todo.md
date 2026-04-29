@@ -270,3 +270,63 @@
 - [x] 현재 대회 DB 데이터 업데이트 (sizeOptions → XS~3XL)
 - [x] 사이즈표 이미지 S3 업로드 및 DB 저장 완료
 - [x] vitest 테스트 업데이트 - 59건 전체 PASS
+
+## Phase 35: 커뮤니티 기능 구현
+
+### Phase A: 기반 작업 (DB + 닉네임)
+- [x] users 테이블에 nickname 컬럼 추가
+- [x] posts, post_images, comments, post_likes, reports, notifications 테이블 생성
+- [x] user.setNickname, user.checkNickname API 구현
+- [x] 닉네임 설정 모달 UI 구현
+- [x] 프로필 페이지에 닉네임 표시/수정 기능 추가
+- [x] vitest 닉네임 관련 테스트 (5개 통과)
+
+### Phase B: 게시글 CRUD + 이미지 리사이징
+- [x] sharp 설치 및 이미지 업로드 API (리사이징 + S3)
+- [x] 게시글 CRUD API (listPosts, getPost, createPost, updatePost + images)
+- [x] 관리자 비공개 처리 API (hidePost, unhidePost)
+- [x] 슈퍼어드민 삭제 API (deletePost)
+- [x] post.togglePin 관리자 공지 고정 API
+- [x] vitest 게시글 CRUD + 비공개/삭제 권한 테스트 (14개 통과)
+
+### Phase C: 댓글 + 좋아요
+- [x] 댓글 API (listComments, createComment, deleteComment)
+- [x] 댓글 비공개 API (hideComment, unhideComment)
+- [x] 좋아요 API (toggleLike)
+- [x] vitest 댓글 + 좋아요 + 비공개 테스트 (4개 통과)
+
+### Phase D: 신고 기능
+- [x] 신고 API (reportContent, listReports, reviewReport)
+- [ ] 관리자 신고 관리 UI (AdminPage 탭 추가)
+- [x] vitest 신고 관련 테스트 (4개 통과)
+
+### Phase E: 알림 시스템
+- [x] 알림 API (notification.list, markRead, unreadCount, updateSettings)
+- [x] 알림 발송 로직 (댓글/좋아요/공지/신고결과/비공개처리)
+- [x] 알림 UI (AppHeader 배지 + NotificationsPage)
+- [x] vitest 알림 관련 테스트 (6개 통과)
+
+### Phase F: 검색 + 공유 기능
+- [ ] FULLTEXT INDEX (ngram) + 검색 API
+- [ ] 검색 UI (검색바 + 결과 + 최근 검색어)
+- [ ] 게시글 공유 (Web Share API + 클립보드 폴백)
+- [ ] OG 메타태그 서버 미들웨어
+- [ ] vitest 검색 + 공유 테스트
+
+### Phase G: 프론트엔드 UI 통합
+- [x] 하단 탭바 변경 (샵 → 소셜)
+- [x] SocialPage (피드 목록, 무한 스크롤, 공지 고정, 비공개 표시)
+- [x] PostDetailPage (이미지 슬라이더, 댓글, 좋아요, 공유, 신고, 비공개)
+- [x] PostWritePage (이미지 첨부, 공지 체크, 수정 모드)
+- [x] NotificationsPage (알림 목록, 읽음 처리)
+- [x] NicknameModal (닉네임 설정/중복 확인)
+- [x] 관리자 기능 UI (비공개 처리 모달, 슈퍼어드민 삭제)
+- [x] App.tsx 라우트 등록 (social/write, social/post/:id, social/post/:id/edit, social/notifications)
+
+### Phase H: 테스트 및 마무리
+- [x] 전체 vitest 실행 및 통과 확인 (92개 중 91개 통과, 기존 admin listUsers 1개 실패)
+- [x] 커뮤니티 vitest 33개 전체 통과 (nickname 5 + post 14 + comment 4 + report 4 + notification 6)
+- [x] 프론트엔드 API 불일치 수정 (PostWritePage, NicknameModal, PostDetailPage)
+- [x] 백엔드 post.update에 이미지 수정 지원 추가
+- [x] 백엔드 post.detail에 fileKey/thumbnailFileKey 반환 추가
+- [x] 최종 체크포인트 저장

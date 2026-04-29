@@ -23,6 +23,8 @@ export const users = mysqlTable("users", {
   birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
   termsAcceptedAt: timestamp("termsAcceptedAt"),
   privacyAcceptedAt: timestamp("privacyAcceptedAt"),
+  nickname: varchar("nickname", { length: 30 }).unique(),
+  pushEnabled: boolean("pushEnabled").default(true).notNull(),
   role: mysqlEnum("role", ["user", "organizer", "admin", "super_admin"])
     .default("user")
     .notNull(),
@@ -208,3 +210,111 @@ export const matchResults = mysqlTable("match_results", {
 
 export type MatchResult = typeof matchResults.$inferSelect;
 export type InsertMatchResult = typeof matchResults.$inferInsert;
+
+// ─── Community: Posts ───────────────────────────────────
+export const posts = mysqlTable("posts", {
+  id: int("id").autoincrement().primaryKey(),
+  authorId: int("authorId").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  content: text("content").notNull(),
+  isPinned: boolean("isPinned").default(false).notNull(),
+  isNotice: boolean("isNotice").default(false).notNull(),
+  isHidden: boolean("isHidden").default(false).notNull(),
+  hiddenBy: int("hiddenBy"),
+  hiddenAt: timestamp("hiddenAt"),
+  hiddenReason: text("hiddenReason"),
+  commentCount: int("commentCount").default(0).notNull(),
+  likeCount: int("likeCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Post = typeof posts.$inferSelect;
+export type InsertPost = typeof posts.$inferInsert;
+
+// ─── Community: Post Images ─────────────────────────────
+export const postImages = mysqlTable("post_images", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  imageUrl: varchar("imageUrl", { length: 1000 }).notNull(),
+  thumbnailUrl: varchar("thumbnailUrl", { length: 1000 }).notNull(),
+  fileKey: varchar("fileKey", { length: 500 }).notNull(),
+  thumbnailFileKey: varchar("thumbnailFileKey", { length: 500 }).notNull(),
+  width: int("width"),
+  height: int("height"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PostImage = typeof postImages.$inferSelect;
+export type InsertPostImage = typeof postImages.$inferInsert;
+
+// ─── Community: Comments ────────────────────────────────
+export const comments = mysqlTable("comments", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  authorId: int("authorId").notNull(),
+  content: text("content").notNull(),
+  isHidden: boolean("isHidden").default(false).notNull(),
+  hiddenBy: int("hiddenBy"),
+  hiddenAt: timestamp("hiddenAt"),
+  hiddenReason: text("hiddenReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = typeof comments.$inferInsert;
+
+// ─── Community: Post Likes ──────────────────────────────
+export const postLikes = mysqlTable("post_likes", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PostLike = typeof postLikes.$inferSelect;
+export type InsertPostLike = typeof postLikes.$inferInsert;
+
+// ─── Community: Reports ─────────────────────────────────
+export const reports = mysqlTable("reports", {
+  id: int("id").autoincrement().primaryKey(),
+  reporterId: int("reporterId").notNull(),
+  targetType: mysqlEnum("targetType", ["post", "comment"]).notNull(),
+  targetId: int("targetId").notNull(),
+  reason: mysqlEnum("reason", [
+    "spam",
+    "abuse",
+    "inappropriate",
+    "misinformation",
+    "other",
+  ]).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["pending", "reviewed", "resolved", "dismissed"])
+    .default("pending")
+    .notNull(),
+  reviewedBy: int("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewNote: text("reviewNote"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = typeof reports.$inferInsert;
+
+// ─── Community: Notifications ───────────────────────────
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["comment", "like", "notice", "report_result", "hidden"]).notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  body: text("body").notNull(),
+  relatedPostId: int("relatedPostId"),
+  relatedCommentId: int("relatedCommentId"),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

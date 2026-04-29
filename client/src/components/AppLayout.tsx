@@ -6,14 +6,14 @@
  * - Lucide icons, stroke 2.2px
  */
 import { useLocation } from "wouter";
-import { Home, Trophy, MapPin, ShoppingBag, User } from "lucide-react";
+import { Home, Trophy, MapPin, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { path: "/", label: "홈", icon: Home },
   { path: "/tournament", label: "대회", icon: Trophy },
   { path: "/courts", label: "코트예약", icon: MapPin },
-  { path: "/shop", label: "샵", icon: ShoppingBag },
+  { path: "/social", label: "소셜", icon: Users },
   { path: "/mypage", label: "프로필", icon: User },
 ] as const;
 

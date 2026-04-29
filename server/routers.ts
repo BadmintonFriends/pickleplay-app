@@ -8,6 +8,7 @@ import { storagePut } from "./storage";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { sendVerificationCode, verifyCode, normalizePhoneToDigits, sendSmsMessage } from "./sms";
+import { communityRouter } from "./communityRouter";
 import { sdk } from "./_core/sdk";
 
 // ─── Validation schemas ──────────────────────────────────
@@ -757,5 +758,6 @@ export const appRouter = router({
   registration: registrationRouter,
   admin: adminRouter,
   kpr: kprRouter,
+  community: communityRouter,
 });
 export type AppRouter = typeof appRouter;
