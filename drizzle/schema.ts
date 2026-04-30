@@ -166,6 +166,7 @@ export const players = mysqlTable("players", {
   birthDate: varchar("birthDate", { length: 10 }).notNull(), // YYYY-MM-DD
   phone: varchar("phone", { length: 20 }).notNull(),
   giftSize: varchar("giftSize", { length: 20 }), // 참가기념품 사이즈
+  affiliation: varchar("affiliation", { length: 100 }).notNull().default(""), // 소속 (클럽명) - 필수
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

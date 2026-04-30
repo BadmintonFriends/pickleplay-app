@@ -8,6 +8,7 @@
 import { useLocation } from "wouter";
 import { Home, Trophy, MapPin, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import BusinessFooter from "@/components/BusinessFooter";
 
 const tabs = [
   { path: "/", label: "홈", icon: Home },
@@ -25,6 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main scrollable content area */}
       <main className="flex-1 overflow-y-auto pb-22 no-scrollbar">
         {children}
+        <BusinessFooter />
       </main>
 
       {/* Bottom Tab Navigation */}

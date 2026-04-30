@@ -1,0 +1,1 @@
+ALTER TABLE `players` ADD `affiliation` varchar(100) DEFAULT '' NOT NULL;

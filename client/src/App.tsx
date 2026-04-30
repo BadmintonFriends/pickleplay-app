@@ -17,6 +17,7 @@ import PostDetailPage from "./pages/PostDetailPage";
 import PostWritePage from "./pages/PostWritePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import AdminPage from "./pages/AdminPage";
+import TournamentManagePage from "./pages/TournamentManagePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MyPage from "./pages/MyPage";
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/terms" component={TermsPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/tournament/:id/register/complete" component={RegistrationCompletePage} />
+      <Route path="/tournament/:id/manage" component={TournamentManagePage} />
 
       {/* Admin route - no AppLayout */}
       <Route path="/admin" component={AdminPage} />

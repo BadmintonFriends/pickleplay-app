@@ -6,7 +6,7 @@ import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   ChevronLeft, Upload, Edit3, AlertCircle, CheckCircle2,
-  User, Phone, Calendar, Gift, Loader2, Info, Download, Ruler, X,
+  User, Phone, Calendar, Gift, Loader2, Info, Download, Ruler, X, Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +29,10 @@ interface PlayerForm {
   birthDate: string;
   phone: string;
   giftSize: string;
+  affiliation: string;
 }
 
-const emptyPlayer = (): PlayerForm => ({ name: "", birthDate: "", phone: "", giftSize: "" });
+const emptyPlayer = (): PlayerForm => ({ name: "", birthDate: "", phone: "", giftSize: "", affiliation: "" });
 
 export default function RegistrationPage() {
   const [, params] = useRoute("/tournament/:id/register");
@@ -161,6 +162,7 @@ export default function RegistrationPage() {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(p.birthDate)) return `${label} 생년월일을 입력해주세요 (YYYY-MM-DD)`;
       if (p.phone.replace(/\D/g, "").length < 10) return `${label} 전화번호를 입력해주세요`;
       if (sizeOptions.length > 0 && !p.giftSize) return `${label} 기념품 사이즈를 선택해주세요`;
+      if (!p.affiliation.trim()) return `${label} 소속을 입력해주세요`;
     }
     return null;
   };
@@ -184,6 +186,7 @@ export default function RegistrationPage() {
         birthDate: p.birthDate,
         phone: p.phone.replace(/\D/g, ""),
         giftSize: p.giftSize || undefined,
+        affiliation: p.affiliation.trim(),
       })),
     });
   };
@@ -215,15 +218,17 @@ export default function RegistrationPage() {
         const eventType = String(row[0] || "").trim();
         const skillLevel = String(row[1] || "").trim();
         const p1Name = String(row[2] || "").trim();
-        const p1Birth = String(row[3] || "").trim();
-        const p1Phone = String(row[4] || "").trim();
-        const p1Size = String(row[5] || "").trim();
-        const p2Name = String(row[6] || "").trim();
-        const p2Birth = String(row[7] || "").trim();
-        const p2Phone = String(row[8] || "").trim();
-        const p2Size = String(row[9] || "").trim();
+        const p1Affiliation = String(row[3] || "").trim();
+        const p1Birth = String(row[4] || "").trim();
+        const p1Phone = String(row[5] || "").trim();
+        const p1Size = String(row[6] || "").trim();
+        const p2Name = String(row[7] || "").trim();
+        const p2Affiliation = String(row[8] || "").trim();
+        const p2Birth = String(row[9] || "").trim();
+        const p2Phone = String(row[10] || "").trim();
+        const p2Size = String(row[11] || "").trim();
 
-        const rowData = { eventType, skillLevel, p1Name, p1Birth, p1Phone, p1Size, p2Name, p2Birth, p2Phone, p2Size, rowNum: i + 1 };
+        const rowData = { eventType, skillLevel, p1Name, p1Affiliation, p1Birth, p1Phone, p1Size, p2Name, p2Affiliation, p2Birth, p2Phone, p2Size, rowNum: i + 1 };
         parsed.push(rowData);
 
         // Validate
@@ -232,11 +237,15 @@ export default function RegistrationPage() {
           errors.push({ row: i + 1, field: "종목", message: `유효하지 않은 종목: ${eventType}`, severity: "error" });
         }
         if (!p1Name) errors.push({ row: i + 1, field: "선수1 이름", message: "이름 필수", severity: "error" });
+        if (!p1Affiliation) errors.push({ row: i + 1, field: "선수1 소속", message: "소속 필수", severity: "error" });
         if (!p1Phone) errors.push({ row: i + 1, field: "선수1 전화번호", message: "전화번호 필수", severity: "error" });
 
         const isDoubles = ["남복", "여복", "혼복"].includes(eventType);
         if (isDoubles && !p2Name) {
           errors.push({ row: i + 1, field: "선수2 이름", message: "복식 종목은 선수2 필수", severity: "error" });
+        }
+        if (isDoubles && !p2Affiliation) {
+          errors.push({ row: i + 1, field: "선수2 소속", message: "복식 종목은 선수2 소속 필수", severity: "error" });
         }
 
         // Size validation
@@ -288,10 +297,10 @@ export default function RegistrationPage() {
       );
       const isDoubles = ["남복", "여복", "혼복"].includes(row.eventType);
       const playerList = [
-        { name: row.p1Name, birthDate: row.p1Birth, phone: row.p1Phone.replace(/\D/g, ""), giftSize: row.p1Size || undefined },
+        { name: row.p1Name, birthDate: row.p1Birth, phone: row.p1Phone.replace(/\D/g, ""), giftSize: row.p1Size || undefined, affiliation: row.p1Affiliation },
       ];
       if (isDoubles && row.p2Name) {
-        playerList.push({ name: row.p2Name, birthDate: row.p2Birth, phone: row.p2Phone.replace(/\D/g, ""), giftSize: row.p2Size || undefined });
+        playerList.push({ name: row.p2Name, birthDate: row.p2Birth, phone: row.p2Phone.replace(/\D/g, ""), giftSize: row.p2Size || undefined, affiliation: row.p2Affiliation });
       }
       return {
         tournamentId,
@@ -531,6 +540,20 @@ export default function RegistrationPage() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">소속 <span className="text-destructive">*</span></label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={player.affiliation}
+                      onChange={(e) => updatePlayer(idx, "affiliation", e.target.value)}
+                      placeholder="예) OO클럽"
+                      maxLength={100}
+                      className="w-full pl-10 pr-3 py-2.5 bg-ink-3 rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 border border-line-strong"
+                    />
+                  </div>
+                </div>
                 {sizeOptions.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -615,8 +638,8 @@ export default function RegistrationPage() {
               onClick={async () => {
                 try {
                   const XLSX = await import("xlsx");
-                  const header = ["종목", "급수", "선수1이름", "선수1생년월일", "선수1전화번호", "선수1사이즈", "선수2이름", "선수2생년월일", "선수2전화번호", "선수2사이즈"];
-                  const example = ["남복", "A조", "홍길동", "1990-01-01", "010-1234-5678", "L", "김철수", "1992-05-15", "010-9876-5432", "XL"];
+                  const header = ["종목", "급수", "선수1이름", "선수1소속", "선수1생년월일", "선수1전화번호", "선수1사이즈", "선수2이름", "선수2소속", "선수2생년월일", "선수2전화번호", "선수2사이즈"];
+                  const example = ["남복", "A조", "홍길동", "OO클럽", "1990-01-01", "010-1234-5678", "L", "김철수", "XX클럽", "1992-05-15", "010-9876-5432", "XL"];
                   const ws = XLSX.utils.aoa_to_sheet([header, example]);
                   ws["!cols"] = header.map(() => ({ wch: 16 }));
                   const wb = XLSX.utils.book_new();

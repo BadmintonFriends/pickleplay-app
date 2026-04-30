@@ -17,6 +17,7 @@ const playerSchema = z.object({
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "생년월일 형식: YYYY-MM-DD"),
   phone: z.string().min(10, "전화번호를 입력해주세요"),
   giftSize: z.string().optional(),
+  affiliation: z.string().min(1, "소속을 입력해주세요").max(100),
 });
 
 const registrationInputSchema = z.object({
@@ -124,6 +125,7 @@ const registrationRouter = router({
           birthDate: input.players[i].birthDate,
           phone: input.players[i].phone,
           giftSize: input.players[i].giftSize ?? null,
+          affiliation: input.players[i].affiliation,
         });
       }
 
@@ -178,6 +180,7 @@ const registrationRouter = router({
             birthDate: reg.players[i].birthDate,
             phone: reg.players[i].phone,
             giftSize: reg.players[i].giftSize ?? null,
+            affiliation: reg.players[i].affiliation,
           });
         }
 
@@ -247,6 +250,7 @@ const registrationRouter = router({
           birthDate: input.players[i].birthDate,
           phone: input.players[i].phone,
           giftSize: input.players[i].giftSize ?? null,
+          affiliation: input.players[i].affiliation,
         });
       }
       return { success: true };

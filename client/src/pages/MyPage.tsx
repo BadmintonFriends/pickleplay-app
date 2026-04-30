@@ -255,8 +255,8 @@ export default function MyPage() {
                         <Badge className={`${status.color} text-xs px-2 py-0.5 rounded-full font-medium`}>{status.label}</Badge>
                         <Badge className={`${payment.color} text-xs px-2 py-0.5 rounded-full font-medium`}>{payment.label}</Badge>
                         {reg.eventType && (
-                          <Badge variant="outline" className="text-xs px-2 py-0.5 rounded-full border-line-strong text-muted-foreground">
-                            {reg.eventType === "doubles" ? "복식" : "단식"}
+                          <Badge variant="outline" className="text-xs px-2 py-0.5 rounded-full border-primary/30 text-primary">
+                            {reg.eventType} {reg.skillLevel}
                           </Badge>
                         )}
                       </div>

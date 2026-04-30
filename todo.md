@@ -330,3 +330,36 @@
 - [x] 백엔드 post.update에 이미지 수정 지원 추가
 - [x] 백엔드 post.detail에 fileKey/thumbnailFileKey 반환 추가
 - [x] 최종 체크포인트 저장
+
+## Phase 36: 기능 개선 5건 (기획서 v36)
+
+### 항목 1: 대회 참가신청 시 소속 필드 추가 (필수)
+- [x] players 테이블에 affiliation 컬럼 추가 (NOT NULL)
+- [x] server/routers.ts registration.create/bulkCreate 스키마에 affiliation 필수 추가
+- [x] server/db.ts createPlayer에 affiliation 파라미터 추가
+- [x] RegistrationPage PlayerForm에 소속 입력 UI 추가 (필수 검증)
+- [x] 엑셀 업로드/내보내기에 소속 컬럼 추가
+- [x] AdminPage 접수 관리 테이블에 소속 컬럼 추가
+- [x] RegistrationCompletePage에 소속 표시
+
+### 항목 2: 웹사이트 하단 사업자 정보 추가
+- [x] BusinessFooter.tsx 컴포넌트 생성
+- [x] AppLayout.tsx에 BusinessFooter 삽입
+
+### 항목 3: 내 접수 내역에 종목/급수 표시
+- [x] MyPage.tsx eventType/skillLevel 배지 렌더링 수정
+- [x] MyRegistrationsPage.tsx 동일 수정
+
+### 항목 4: 대회 접수 관리 권한 다운그레이드 및 화면 이동
+- [x] TournamentManagePage.tsx 신규 생성
+- [x] AdminPage에서 접수 관리 탭 제거 + 대회 카드에 관리 버튼 추가 (네비게이션 이동)
+- [x] TournamentManagePage에 organizer 본인 대회 권한 검증 추가 (organizerId 비교)
+- [x] TournamentDetailPage에 organizer/admin용 관리 버튼 추가
+- [x] App.tsx에 /tournament/:id/manage 라우트 등록
+
+### 항목 5: 입금 안내 문구 변경 (팀 단위 + 파트너 2명 이름)
+- [x] RegistrationCompletePage.tsx 입금 안내 문구 변경 (복식/단식 분기)
+- [x] TournamentDetailPage.tsx 참가비 영역에 입금자명 안내 추가
+
+### 테스트
+- [ ] vitest 테스트 추가/수정 및 전체 통과 확인

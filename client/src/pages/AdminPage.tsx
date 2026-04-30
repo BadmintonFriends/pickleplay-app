@@ -382,7 +382,7 @@ export default function AdminPage() {
     try {
       const XLSX = await import("xlsx");
       const rows: any[][] = [
-        ["접수번호", "접수상태", "입금상태", "종목", "급수", "선수1이름", "선수1생년월일", "선수1전화번호", "선수1사이즈", "선수2이름", "선수2생년월일", "선수2전화번호", "선수2사이즈", "접수일시"],
+        ["접수번호", "접수상태", "입금상태", "종목", "급수", "선수1이름", "선수1소속", "선수1생년월일", "선수1전화번호", "선수1사이즈", "선수2이름", "선수2소속", "선수2생년월일", "선수2전화번호", "선수2사이즈", "접수일시"],
       ];
       for (const reg of regData) {
         const p1 = reg.players?.[0];
@@ -393,8 +393,8 @@ export default function AdminPage() {
           reg.paymentStatus === "unpaid" ? "미입금" : reg.paymentStatus === "paid" ? "입금완료" : "환불",
           (reg as any).eventType ?? "",
           (reg as any).skillLevel ?? "",
-          p1?.name ?? "", p1?.birthDate ?? "", p1?.phone ?? "", p1?.giftSize ?? "",
-          p2?.name ?? "", p2?.birthDate ?? "", p2?.phone ?? "", p2?.giftSize ?? "",
+          p1?.name ?? "", p1?.affiliation ?? "", p1?.birthDate ?? "", p1?.phone ?? "", p1?.giftSize ?? "",
+          p2?.name ?? "", p2?.affiliation ?? "", p2?.birthDate ?? "", p2?.phone ?? "", p2?.giftSize ?? "",
           reg.createdAt ? new Date(reg.createdAt).toLocaleString("ko-KR") : "",
         ]);
       }
@@ -402,8 +402,8 @@ export default function AdminPage() {
       const ws = XLSX.utils.aoa_to_sheet(rows);
       ws["!cols"] = [
         { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 8 },
-        { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 },
-        { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 }, { wch: 18 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 }, { wch: 18 },
       ];
       XLSX.utils.book_append_sheet(wb, ws, "접수명단");
       const tName = tournamentList?.find((t: any) => t.id === selectedTournamentId)?.name ?? "대회";
@@ -565,7 +565,7 @@ export default function AdminPage() {
                         <Edit3 className="w-3 h-3" /> 수정
                       </button>
                       <button
-                        onClick={() => { setSelectedTournamentId(t.id); setActiveTab("registrations"); }}
+                        onClick={() => navigate(`/tournament/${t.id}/manage`)}
                         className="text-[10px] font-bold text-purple-500 flex items-center gap-1"
                       >
                         <Users className="w-3 h-3" /> 접수 관리

@@ -35,7 +35,7 @@ const statusConfig: Record<string, { label: string; color: string; bg: string }>
 export default function TournamentDetailPage() {
   const [, params] = useRoute("/tournament/:id");
   const [, navigate] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const tournamentId = Number(params?.id);
   const [posterIndex, setPosterIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -170,6 +170,10 @@ export default function TournamentDetailPage() {
                 <p className="text-overline text-muted-foreground">참가비</p>
                 <p className="text-sm font-bold text-foreground mt-0.5">
                   팀당 {tournament.feePerTeam.toLocaleString()}원
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                  입금은 팀 단위로, 입금자명에 파트너 2명 이름 모두 기재<br/>
+                  (예: 홍길동김철수)
                 </p>
               </div>
             </div>
@@ -368,8 +372,21 @@ export default function TournamentDetailPage() {
         </motion.section>
       )}
 
+      {/* Manage button - only for organizer/admin */}
+      {isAuthenticated && (user?.role === "admin" || user?.role === "super_admin" || (user?.role === "organizer" && tournament.organizerId === user?.id)) && (
+        <motion.section className="px-4 pb-3" initial="hidden" animate="visible" variants={fadeUp} custom={7}>
+          <button
+            onClick={() => navigate(`/tournament/${tournamentId}/manage`)}
+            className="w-full bg-ink text-white text-xs font-bold py-3 rounded-xl hover:bg-ink-3 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98] border border-line-strong"
+          >
+            <Users className="w-3.5 h-3.5" />
+            접수 관리
+          </button>
+        </motion.section>
+      )}
+
       {/* Location button */}
-      <motion.section className="px-4 pb-6" initial="hidden" animate="visible" variants={fadeUp} custom={7}>
+      <motion.section className="px-4 pb-6" initial="hidden" animate="visible" variants={fadeUp} custom={8}>
         <button
           onClick={() => window.open(`https://map.naver.com/p/search/${encodeURIComponent(tournament.venue)}`, "_blank")}
           className="w-full bg-secondary text-secondary-foreground text-xs font-bold py-3 rounded-xl hover:bg-ink-3 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"

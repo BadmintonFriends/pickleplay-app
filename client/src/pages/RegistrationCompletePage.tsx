@@ -128,7 +128,7 @@ export default function RegistrationCompletePage() {
                         <span className="text-xs font-bold text-primary">{idx + 1}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{p.name}</p>
+                        <p className="text-sm font-medium text-foreground">{p.name} {p.affiliation && <span className="text-xs text-muted-foreground">({p.affiliation})</span>}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="w-3 h-3" />
                           <span>{p.birthDate}</span>
@@ -187,10 +187,19 @@ export default function RegistrationCompletePage() {
                   </>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                참가비 입금 후 관리자 확인이 완료되면 참가가 확정됩니다.
-                입금 시 <span className="font-medium text-foreground">참가자 이름</span>으로 입금해주세요.
-              </p>
+              {["남복", "여복", "혼복"].includes((latestReg as any)?.eventType ?? "") ? (
+                <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                  참가비는 <span className="font-medium text-foreground">팀 단위</span>로 입금해주세요.<br/>
+                  입금자명에 <span className="font-medium text-foreground">파트너 2명의 이름을 모두 기재</span>해주세요.<br/>
+                  <span className="text-muted-foreground/70">(예: 홍길동김철수)</span><br/>
+                  입금 확인 후 관리자가 참가를 확정합니다.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                  참가비 입금 후 관리자 확인이 완료되면 참가가 확정됩니다.<br/>
+                  입금 시 <span className="font-medium text-foreground">참가자 이름</span>으로 입금해주세요.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

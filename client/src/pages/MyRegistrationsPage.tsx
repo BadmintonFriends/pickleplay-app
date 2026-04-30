@@ -137,8 +137,15 @@ export default function MyRegistrationsPage() {
                   </div>
                 </div>
 
-                {/* Tournament Name */}
-                <p className="text-xs text-muted-foreground mb-1">대회 ID: {reg.tournamentId}</p>
+                {/* Tournament Name & Event */}
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-xs text-muted-foreground">대회 ID: {reg.tournamentId}</p>
+                  {reg.eventType && (
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full border-primary/30 text-primary">
+                      {reg.eventType} {reg.skillLevel}
+                    </Badge>
+                  )}
+                </div>
 
                 {/* Players */}
                 <div className="space-y-1.5 mt-2">

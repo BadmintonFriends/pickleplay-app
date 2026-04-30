@@ -276,8 +276,8 @@ describe("registration router", () => {
       tournamentEventId: 1, // 남복 오픈부
       isSelfParticipant: true,
       players: [
-        { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "L" },
-        { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", giftSize: "XL" },
+        { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "L", affiliation: "OO클럽" },
+        { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", giftSize: "XL", affiliation: "XX클럽" },
       ],
     });
     expect(result).toHaveProperty("registrationId");
@@ -294,7 +294,7 @@ describe("registration router", () => {
       tournamentEventId: 3, // 남단 오픈부
       isSelfParticipant: true,
       players: [
-        { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "M" },
+        { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "M", affiliation: "OO클럽" },
       ],
     });
     expect(result).toHaveProperty("registrationId");
@@ -309,8 +309,8 @@ describe("registration router", () => {
         tournamentEventId: 3, // 남단 오픈부
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432" },
+          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
+          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", affiliation: "B클럽" },
         ],
       })
     ).rejects.toThrow("단식 종목은 1명만 등록 가능합니다");
@@ -324,7 +324,7 @@ describe("registration router", () => {
         tournamentEventId: 1, // 남복 오픈부
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678" },
+          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
         ],
       })
     ).rejects.toThrow("복식 종목은 2명을 등록해야 합니다");
@@ -338,8 +338,8 @@ describe("registration router", () => {
         tournamentEventId: 1,
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "XXXL" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", giftSize: "M" },
+          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "XXXL", affiliation: "A클럽" },
+          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", giftSize: "M", affiliation: "B클럽" },
         ],
       })
     ).rejects.toThrow("유효하지 않은 사이즈입니다");
@@ -353,8 +353,8 @@ describe("registration router", () => {
         tournamentEventId: 1,
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432" },
+          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
+          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", affiliation: "B클럽" },
         ],
       })
     ).rejects.toThrow("대회를 찾을 수 없습니다");
@@ -368,8 +368,8 @@ describe("registration router", () => {
         tournamentEventId: 9999,
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432" },
+          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
+          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", affiliation: "B클럽" },
         ],
       })
     ).rejects.toThrow("종목을 찾을 수 없습니다");
@@ -428,16 +428,16 @@ describe("registration router", () => {
           tournamentEventId: 1,
           isSelfParticipant: false,
           players: [
-            { name: "선수A", birthDate: "1990-01-01", phone: "01011111111", giftSize: "S" },
-            { name: "선수B", birthDate: "1992-03-03", phone: "01022222222", giftSize: "M" },
+            { name: "선수A", birthDate: "1990-01-01", phone: "01011111111", giftSize: "S", affiliation: "A클럽" },
+            { name: "선수B", birthDate: "1992-03-03", phone: "01022222222", giftSize: "M", affiliation: "A클럽" },
           ],
         },
         {
           tournamentEventId: 2,
           isSelfParticipant: false,
           players: [
-            { name: "선수C", birthDate: "1993-04-04", phone: "01033333333", giftSize: "L" },
-            { name: "선수D", birthDate: "1994-05-05", phone: "01044444444", giftSize: "XL" },
+            { name: "선수C", birthDate: "1993-04-04", phone: "01033333333", giftSize: "L", affiliation: "B클럽" },
+            { name: "선수D", birthDate: "1994-05-05", phone: "01044444444", giftSize: "XL", affiliation: "B클럽" },
           ],
         },
       ],
@@ -553,10 +553,9 @@ describe("admin router", () => {
     expect(result.length).toBeGreaterThan(0);
   });
 
-  it("allows admin to list users (admin role)", async () => {
+  it("rejects admin from listing users (only super_admin allowed)", async () => {
     const caller = appRouter.createCaller(createAdminContext("admin"));
-    const result = await caller.admin.listUsers();
-    expect(Array.isArray(result)).toBe(true);
+    await expect(caller.admin.listUsers()).rejects.toThrow();
   });
 
   it("allows super_admin to update user role", async () => {
