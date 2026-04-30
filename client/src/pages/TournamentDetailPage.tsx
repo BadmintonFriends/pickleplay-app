@@ -46,6 +46,13 @@ export default function TournamentDetailPage() {
     { enabled: !!tournamentId }
   );
 
+  const isRoleAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const { data: managedTournamentIds } = trpc.admin.getUserManagedTournaments.useQuery(
+    undefined,
+    { enabled: isAuthenticated && !isRoleAdmin }
+  );
+  const canManage = isRoleAdmin || (managedTournamentIds?.includes(tournamentId) ?? false);
+
   if (isLoading) {
     return (
       <div className="bg-background min-h-screen">
@@ -373,7 +380,7 @@ export default function TournamentDetailPage() {
       )}
 
       {/* Manage button - only for organizer/admin */}
-      {isAuthenticated && (user?.role === "admin" || user?.role === "super_admin" || (user?.role === "organizer" && tournament.organizerId === user?.id)) && (
+      {isAuthenticated && canManage && (
         <motion.section className="px-4 pb-3" initial="hidden" animate="visible" variants={fadeUp} custom={7}>
           <button
             onClick={() => navigate(`/tournament/${tournamentId}/manage`)}

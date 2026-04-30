@@ -401,3 +401,47 @@
 - [x] organizer 본인 대회 종목 설정/포스터 업로드 성공 테스트
 - [x] organizer 타인 대회 종목 설정/포스터/접수조회 FORBIDDEN 테스트
 - [x] 전체 vitest 109개 통과 확인
+
+## Phase 38: 다중 관리자 + organizer 역할 제거
+
+### DB 스키마 + 마이그레이션
+- [x] tournament_organizers 테이블 생성 (drizzle/schema.ts)
+- [x] 기존 tournaments.organizerId 데이터 → tournament_organizers로 이관
+- [x] 기존 users.role='organizer' → 'user'로 변경 (0명 해당)
+- [x] users.role enum에서 organizer 제거
+
+### 백엔드: db.ts 헬퍼 함수
+- [x] getTournamentOrganizers(tournamentId)
+- [x] isTournamentOrganizer(tournamentId, userId)
+- [x] addTournamentOrganizer(tournamentId, userId, role)
+- [x] removeTournamentOrganizer(tournamentId, userId)
+- [x] getUserManagedTournaments(userId)
+
+### 백엔드: trpc.ts + routers.ts
+- [x] adminProcedure에서 organizer 제거
+- [x] verifyTournamentOwnership → isTournamentOrganizer 기반으로 변경
+- [x] 대회 관련 프로시저 protectedProcedure로 변경 (verifyTournamentOwnership으로 권한 검증)
+- [x] admin.getTournamentOrganizers 프로시저 추가
+- [x] admin.addTournamentOrganizer 프로시저 추가
+- [x] admin.removeTournamentOrganizer 프로시저 추가
+- [x] admin.searchUsersForOrganizer 프로시저 추가
+- [x] admin.getUserManagedTournaments 프로시저 추가
+- [x] createTournament에서 owner 자동 등록
+- [x] updateUserRole enum에서 organizer 제거
+- [ ] 접수 취소/수정 권한 체크에서 organizer 참조 제거
+
+### 프론트엔드: TournamentManagePage
+- [x] 대회 정보 탭에 관리자 관리 섹션 추가
+- [x] 관리자 추가 모달 (사용자 검색 + 선택)
+- [x] 관리자 삭제 기능 (owner 제외)
+- [x] admin/super_admin만 추가/삭제 가능
+
+### 프론트엔드: AdminPage + 기타
+- [x] AdminPage 접근 권한 변경 (tournament_organizers 기반)
+- [x] 사용자 관리 역할 드롭다운에서 organizer 제거
+- [x] TournamentDetailPage 관리 버튼 조건 변경
+
+### 테스트
+- [x] 다중 관리자 소유권 검증 테스트
+- [x] organizer 역할 제거 후 기존 테스트 수정
+- [x] 전체 vitest 통과 확인 (109개)

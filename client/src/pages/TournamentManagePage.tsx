@@ -9,6 +9,7 @@ import {
   Settings, FileText, Trophy, AlertCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -64,7 +65,7 @@ export default function TournamentManagePage() {
   const [activeTab, setActiveTab] = useState<ManageTab>("registrations");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const isAllowed = user?.role === "admin" || user?.role === "super_admin" || user?.role === "organizer";
+  const isAllowed = user?.role === "admin" || user?.role === "super_admin" || !!user;
 
   // 대회 정보 조회
   const { data: tournament, isLoading: tournamentLoading, refetch: refetchTournament } = trpc.tournament.detail.useQuery(
@@ -72,12 +73,12 @@ export default function TournamentManagePage() {
     { enabled: !!tournamentId && isAllowed }
   );
 
-  // organizer인 경우 본인 대회만 접근 가능
+  // 대회 관리자 여부는 백엔드 verifyTournamentOwnership에서 검증
   const isOwner = useMemo(() => {
     if (!user || !tournament) return false;
     if (user.role === "admin" || user.role === "super_admin") return true;
-    if (user.role === "organizer" && tournament.organizerId === user.id) return true;
-    return false;
+    // 일반 user는 tournament_organizers 테이블로 검증되므로 우선 true로 설정 (백엔드에서 FORBIDDEN 반환 시 에러 처리)
+    return true;
   }, [user, tournament]);
 
   // 접수 목록 조회
@@ -120,6 +121,30 @@ export default function TournamentManagePage() {
     onSuccess: () => { toast.success("사이즈표가 삭제되었습니다!"); refetchTournament(); },
     onError: (err: any) => toast.error(err.message),
   });
+
+  // ─── Organizer Management ───
+  const [showOrganizerModal, setShowOrganizerModal] = useState(false);
+  const [orgSearchQuery, setOrgSearchQuery] = useState("");
+  const [orgSearching, setOrgSearching] = useState(false);
+
+  const { data: organizerList, refetch: refetchOrganizers } = trpc.admin.getTournamentOrganizers.useQuery(
+    { tournamentId: tournamentId! },
+    { enabled: !!tournamentId && isOwner && activeTab === "info" }
+  );
+  const addOrganizerMutation = trpc.admin.addTournamentOrganizer.useMutation({
+    onSuccess: () => { toast.success("관리자가 추가되었습니다!"); refetchOrganizers(); setShowOrganizerModal(false); setOrgSearchQuery(""); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const removeOrganizerMutation = trpc.admin.removeTournamentOrganizer.useMutation({
+    onSuccess: () => { toast.success("관리자가 제거되었습니다."); refetchOrganizers(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const { data: searchedUsers } = trpc.admin.searchUsersForOrganizer.useQuery(
+    { query: orgSearchQuery },
+    { enabled: orgSearchQuery.length >= 2 && showOrganizerModal }
+  );
+
+  const isAdminRole = user?.role === "admin" || user?.role === "super_admin";
 
   // ─── Info Tab State ───
   const [infoForm, setInfoForm] = useState({
@@ -393,7 +418,7 @@ export default function TournamentManagePage() {
           <p className="text-[10px] text-white/50">{user?.name ?? user?.email}</p>
         </div>
         <Badge className="bg-primary text-foreground text-[10px] font-bold">
-          {user?.role === "organizer" ? "운영자" : "관리자"}
+          {user?.role === "admin" || user?.role === "super_admin" ? "관리자" : "운영자"}
         </Badge>
       </div>
 
@@ -666,6 +691,108 @@ export default function TournamentManagePage() {
               {updateTournamentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {updateTournamentMutation.isPending ? "저장 중..." : "대회 정보 저장"}
             </button>
+
+            {/* ─── 관리자 관리 섹션 ─── */}
+            <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3 mt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" /> 대회 관리자
+                </h3>
+                {isAdminRole && (
+                  <button onClick={() => setShowOrganizerModal(true)}
+                    className="text-[10px] font-bold text-primary flex items-center gap-0.5">
+                    <Plus className="w-3 h-3" /> 추가
+                  </button>
+                )}
+              </div>
+              {!organizerList || organizerList.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground text-center py-2">등록된 관리자가 없습니다</p>
+              ) : (
+                <div className="space-y-2">
+                  {organizerList.map((org: any) => (
+                    <div key={org.userId} className="flex items-center justify-between bg-ink-3 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Users className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold">{org.userName || org.userEmail || `ID: ${org.userId}`}</p>
+                          <p className="text-[9px] text-muted-foreground">
+                            {org.role === "owner" ? "대회 생성자" : "운영자"}
+                          </p>
+                        </div>
+                      </div>
+                      {isAdminRole && org.role !== "owner" && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`${org.userName || org.userEmail} 관리자를 제거하시겠습니까?`)) {
+                              removeOrganizerMutation.mutate({ tournamentId: tournamentId!, userId: org.userId });
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!isAdminRole && (
+                <p className="text-[9px] text-muted-foreground text-center">관리자 추가/제거는 시스템 관리자만 가능합니다</p>
+              )}
+            </div>
+
+            {/* 관리자 추가 모달 */}
+            <Dialog open={showOrganizerModal} onOpenChange={setShowOrganizerModal}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle className="text-sm">대회 관리자 추가</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                      value={orgSearchQuery}
+                      onChange={e => setOrgSearchQuery(e.target.value)}
+                      placeholder="이름 또는 이메일로 검색..."
+                      className="w-full pl-9 pr-3 py-2.5 bg-ink-3 rounded-lg text-xs border border-line-strong focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                  {orgSearchQuery.length < 2 ? (
+                    <p className="text-[10px] text-muted-foreground text-center py-4">2글자 이상 입력하세요</p>
+                  ) : !searchedUsers || searchedUsers.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground text-center py-4">검색 결과가 없습니다</p>
+                  ) : (
+                    <div className="max-h-[200px] overflow-y-auto space-y-1">
+                      {searchedUsers.map((u: any) => {
+                        const alreadyAdded = organizerList?.some((o: any) => o.userId === u.id);
+                        return (
+                          <button
+                            key={u.id}
+                            disabled={alreadyAdded || addOrganizerMutation.isPending}
+                            onClick={() => addOrganizerMutation.mutate({ tournamentId: tournamentId!, userId: u.id })}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
+                              alreadyAdded ? "opacity-50 cursor-not-allowed bg-ink-3" : "hover:bg-ink-3"
+                            }`}
+                          >
+                            <div>
+                              <p className="text-xs font-semibold">{u.name || "이름 없음"}</p>
+                              <p className="text-[9px] text-muted-foreground">{u.email}</p>
+                            </div>
+                            {alreadyAdded ? (
+                              <Badge className="text-[8px] bg-muted text-muted-foreground">이미 등록</Badge>
+                            ) : (
+                              <Plus className="w-3.5 h-3.5 text-primary" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </motion.div>
         )}
 

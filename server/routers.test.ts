@@ -146,6 +146,20 @@ vi.mock("./db", () => {
     getKprTotalParticipants: vi.fn().mockResolvedValue(2),
     getKprRank: vi.fn().mockResolvedValue(1),
     getRecentMatches: vi.fn().mockResolvedValue([]),
+    // Phase 38: tournament_organizers
+    getTournamentOrganizers: vi.fn().mockResolvedValue([]),
+    isTournamentOrganizer: vi.fn().mockImplementation(async (tournamentId: number, userId: number) => {
+      // user id=1 is organizer of tournament 1
+      return tournamentId === 1 && userId === 1;
+    }),
+    addTournamentOrganizer: vi.fn().mockResolvedValue(undefined),
+    removeTournamentOrganizer: vi.fn().mockResolvedValue(undefined),
+    getUserManagedTournaments: vi.fn().mockImplementation(async (userId: number) => {
+      // user id=1 manages tournament 1
+      if (userId === 1) return [1];
+      return [];
+    }),
+    searchUsers: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -206,8 +220,13 @@ function createUserContext(overrides?: Partial<AuthenticatedUser>): TrpcContext 
   };
 }
 
-function createAdminContext(role: "admin" | "organizer" | "super_admin" = "admin"): TrpcContext {
+function createAdminContext(role: "admin" | "super_admin" | "user" = "admin"): TrpcContext {
   return createUserContext({ id: 1, openId: "admin-1", name: "관리자", role });
+}
+
+// Phase 38: tournament_organizers에 등록된 일반 user context (id=1, tournament 1의 관리자)
+function createTournamentManagerContext(): TrpcContext {
+  return createUserContext({ id: 1, openId: "manager-1", name: "대회관리자", role: "user" });
 }
 
 // ─── Tournament Router Tests ────────────────────────────
@@ -464,8 +483,8 @@ describe("admin router", () => {
     expect(Array.isArray(result)).toBe(true);
   });
 
-  it("allows organizer to view tournament registrations", async () => {
-    const caller = appRouter.createCaller(createAdminContext("organizer"));
+  it("allows tournament manager (user in tournament_organizers) to view registrations", async () => {
+    const caller = appRouter.createCaller(createTournamentManagerContext());
     const result = await caller.admin.tournamentRegistrations({ tournamentId: 1 });
     expect(Array.isArray(result)).toBe(true);
   });
@@ -541,8 +560,8 @@ describe("admin router", () => {
   });
 
   it("rejects non-super_admin from listing users", async () => {
-    // organizer should not be able to list users (superAdminProcedure)
-    const caller = appRouter.createCaller(createAdminContext("organizer"));
+    // tournament manager (user role) should not be able to list users (superAdminProcedure)
+    const caller = appRouter.createCaller(createTournamentManagerContext());
     await expect(caller.admin.listUsers()).rejects.toThrow();
   });
 
@@ -562,7 +581,7 @@ describe("admin router", () => {
     const caller = appRouter.createCaller(createAdminContext("super_admin"));
     const result = await caller.admin.updateUserRole({
       userId: 10,
-      role: "organizer",
+      role: "admin",
     });
     expect(result.success).toBe(true);
   });

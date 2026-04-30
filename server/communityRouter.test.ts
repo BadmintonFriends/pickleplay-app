@@ -174,6 +174,13 @@ vi.mock("./db", () => {
     getKprRank: vi.fn().mockResolvedValue(1),
     getRecentMatches: vi.fn().mockResolvedValue([]),
     getDb: vi.fn().mockResolvedValue(null),
+    // Phase 38: tournament_organizers
+    getTournamentOrganizers: vi.fn().mockResolvedValue([]),
+    isTournamentOrganizer: vi.fn().mockResolvedValue(false),
+    addTournamentOrganizer: vi.fn().mockResolvedValue(undefined),
+    removeTournamentOrganizer: vi.fn().mockResolvedValue(undefined),
+    getUserManagedTournaments: vi.fn().mockResolvedValue([]),
+    searchUsers: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -236,7 +243,7 @@ function createUserContext(overrides?: Partial<AuthenticatedUser>): TrpcContext 
   };
 }
 
-function createAdminContext(role: "admin" | "organizer" | "super_admin" = "admin"): TrpcContext {
+function createAdminContext(role: "admin" | "super_admin" | "user" = "admin"): TrpcContext {
   return createUserContext({ id: 1, openId: "admin-1", name: "관리자", role });
 }
 

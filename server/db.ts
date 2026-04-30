@@ -7,6 +7,7 @@ import {
   tournamentAgeGroups, InsertTournamentAgeGroup,
   tournamentPosters, InsertTournamentPoster,
   tournamentDocuments, InsertTournamentDocument,
+  tournamentOrganizers, InsertTournamentOrganizer,
   registrations, InsertRegistration,
   players, InsertPlayer,
   kprRatings, InsertKprRating,
@@ -97,7 +98,7 @@ export async function getAllUsers() {
   return db.select().from(users).orderBy(desc(users.createdAt));
 }
 
-export async function updateUserRole(userId: number, role: "user" | "organizer" | "admin" | "super_admin") {
+export async function updateUserRole(userId: number, role: "user" | "admin" | "super_admin") {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set({ role }).where(eq(users.id, userId));
@@ -726,4 +727,67 @@ export async function updatePushEnabled(userId: number, enabled: boolean) {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set({ pushEnabled: enabled }).where(eq(users.id, userId));
+}
+
+// ─── Tournament Organizers (다중 관리자) ─────────────────
+
+export async function getTournamentOrganizers(tournamentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: tournamentOrganizers.id,
+      tournamentId: tournamentOrganizers.tournamentId,
+      userId: tournamentOrganizers.userId,
+      role: tournamentOrganizers.role,
+      assignedAt: tournamentOrganizers.assignedAt,
+      userName: users.name,
+      userPhone: users.phone,
+    })
+    .from(tournamentOrganizers)
+    .leftJoin(users, eq(tournamentOrganizers.userId, users.id))
+    .where(eq(tournamentOrganizers.tournamentId, tournamentId))
+    .orderBy(tournamentOrganizers.role, tournamentOrganizers.assignedAt);
+  return rows;
+}
+
+export async function isTournamentOrganizer(tournamentId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: tournamentOrganizers.id })
+    .from(tournamentOrganizers)
+    .where(and(
+      eq(tournamentOrganizers.tournamentId, tournamentId),
+      eq(tournamentOrganizers.userId, userId)
+    ))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function addTournamentOrganizer(tournamentId: number, userId: number, role: "owner" | "manager" = "manager") {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(tournamentOrganizers).values({ tournamentId, userId, role });
+}
+
+export async function removeTournamentOrganizer(tournamentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  // owner는 제거 불가
+  await db.delete(tournamentOrganizers).where(and(
+    eq(tournamentOrganizers.tournamentId, tournamentId),
+    eq(tournamentOrganizers.userId, userId),
+    eq(tournamentOrganizers.role, "manager")
+  ));
+}
+
+export async function getUserManagedTournaments(userId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ tournamentId: tournamentOrganizers.tournamentId })
+    .from(tournamentOrganizers)
+    .where(eq(tournamentOrganizers.userId, userId));
+  return rows.map(r => r.tournamentId);
 }

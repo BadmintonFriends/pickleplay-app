@@ -2,6 +2,7 @@ import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import * as db from "../db";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -27,14 +28,23 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
-const ADMIN_ROLES = ['admin', 'super_admin', 'organizer'] as const;
+const ADMIN_ROLES = ['admin', 'super_admin'] as const;
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || !(ADMIN_ROLES as readonly string[]).includes(ctx.user.role)) {
+    if (!ctx.user) {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+    }
+
+    const isAdmin = (ADMIN_ROLES as readonly string[]).includes(ctx.user.role);
+    if (!isAdmin) {
+      // 일반 user: tournament_organizers에 1건 이상 등록되어 있으면 접근 허용
+      const managedTournaments = await db.getUserManagedTournaments(ctx.user.id);
+      if (managedTournaments.length === 0) {
+        throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+      }
     }
 
     return next({

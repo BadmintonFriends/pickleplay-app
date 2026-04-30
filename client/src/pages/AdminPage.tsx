@@ -99,12 +99,17 @@ export default function AdminPage() {
   const [posterPreviews, setPosterPreviews] = useState<string[]>([]);
   const [uploadingPoster, setUploadingPoster] = useState(false);
 
-  const isAdmin = user?.role === "admin" || user?.role === "super_admin" || user?.role === "organizer";
+  const isRoleAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   // Queries
   const utils = trpc.useUtils();
-  const { data: tournamentList } = trpc.tournament.list.useQuery(undefined, { enabled: isAdmin });
-  const { data: allUsers } = trpc.admin.listUsers.useQuery(undefined, { enabled: isAdmin && activeTab === "users" });
+  const { data: managedTournamentIds } = trpc.admin.getUserManagedTournaments.useQuery(
+    undefined,
+    { enabled: isAuthenticated && !isRoleAdmin }
+  );
+  const isAdmin = isRoleAdmin || (managedTournamentIds && managedTournamentIds.length > 0);
+  const { data: tournamentList } = trpc.tournament.list.useQuery(undefined, { enabled: !!isAdmin });
+  const { data: allUsers } = trpc.admin.listUsers.useQuery(undefined, { enabled: isRoleAdmin && activeTab === "users" });
   // Mutations
 
   const updateRoleMutation = trpc.admin.updateUserRole.useMutation({
@@ -375,17 +380,20 @@ export default function AdminPage() {
     );
   }
 
-  // organizer는 본인 대회만 필터링
+  // admin/super_admin은 모든 대회 표시, 일반 user는 본인 관리 대회만
   const filteredTournamentList = useMemo(() => {
     if (!tournamentList) return [];
-    if (user?.role === "admin" || user?.role === "super_admin") return tournamentList;
-    // organizer는 본인이 생성한 대회만
-    return tournamentList.filter((t: any) => t.organizerId === user?.id);
-  }, [tournamentList, user]);
+    if (isRoleAdmin) return tournamentList;
+    // 일반 user: tournament_organizers에 등록된 대회만 표시
+    if (managedTournamentIds && managedTournamentIds.length > 0) {
+      return tournamentList.filter((t: any) => managedTournamentIds.includes(t.id));
+    }
+    return [];
+  }, [tournamentList, isRoleAdmin, managedTournamentIds]);
 
   const tabs: { key: AdminTab; label: string; icon: any }[] = [
     { key: "tournaments", label: "대회 관리", icon: Trophy },
-    ...(user?.role === "admin" || user?.role === "super_admin" ? [{ key: "users" as AdminTab, label: "사용자", icon: UserCheck }] : []),
+    ...(isRoleAdmin ? [{ key: "users" as AdminTab, label: "사용자", icon: UserCheck }] : []),
   ];
 
   const isSaving = createTournamentMutation.isPending || updateTournamentMutation.isPending;
@@ -434,17 +442,19 @@ export default function AdminPage() {
           <motion.div className="space-y-3" initial="hidden" animate="visible" variants={fadeUp} custom={0}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-bold text-foreground">대회 목록</h2>
-              <button
-                onClick={startCreate}
-                className="flex items-center gap-1 bg-primary text-foreground text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors"
-              >
-                <Plus className="w-3 h-3" /> 대회 추가
-              </button>
+              {isRoleAdmin && (
+                <button
+                  onClick={startCreate}
+                  className="flex items-center gap-1 bg-primary text-foreground text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors"
+                >
+                  <Plus className="w-3 h-3" /> 대회 추가
+                </button>
+              )}
             </div>
             {!filteredTournamentList || filteredTournamentList.length === 0 ? (
               <div className="text-center py-10">
                 <Trophy className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">{user?.role === "organizer" ? "본인이 생성한 대회가 없습니다" : "등록된 대회가 없습니다"}</p>
+                <p className="text-xs text-muted-foreground">등록된 대회가 없습니다</p>
               </div>
             ) : (
               filteredTournamentList.map((t: any) => {
@@ -852,7 +862,7 @@ export default function AdminPage() {
                     className="text-[10px] font-bold px-2 py-1 rounded-lg border border-line-strong bg-card"
                   >
                     <option value="user">user</option>
-                    <option value="organizer">organizer</option>
+                    
                     <option value="admin">admin</option>
                     <option value="super_admin">super_admin</option>
                   </select>

@@ -9,6 +9,7 @@ import {
   bigint,
   json,
   decimal,
+  unique,
 } from "drizzle-orm/mysql-core";
 
 // ─── Users ───────────────────────────────────────────────
@@ -25,7 +26,7 @@ export const users = mysqlTable("users", {
   privacyAcceptedAt: timestamp("privacyAcceptedAt"),
   nickname: varchar("nickname", { length: 30 }).unique(),
   pushEnabled: boolean("pushEnabled").default(true).notNull(),
-  role: mysqlEnum("role", ["user", "organizer", "admin", "super_admin"])
+  role: mysqlEnum("role", ["user", "admin", "super_admin"])
     .default("user")
     .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -118,6 +119,20 @@ export const tournamentPosters = mysqlTable("tournament_posters", {
 
 export type TournamentPoster = typeof tournamentPosters.$inferSelect;
 export type InsertTournamentPoster = typeof tournamentPosters.$inferInsert;
+
+// ─── Tournament Organizers (다중 관리자) ─────────────────
+export const tournamentOrganizers = mysqlTable("tournament_organizers", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournamentId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["owner", "manager"]).default("manager").notNull(),
+  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+}, (table) => ({
+  uniqueTournamentUser: unique().on(table.tournamentId, table.userId),
+}));
+
+export type TournamentOrganizer = typeof tournamentOrganizers.$inferSelect;
+export type InsertTournamentOrganizer = typeof tournamentOrganizers.$inferInsert;
 
 // ─── Tournament Documents (공문 PDF) ─────────────────────
 export const tournamentDocuments = mysqlTable("tournament_documents", {

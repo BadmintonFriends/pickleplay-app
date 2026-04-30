@@ -274,24 +274,24 @@ const registrationRouter = router({
 
 // ─── Admin Router ───────────────────────────────────────
 
-/** 대회 소유권 검증: organizer는 본인 대회만, admin/super_admin은 모든 대회 접근 가능 */
+/** 대회 소유권 검증: admin/super_admin은 모든 대회, 일반 사용자는 tournament_organizers에 등록된 대회만 접근 가능 */
 async function verifyTournamentOwnership(user: { id: number; role: string }, tournamentId: number) {
   if (user.role === "admin" || user.role === "super_admin") return;
-  const tournament = await db.getTournamentById(tournamentId);
-  if (!tournament || tournament.organizerId !== user.id) {
+  const isOrganizer = await db.isTournamentOrganizer(tournamentId, user.id);
+  if (!isOrganizer) {
     throw new TRPCError({ code: "FORBIDDEN", message: "본인 대회만 수정할 수 있습니다" });
   }
 }
 
 const adminRouter = router({
-  tournamentRegistrations: adminProcedure
+  tournamentRegistrations: protectedProcedure
     .input(z.object({ tournamentId: z.number() }))
     .query(async ({ ctx, input }) => {
       await verifyTournamentOwnership(ctx.user, input.tournamentId);
       return db.getRegistrationsWithPlayers(input.tournamentId);
     }),
 
-  updatePaymentStatus: adminProcedure
+  updatePaymentStatus: protectedProcedure
     .input(z.object({
       registrationId: z.number(),
       paymentStatus: z.enum(["unpaid", "paid", "refunded"]),
@@ -342,7 +342,7 @@ const adminRouter = router({
       return { success: true };
     }),
 
-  updateRegistrationStatus: adminProcedure
+  updateRegistrationStatus: protectedProcedure
     .input(z.object({
       registrationId: z.number(),
       status: z.enum(["pending", "confirmed", "cancelled"]),
@@ -388,10 +388,12 @@ const adminRouter = router({
         ...input,
         organizerId: ctx.user.id,
       });
+      // 생성자를 owner로 자동 등록
+      await db.addTournamentOrganizer(id, ctx.user.id, "owner");
       return { id };
     }),
 
-  updateTournament: adminProcedure
+  updateTournament: protectedProcedure
     .input(z.object({
       id: z.number(),
       data: z.object({
@@ -423,7 +425,7 @@ const adminRouter = router({
       return { success: true };
     }),
 
-  setEvents: adminProcedure
+  setEvents: protectedProcedure
     .input(z.object({
       tournamentId: z.number(),
       events: z.array(z.object({
@@ -445,7 +447,7 @@ const adminRouter = router({
       return { success: true };
     }),
 
-  setAgeGroups: adminProcedure
+  setAgeGroups: protectedProcedure
     .input(z.object({
       tournamentId: z.number(),
       ageGroups: z.array(z.object({
@@ -467,7 +469,7 @@ const adminRouter = router({
       return { success: true };
     }),
 
-  uploadPoster: adminProcedure
+  uploadPoster: protectedProcedure
     .input(z.object({
       tournamentId: z.number(),
       base64Data: z.string(),
@@ -489,7 +491,7 @@ const adminRouter = router({
       return { id, url };
     }),
 
-  deletePoster: adminProcedure
+  deletePoster: protectedProcedure
     .input(z.object({ id: z.number(), tournamentId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await verifyTournamentOwnership(ctx.user, input.tournamentId);
@@ -497,7 +499,7 @@ const adminRouter = router({
       return { success: true };
     }),
 
-  uploadDocument: adminProcedure
+  uploadDocument: protectedProcedure
     .input(z.object({
       tournamentId: z.number(),
       title: z.string(),
@@ -522,7 +524,7 @@ const adminRouter = router({
       return { id, url };
     }),
 
-  uploadSizeGuide: adminProcedure
+  uploadSizeGuide: protectedProcedure
     .input(z.object({
       tournamentId: z.number(),
       base64Data: z.string(),
@@ -541,7 +543,7 @@ const adminRouter = router({
       return { url, fileKey };
     }),
 
-  deleteSizeGuide: adminProcedure
+  deleteSizeGuide: protectedProcedure
     .input(z.object({ tournamentId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await verifyTournamentOwnership(ctx.user, input.tournamentId);
@@ -552,7 +554,7 @@ const adminRouter = router({
       return { success: true };
     }),
 
-  deleteDocument: adminProcedure
+  deleteDocument: protectedProcedure
     .input(z.object({ id: z.number(), tournamentId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await verifyTournamentOwnership(ctx.user, input.tournamentId);
@@ -567,11 +569,64 @@ const adminRouter = router({
   updateUserRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
-      role: z.enum(["user", "organizer", "admin", "super_admin"]),
+      role: z.enum(["user", "admin", "super_admin"]),
     }))
     .mutation(async ({ input }) => {
       await db.updateUserRole(input.userId, input.role);
       return { success: true };
+    }),
+
+  // ─── 대회 관리자 관리 프로시저 ───
+  getTournamentOrganizers: protectedProcedure
+    .input(z.object({ tournamentId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
+      return db.getTournamentOrganizers(input.tournamentId);
+    }),
+
+  addTournamentOrganizer: adminProcedure
+    .input(z.object({
+      tournamentId: z.number(),
+      userId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      // 이미 등록된지 확인
+      const isAlready = await db.isTournamentOrganizer(input.tournamentId, input.userId);
+      if (isAlready) {
+        throw new TRPCError({ code: "CONFLICT", message: "이미 등록된 관리자입니다" });
+      }
+      await db.addTournamentOrganizer(input.tournamentId, input.userId, "manager");
+      return { success: true };
+    }),
+
+  removeTournamentOrganizer: adminProcedure
+    .input(z.object({
+      tournamentId: z.number(),
+      userId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      await db.removeTournamentOrganizer(input.tournamentId, input.userId);
+      return { success: true };
+    }),
+
+  searchUsersForOrganizer: adminProcedure
+    .input(z.object({ query: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const allUsers = await db.getAllUsers();
+      const q = input.query.toLowerCase();
+      return allUsers
+        .filter(u => 
+          (u.name && u.name.toLowerCase().includes(q)) ||
+          (u.phone && u.phone.includes(q)) ||
+          (u.email && u.email.toLowerCase().includes(q))
+        )
+        .slice(0, 10)
+        .map(u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email }));
+    }),
+
+  getUserManagedTournaments: protectedProcedure
+    .query(async ({ ctx }) => {
+      return db.getUserManagedTournaments(ctx.user.id);
     }),
 });
 
