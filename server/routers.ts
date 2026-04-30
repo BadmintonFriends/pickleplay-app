@@ -222,8 +222,12 @@ const registrationRouter = router({
     .query(async ({ ctx, input }) => {
       const reg = await db.getRegistrationWithPlayers(input.id);
       if (!reg) throw new TRPCError({ code: "NOT_FOUND", message: "접수 내역을 찾을 수 없습니다" });
-      if (reg.userId !== ctx.user.id && !['admin', 'super_admin', 'organizer'].includes(ctx.user.role)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+      if (reg.userId !== ctx.user.id && !['admin', 'super_admin'].includes(ctx.user.role)) {
+        // 대회 관리자인지 확인
+        const isOrganizer = await db.isTournamentOrganizer(reg.tournamentId, ctx.user.id);
+        if (!isOrganizer) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+        }
       }
       return reg;
     }),
@@ -236,8 +240,11 @@ const registrationRouter = router({
     .mutation(async ({ ctx, input }) => {
       const reg = await db.getRegistrationById(input.id);
       if (!reg) throw new TRPCError({ code: "NOT_FOUND", message: "접수 내역을 찾을 수 없습니다" });
-      if (reg.userId !== ctx.user.id && !['admin', 'super_admin', 'organizer'].includes(ctx.user.role)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+      if (reg.userId !== ctx.user.id && !['admin', 'super_admin'].includes(ctx.user.role)) {
+        const isOrganizer = await db.isTournamentOrganizer(reg.tournamentId, ctx.user.id);
+        if (!isOrganizer) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+        }
       }
       if (reg.status === "cancelled") throw new TRPCError({ code: "BAD_REQUEST", message: "취소된 접수는 수정할 수 없습니다" });
 
@@ -261,8 +268,11 @@ const registrationRouter = router({
     .mutation(async ({ ctx, input }) => {
       const reg = await db.getRegistrationById(input.id);
       if (!reg) throw new TRPCError({ code: "NOT_FOUND", message: "접수 내역을 찾을 수 없습니다" });
-      if (reg.userId !== ctx.user.id && !['admin', 'super_admin', 'organizer'].includes(ctx.user.role)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+      if (reg.userId !== ctx.user.id && !['admin', 'super_admin'].includes(ctx.user.role)) {
+        const isOrganizer = await db.isTournamentOrganizer(reg.tournamentId, ctx.user.id);
+        if (!isOrganizer) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+        }
       }
       if (reg.status === "cancelled") throw new TRPCError({ code: "BAD_REQUEST", message: "이미 취소된 접수입니다" });
 

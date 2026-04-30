@@ -41,7 +41,7 @@ const features = [
   { icon: Trophy, title: "대회", desc: "전국 피클볼 대회 정보를 한눈에", path: "/tournament", isOpen: true },
   { icon: MapPin, title: "코트 예약", desc: "가까운 코트를 찾고 바로 예약", path: "/courts", isOpen: false },
   { icon: ShoppingBag, title: "샵", desc: "패들, 볼, 의류 등 장비 쇼핑", path: "/shop", isOpen: false },
-  { icon: Users, title: "소셜", desc: "피클볼 커뮤니티와 함께하세요", path: "/social", isOpen: false },
+  { icon: Users, title: "소셜", desc: "피클볼 커뮤니티와 함께하세요", path: "/social", isOpen: true },
 ];
 
 /* ─── KPR Dashboard (로그인 사용자) ─── */

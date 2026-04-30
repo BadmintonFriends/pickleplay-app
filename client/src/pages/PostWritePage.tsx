@@ -167,7 +167,7 @@ export default function PostWritePage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-line">
         <div className="flex items-center justify-between px-2 h-12">
-          <button onClick={() => navigate(-1 as any)} className="p-2 rounded-lg hover:bg-muted">
+          <button onClick={() => { if (window.history.length > 1) { window.history.back(); } else { navigate("/social"); } }} className="p-2 rounded-lg hover:bg-muted">
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h2 className="text-sm font-bold text-foreground">

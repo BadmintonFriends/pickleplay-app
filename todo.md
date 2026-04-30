@@ -428,7 +428,7 @@
 - [x] admin.getUserManagedTournaments 프로시저 추가
 - [x] createTournament에서 owner 자동 등록
 - [x] updateUserRole enum에서 organizer 제거
-- [ ] 접수 취소/수정 권한 체크에서 organizer 참조 제거
+- [x] 접수 취소/수정 권한 체크에서 organizer 참조 제거
 
 ### 프론트엔드: TournamentManagePage
 - [x] 대회 정보 탭에 관리자 관리 섹션 추가
@@ -445,3 +445,10 @@
 - [x] 다중 관리자 소유권 검증 테스트
 - [x] organizer 역할 제거 후 기존 테스트 수정
 - [x] 전체 vitest 통과 확인 (109개)
+
+## Phase 38 후속 작업
+
+- [x] 데이터 마이그레이션: tournaments.organizerId → tournament_organizers 백필
+- [x] 접수 취소/수정 권한 체크에서 organizer 참조 제거 → isTournamentOrganizer 사용
+- [x] 홈에서 소셜 카드 탭 시 소셜 탭으로 이동
+- [x] 소셜 글쓰기 화면에서 뒤로가기 시 404 버그 수정
