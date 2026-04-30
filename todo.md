@@ -363,3 +363,41 @@
 
 ### 테스트
 - [ ] vitest 테스트 추가/수정 및 전체 통과 확인
+
+## Phase 37: 대회 정보/상태 관리 권한 다운그레이드
+
+### 백엔드: 소유권 검증
+- [x] verifyTournamentOwnership 헬퍼 함수 추가
+- [x] updateTournament에 소유권 검증 적용
+- [x] setEvents에 소유권 검증 적용
+- [x] setAgeGroups에 소유권 검증 적용
+- [x] uploadPoster에 소유권 검증 적용
+- [x] deletePoster에 tournamentId 추가 + 소유권 검증 적용
+- [x] uploadSizeGuide에 소유권 검증 적용
+- [x] deleteSizeGuide에 소유권 검증 적용
+- [x] uploadDocument에 소유권 검증 적용
+- [x] tournamentRegistrations/updatePaymentStatus/updateRegistrationStatus에 소유권 검증 적용
+- [x] deleteDocument에 tournamentId 추가 + 소유권 검증 적용
+
+### 프론트엔드: TournamentManagePage 확장
+- [x] 탭 네비게이션 추가 (접수관리 | 대회정보 | 종목/연령대 | 포스터/문서 | 상태변경)
+- [x] 대회 정보 수정 탭 UI 이식
+- [x] 종목/연령대 설정 탭 UI 이식
+- [x] 포스터/사이즈표/문서 관리 탭 UI 이식
+- [x] 상태 변경 탭 UI 이식
+
+### 프론트엔드: AdminPage 축소
+- [x] 대회 수정 폼 제거 (생성만 유지) - 수정은 TournamentManagePage로 이동
+- [x] 상태 변경 버튼 제거 - TournamentManagePage 상태 탭으로 이동
+- [x] 대회 카드에 "대회 관리" 버튼으로 통합
+- [x] organizer인 경우 본인 대회만 목록 표시 (filteredTournamentList)
+- [x] 접수 관리 탭 제거
+- [x] 사용자 관리 탭 admin/super_admin만 표시
+
+### 테스트
+- [x] organizer 본인 대회 수정 성공 테스트
+- [x] organizer 타인 대회 수정 FORBIDDEN 테스트
+- [x] admin/super_admin 모든 대회 수정 성공 테스트
+- [x] organizer 본인 대회 종목 설정/포스터 업로드 성공 테스트
+- [x] organizer 타인 대회 종목 설정/포스터/접수조회 FORBIDDEN 테스트
+- [x] 전체 vitest 109개 통과 확인

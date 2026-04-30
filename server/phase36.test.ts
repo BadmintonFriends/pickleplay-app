@@ -284,3 +284,107 @@ describe("Phase 36: 접수 관리 권한 (admin procedures)", () => {
     expect(result.success).toBe(true);
   });
 });
+
+// ─── Phase 37: Tournament Ownership Verification Tests ─────
+describe("Phase 37: 대회 소유권 검증 (verifyTournamentOwnership)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // mockTournament has organizerId: 1
+  // createAdminContext("organizer") creates user with id: 1 → is owner
+  // createUserContext({ id: 99, role: "organizer" }) → is NOT owner
+
+  it("organizer can update own tournament (organizerId matches)", async () => {
+    const caller = appRouter.createCaller(createAdminContext("organizer"));
+    // admin context has id: 1, mockTournament.organizerId = 1 → should succeed
+    const result = await caller.admin.updateTournament({
+      id: 1,
+      data: { name: "수정된 대회명" },
+    });
+    expect(result).toHaveProperty("success", true);
+  });
+
+  it("organizer cannot update other's tournament (organizerId mismatch)", async () => {
+    // Create organizer context with id: 99 (not the owner of tournament 1)
+    const otherOrganizerCtx = createUserContext({ id: 99, openId: "other-org", name: "다른 주최자", role: "organizer" });
+    const caller = appRouter.createCaller(otherOrganizerCtx);
+    await expect(
+      caller.admin.updateTournament({
+        id: 1,
+        data: { name: "무단 수정" },
+      })
+    ).rejects.toThrow("본인 대회만 수정할 수 있습니다");
+  });
+
+  it("admin can update any tournament regardless of ownership", async () => {
+    const caller = appRouter.createCaller(createAdminContext("admin"));
+    const result = await caller.admin.updateTournament({
+      id: 1,
+      data: { name: "관리자 수정" },
+    });
+    expect(result).toHaveProperty("success", true);
+  });
+
+  it("super_admin can update any tournament regardless of ownership", async () => {
+    const caller = appRouter.createCaller(createAdminContext("super_admin"));
+    const result = await caller.admin.updateTournament({
+      id: 1,
+      data: { name: "슈퍼관리자 수정" },
+    });
+    expect(result).toHaveProperty("success", true);
+  });
+
+  it("organizer can set events for own tournament", async () => {
+    const caller = appRouter.createCaller(createAdminContext("organizer"));
+    const result = await caller.admin.setEvents({
+      tournamentId: 1,
+      events: [
+        { eventType: "남복", skillLevel: "오픈부", maxTeams: 32 },
+      ],
+    });
+    expect(result).toHaveProperty("success", true);
+  });
+
+  it("organizer cannot set events for other's tournament", async () => {
+    const otherOrganizerCtx = createUserContext({ id: 99, openId: "other-org", name: "다른 주최자", role: "organizer" });
+    const caller = appRouter.createCaller(otherOrganizerCtx);
+    await expect(
+      caller.admin.setEvents({
+        tournamentId: 1,
+        events: [{ eventType: "여복", skillLevel: "A조", maxTeams: 20 }],
+      })
+    ).rejects.toThrow("본인 대회만 수정할 수 있습니다");
+  });
+
+  it("organizer can upload poster for own tournament", async () => {
+    const caller = appRouter.createCaller(createAdminContext("organizer"));
+    const result = await caller.admin.uploadPoster({
+      tournamentId: 1,
+      base64Data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      contentType: "image/png",
+    });
+    expect(result).toHaveProperty("id");
+    expect(result).toHaveProperty("url");
+  });
+
+  it("organizer cannot upload poster for other's tournament", async () => {
+    const otherOrganizerCtx = createUserContext({ id: 99, openId: "other-org", name: "다른 주최자", role: "organizer" });
+    const caller = appRouter.createCaller(otherOrganizerCtx);
+    await expect(
+      caller.admin.uploadPoster({
+        tournamentId: 1,
+        base64Data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        contentType: "image/png",
+      })
+    ).rejects.toThrow("본인 대회만 수정할 수 있습니다");
+  });
+
+  it("organizer cannot access tournamentRegistrations for other's tournament", async () => {
+    const otherOrganizerCtx = createUserContext({ id: 99, openId: "other-org", name: "다른 주최자", role: "organizer" });
+    const caller = appRouter.createCaller(otherOrganizerCtx);
+    await expect(
+      caller.admin.tournamentRegistrations({ tournamentId: 1 })
+    ).rejects.toThrow("본인 대회만 수정할 수 있습니다");
+  });
+});

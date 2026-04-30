@@ -273,10 +273,21 @@ const registrationRouter = router({
 });
 
 // ─── Admin Router ───────────────────────────────────────
+
+/** 대회 소유권 검증: organizer는 본인 대회만, admin/super_admin은 모든 대회 접근 가능 */
+async function verifyTournamentOwnership(user: { id: number; role: string }, tournamentId: number) {
+  if (user.role === "admin" || user.role === "super_admin") return;
+  const tournament = await db.getTournamentById(tournamentId);
+  if (!tournament || tournament.organizerId !== user.id) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "본인 대회만 수정할 수 있습니다" });
+  }
+}
+
 const adminRouter = router({
   tournamentRegistrations: adminProcedure
     .input(z.object({ tournamentId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       return db.getRegistrationsWithPlayers(input.tournamentId);
     }),
 
@@ -285,9 +296,10 @@ const adminRouter = router({
       registrationId: z.number(),
       paymentStatus: z.enum(["unpaid", "paid", "refunded"]),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const reg = await db.getRegistrationById(input.registrationId);
       if (!reg) throw new TRPCError({ code: "NOT_FOUND", message: "접수 정보를 찾을 수 없습니다" });
+      await verifyTournamentOwnership(ctx.user, reg.tournamentId);
 
       const updateData: Record<string, unknown> = {
         paymentStatus: input.paymentStatus,
@@ -335,9 +347,10 @@ const adminRouter = router({
       registrationId: z.number(),
       status: z.enum(["pending", "confirmed", "cancelled"]),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const reg = await db.getRegistrationById(input.registrationId);
       if (!reg) throw new TRPCError({ code: "NOT_FOUND" });
+      await verifyTournamentOwnership(ctx.user, reg.tournamentId);
       if (input.status === "cancelled" && reg.status !== "cancelled") {
         await db.decrementEventTeamCount(reg.tournamentEventId);
       } else if (reg.status === "cancelled" && input.status !== "cancelled") {
@@ -404,7 +417,8 @@ const adminRouter = router({
         status: z.enum(["draft", "open", "closed", "cancelled"]).optional(),
       }),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.id);
       await db.updateTournament(input.id, input.data);
       return { success: true };
     }),
@@ -419,7 +433,8 @@ const adminRouter = router({
         dayLabel: z.string().optional(),
       })),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       await db.deleteEventsByTournament(input.tournamentId);
       for (const event of input.events) {
         await db.createTournamentEvent({
@@ -440,7 +455,8 @@ const adminRouter = router({
         maxAge: z.number().optional(),
       })),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       await db.deleteAgeGroupsByTournament(input.tournamentId);
       for (const ag of input.ageGroups) {
         await db.createAgeGroup({
@@ -458,7 +474,8 @@ const adminRouter = router({
       contentType: z.string().default("image/jpeg"),
       sortOrder: z.number().default(0),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       const buffer = Buffer.from(input.base64Data, "base64");
       const ext = input.contentType.includes("png") ? "png" : "jpg";
       const fileKey = `tournaments/${input.tournamentId}/posters/${nanoid()}.${ext}`;
@@ -473,8 +490,9 @@ const adminRouter = router({
     }),
 
   deletePoster: adminProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ id: z.number(), tournamentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       await db.deletePoster(input.id);
       return { success: true };
     }),
@@ -488,7 +506,8 @@ const adminRouter = router({
       fileSize: z.number(),
       sortOrder: z.number().default(0),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       const buffer = Buffer.from(input.base64Data, "base64");
       const fileKey = `tournaments/${input.tournamentId}/documents/${nanoid()}.pdf`;
       const { url } = await storagePut(fileKey, buffer, input.contentType);
@@ -509,7 +528,8 @@ const adminRouter = router({
       base64Data: z.string(),
       contentType: z.string().default("image/png"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       const buffer = Buffer.from(input.base64Data, "base64");
       const ext = input.contentType.includes("png") ? "png" : "jpg";
       const fileKey = `tournaments/${input.tournamentId}/size-guide/${nanoid()}.${ext}`;
@@ -523,7 +543,8 @@ const adminRouter = router({
 
   deleteSizeGuide: adminProcedure
     .input(z.object({ tournamentId: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       await db.updateTournament(input.tournamentId, {
         sizeGuideImageUrl: null,
         sizeGuideFileKey: null,
@@ -532,8 +553,9 @@ const adminRouter = router({
     }),
 
   deleteDocument: adminProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ id: z.number(), tournamentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
       await db.deleteDocument(input.id);
       return { success: true };
     }),
