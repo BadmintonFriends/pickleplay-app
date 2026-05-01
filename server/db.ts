@@ -755,7 +755,7 @@ export async function getTournamentOrganizers(tournamentId: number) {
     .from(tournamentOrganizers)
     .leftJoin(users, eq(tournamentOrganizers.userId, users.id))
     .where(eq(tournamentOrganizers.tournamentId, tournamentId))
-    .orderBy(tournamentOrganizers.role, tournamentOrganizers.assignedAt);
+    .orderBy(asc(tournamentOrganizers.role), asc(tournamentOrganizers.assignedAt));
   return rows;
 }
 

@@ -460,3 +460,7 @@
 - [x] 프론트엔드: TournamentManagePage에 정렬 UI 추가 (위/아래 버튼 + 순번 표시)
 - [x] 대회 상세/접수 페이지에서 sortOrder 기준 정렬 반영
 - [x] vitest 테스트 추가 (111개 통과)
+
+## 버그 수정: tournament_organizers 쿼리 에러
+
+- [x] getTournamentOrganizers ORDER BY role, assignedAt 쿼리 실패 수정 (tournament_organizers 테이블 생성 + orderBy asc() 래퍼 적용 + 데이터 백필)
