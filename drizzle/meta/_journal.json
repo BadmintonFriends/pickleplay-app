@@ -85,6 +85,13 @@
       "when": 1777522074454,
       "tag": "0011_lean_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1777563221972,
+      "tag": "0012_aspiring_darkhawk",
+      "breakpoints": true
     }
   ]
 }

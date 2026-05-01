@@ -90,6 +90,7 @@ vi.mock("./db", () => {
     updateTournament: vi.fn().mockResolvedValue(undefined),
     deleteEventsByTournament: vi.fn().mockResolvedValue(undefined),
     createTournamentEvent: vi.fn().mockResolvedValue(1),
+    updateEventSortOrders: vi.fn().mockResolvedValue(undefined),
     deleteAgeGroupsByTournament: vi.fn().mockResolvedValue(undefined),
     createAgeGroup: vi.fn().mockResolvedValue(1),
     deletePoster: vi.fn().mockResolvedValue(undefined),

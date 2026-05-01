@@ -452,3 +452,11 @@
 - [x] 접수 취소/수정 권한 체크에서 organizer 참조 제거 → isTournamentOrganizer 사용
 - [x] 홈에서 소셜 카드 탭 시 소셜 탭으로 이동
 - [x] 소셜 글쓰기 화면에서 뒤로가기 시 404 버그 수정
+
+## 종목/급수 정렬 순서 관리 기능
+
+- [x] DB 스키마: tournament_events에 sortOrder 컨럼 추가
+- [x] 서버 API: 정렬 순서 업데이트 프로시저 추가 (reorderEvents)
+- [x] 프론트엔드: TournamentManagePage에 정렬 UI 추가 (위/아래 버튼 + 순번 표시)
+- [x] 대회 상세/접수 페이지에서 sortOrder 기준 정렬 반영
+- [x] vitest 테스트 추가 (111개 통과)

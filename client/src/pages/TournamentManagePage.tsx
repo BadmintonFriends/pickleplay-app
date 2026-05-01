@@ -3,10 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
-  ChevronLeft, Users, Download, Loader2, Shield,
+  ChevronLeft, ChevronUp, ChevronDown, Users, Download, Loader2, Shield,
   Search, Phone, DollarSign, RefreshCw, MessageSquare,
   Save, Plus, Trash2, Upload, Image as ImageIcon, X,
-  Settings, FileText, Trophy, AlertCircle,
+  Settings, FileText, Trophy, AlertCircle, GripVertical,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -808,43 +808,77 @@ export default function TournamentManagePage() {
                 </button>
               </div>
               {events.map((ev, i) => (
-                <div key={i} className="grid grid-cols-12 gap-1.5 items-end">
-                  <div className="col-span-3">
-                    <label className="text-[9px] text-muted-foreground block mb-0.5">종목</label>
-                    <select value={ev.eventType} onChange={e => {
-                      const next = [...events]; next[i] = {...next[i], eventType: e.target.value as EventFormData["eventType"]}; setEvents(next);
-                    }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong">
-                      <option value="남복">남복</option>
-                      <option value="여복">여복</option>
-                      <option value="혼복">혼복</option>
-                      {infoForm.hasSingles && <option value="남단">남단</option>}
-                      {infoForm.hasSingles && <option value="여단">여단</option>}
-                    </select>
+                <div key={i} className="flex gap-1.5 items-end">
+                  {/* 순서 조정 버튼 */}
+                  <div className="flex flex-col gap-0.5 pb-0.5">
+                    <button
+                      onClick={() => {
+                        if (i === 0) return;
+                        const next = [...events];
+                        [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                        setEvents(next);
+                      }}
+                      disabled={i === 0}
+                      className="p-0.5 rounded hover:bg-muted disabled:opacity-20 transition-colors"
+                      title="위로 이동"
+                    >
+                      <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (i === events.length - 1) return;
+                        const next = [...events];
+                        [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                        setEvents(next);
+                      }}
+                      disabled={i === events.length - 1}
+                      className="p-0.5 rounded hover:bg-muted disabled:opacity-20 transition-colors"
+                      title="아래로 이동"
+                    >
+                      <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                    </button>
                   </div>
-                  <div className="col-span-3">
-                    <label className="text-[9px] text-muted-foreground block mb-0.5">급수</label>
-                    <input value={ev.skillLevel} onChange={e => {
-                      const next = [...events]; next[i] = {...next[i], skillLevel: e.target.value}; setEvents(next);
-                    }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong" placeholder="A조" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-[9px] text-muted-foreground block mb-0.5">최대팀</label>
-                    <input type="number" value={ev.maxTeams} onChange={e => {
-                      const next = [...events]; next[i] = {...next[i], maxTeams: Number(e.target.value)}; setEvents(next);
-                    }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong" />
-                  </div>
-                  <div className="col-span-3">
-                    <label className="text-[9px] text-muted-foreground block mb-0.5">일자</label>
-                    <input value={ev.dayLabel} onChange={e => {
-                      const next = [...events]; next[i] = {...next[i], dayLabel: e.target.value}; setEvents(next);
-                    }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong" placeholder="Day1" />
-                  </div>
-                  <div className="col-span-1 flex justify-center">
-                    {events.length > 1 && (
-                      <button onClick={() => setEvents(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-destructive">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
+                  {/* 순번 표시 */}
+                  <div className="text-[9px] text-muted-foreground font-mono pb-1.5 w-4 text-center shrink-0">{i + 1}</div>
+                  {/* 필드 그리드 */}
+                  <div className="grid grid-cols-12 gap-1.5 items-end flex-1">
+                    <div className="col-span-3">
+                      <label className="text-[9px] text-muted-foreground block mb-0.5">종목</label>
+                      <select value={ev.eventType} onChange={e => {
+                        const next = [...events]; next[i] = {...next[i], eventType: e.target.value as EventFormData["eventType"]}; setEvents(next);
+                      }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong">
+                        <option value="남복">남복</option>
+                        <option value="여복">여복</option>
+                        <option value="혼복">혼복</option>
+                        {infoForm.hasSingles && <option value="남단">남단</option>}
+                        {infoForm.hasSingles && <option value="여단">여단</option>}
+                      </select>
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-[9px] text-muted-foreground block mb-0.5">급수</label>
+                      <input value={ev.skillLevel} onChange={e => {
+                        const next = [...events]; next[i] = {...next[i], skillLevel: e.target.value}; setEvents(next);
+                      }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong" placeholder="A조" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[9px] text-muted-foreground block mb-0.5">최대팀</label>
+                      <input type="number" value={ev.maxTeams} onChange={e => {
+                        const next = [...events]; next[i] = {...next[i], maxTeams: Number(e.target.value)}; setEvents(next);
+                      }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong" />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-[9px] text-muted-foreground block mb-0.5">일자</label>
+                      <input value={ev.dayLabel} onChange={e => {
+                        const next = [...events]; next[i] = {...next[i], dayLabel: e.target.value}; setEvents(next);
+                      }} className="w-full px-1.5 py-1.5 bg-ink-3 rounded text-[10px] border border-line-strong" placeholder="Day1" />
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      {events.length > 1 && (
+                        <button onClick={() => setEvents(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-destructive">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

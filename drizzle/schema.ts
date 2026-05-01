@@ -87,6 +87,7 @@ export const tournamentEvents = mysqlTable("tournament_events", {
   maxTeams: int("maxTeams").default(40).notNull(),
   dayLabel: varchar("dayLabel", { length: 50 }), // e.g. "1일차 (6/13)"
   currentTeams: int("currentTeams").default(0).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

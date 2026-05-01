@@ -171,7 +171,7 @@ export async function createTournamentEvent(data: InsertTournamentEvent) {
 export async function getEventsByTournament(tournamentId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(tournamentEvents).where(eq(tournamentEvents.tournamentId, tournamentId));
+  return db.select().from(tournamentEvents).where(eq(tournamentEvents.tournamentId, tournamentId)).orderBy(asc(tournamentEvents.sortOrder), asc(tournamentEvents.id));
 }
 
 export async function updateTournamentEvent(id: number, data: Partial<InsertTournamentEvent>) {
@@ -190,6 +190,14 @@ export async function deleteEventsByTournament(tournamentId: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(tournamentEvents).where(eq(tournamentEvents.tournamentId, tournamentId));
+}
+
+export async function updateEventSortOrders(orders: { id: number; sortOrder: number }[]) {
+  const db = await getDb();
+  if (!db) return;
+  for (const { id, sortOrder } of orders) {
+    await db.update(tournamentEvents).set({ sortOrder }).where(eq(tournamentEvents.id, id));
+  }
 }
 
 // ─── Tournament Age Groups ──────────────────────────────

@@ -448,12 +448,25 @@ const adminRouter = router({
     .mutation(async ({ ctx, input }) => {
       await verifyTournamentOwnership(ctx.user, input.tournamentId);
       await db.deleteEventsByTournament(input.tournamentId);
-      for (const event of input.events) {
+      for (let i = 0; i < input.events.length; i++) {
         await db.createTournamentEvent({
           tournamentId: input.tournamentId,
-          ...event,
+          ...input.events[i],
+          sortOrder: i,
         });
       }
+      return { success: true };
+    }),
+
+  reorderEvents: protectedProcedure
+    .input(z.object({
+      tournamentId: z.number(),
+      eventIds: z.array(z.number()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await verifyTournamentOwnership(ctx.user, input.tournamentId);
+      const orders = input.eventIds.map((id, index) => ({ id, sortOrder: index }));
+      await db.updateEventSortOrders(orders);
       return { success: true };
     }),
 

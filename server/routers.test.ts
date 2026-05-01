@@ -96,6 +96,7 @@ vi.mock("./db", () => {
     updateTournament: vi.fn().mockResolvedValue(undefined),
     deleteEventsByTournament: vi.fn().mockResolvedValue(undefined),
     createTournamentEvent: vi.fn().mockResolvedValue(1),
+    updateEventSortOrders: vi.fn().mockResolvedValue(undefined),
     deleteAgeGroupsByTournament: vi.fn().mockResolvedValue(undefined),
     createAgeGroup: vi.fn().mockResolvedValue(1),
     deletePoster: vi.fn().mockResolvedValue(undefined),
@@ -532,6 +533,27 @@ describe("admin router", () => {
       ],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("allows admin to reorder events", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.admin.reorderEvents({
+      tournamentId: 1,
+      eventIds: [2, 1],
+    });
+    expect(result.success).toBe(true);
+    const db = await import("./db");
+    expect(db.updateEventSortOrders).toHaveBeenCalledWith([
+      { id: 2, sortOrder: 0 },
+      { id: 1, sortOrder: 1 },
+    ]);
+  });
+
+  it("rejects non-admin from reordering events", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.admin.reorderEvents({ tournamentId: 1, eventIds: [2, 1] })
+    ).rejects.toThrow();
   });
 
   it("allows admin to set age groups", async () => {

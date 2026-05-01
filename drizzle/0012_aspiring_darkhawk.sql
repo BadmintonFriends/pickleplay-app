@@ -1,0 +1,1 @@
+ALTER TABLE `tournament_events` ADD `sortOrder` int DEFAULT 0 NOT NULL;

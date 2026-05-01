@@ -98,15 +98,12 @@ export default function RegistrationPage() {
   // 종목 정렬: 종목 타입(남복→여복→혼복→남단→여단) > 급수(오픈부→2부→3부→신인부)
   const sortedEvents = useMemo(() => {
     if (!tournament?.events) return [];
-    const typeOrder: Record<string, number> = { "남복": 0, "여복": 1, "혼복": 2, "남단": 3, "여단": 4 };
-    const levelOrder: Record<string, number> = { "오픈부": 0, "1부": 1, "2부": 2, "3부": 3, "4부": 4, "신인부": 5 };
+    // sortOrder 기반 정렬 (관리자가 설정한 순서 우선)
     return [...tournament.events].sort((a: any, b: any) => {
-      const typeA = typeOrder[a.eventType] ?? 99;
-      const typeB = typeOrder[b.eventType] ?? 99;
-      if (typeA !== typeB) return typeA - typeB;
-      const levelA = levelOrder[a.skillLevel] ?? 99;
-      const levelB = levelOrder[b.skillLevel] ?? 99;
-      return levelA - levelB;
+      const orderA = a.sortOrder ?? 0;
+      const orderB = b.sortOrder ?? 0;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.id ?? 0) - (b.id ?? 0);
     });
   }, [tournament?.events]);
 
