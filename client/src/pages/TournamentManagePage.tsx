@@ -64,6 +64,7 @@ export default function TournamentManagePage() {
 
   const [activeTab, setActiveTab] = useState<ManageTab>("registrations");
   const [searchQuery, setSearchQuery] = useState("");
+  const [eventFilter, setEventFilter] = useState<string>("all");
 
   const isAllowed = user?.role === "admin" || user?.role === "super_admin" || !!user;
 
@@ -386,8 +387,29 @@ export default function TournamentManagePage() {
     );
   }
 
+  // 종목 필터 옵션 생성
+  const eventFilterOptions = useMemo(() => {
+    if (!regData) return [];
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const r of regData) {
+      const key = `${r.eventType ?? ""}_${r.skillLevel ?? ""}`;
+      if (!seen.has(key) && (r.eventType || r.skillLevel)) {
+        seen.add(key);
+        options.push({ value: key, label: `${r.eventType ?? ""} ${r.skillLevel ?? ""}`.trim() });
+      }
+    }
+    return options;
+  }, [regData]);
+
   // Filter registrations
   const filteredRegs = regData?.filter((r: any) => {
+    // 종목 필터
+    if (eventFilter !== "all") {
+      const key = `${r.eventType ?? ""}_${r.skillLevel ?? ""}`;
+      if (key !== eventFilter) return false;
+    }
+    // 검색 필터
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -461,6 +483,25 @@ export default function TournamentManagePage() {
                 <Download className="w-3.5 h-3.5" /> 엑셀
               </button>
             </div>
+            {eventFilterOptions.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setEventFilter("all")}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${eventFilter === "all" ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground border-line-strong hover:bg-ink-3"}`}
+                >
+                  전체
+                </button>
+                {eventFilterOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setEventFilter(opt.value)}
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${eventFilter === opt.value ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground border-line-strong hover:bg-ink-3"}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {regData && regData.length > 0 && (
               <div className="grid grid-cols-4 gap-2">
@@ -497,22 +538,18 @@ export default function TournamentManagePage() {
                 return (
                   <div key={reg.id} className="bg-card rounded-xl p-4 border border-line-strong">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] font-mono text-muted-foreground">{reg.registrationNumber}</span>
+                        {reg.eventType && <Badge className="text-[8px] font-bold border bg-indigo-100 text-indigo-700">{reg.eventType}</Badge>}
+                        {reg.skillLevel && <Badge className="text-[8px] font-bold border bg-violet-100 text-violet-700">{reg.skillLevel}</Badge>}
+                        {reg.ageGroupLabel && <Badge className="text-[8px] font-bold border bg-blue-100 text-blue-700">{reg.ageGroupLabel}</Badge>}
                         <Badge className={`${rs.color} text-[8px] font-bold border`}>{rs.label}</Badge>
                         <Badge className={`${ps.color} text-[8px] font-bold border`}>{ps.label}</Badge>
                       </div>
-                      <span className="text-[9px] text-muted-foreground">
+                      <span className="text-[9px] text-muted-foreground whitespace-nowrap ml-2">
                         {reg.createdAt ? new Date(reg.createdAt).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) : ""}
                       </span>
                     </div>
-                    {(reg.eventType || reg.skillLevel || reg.ageGroupLabel) && (
-                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                        {reg.eventType && <Badge variant="outline" className="text-[8px] font-bold">{reg.eventType}</Badge>}
-                        {reg.skillLevel && <Badge variant="outline" className="text-[8px]">{reg.skillLevel}</Badge>}
-                        {reg.ageGroupLabel && <Badge variant="outline" className="text-[8px] text-blue-600 border-blue-300">{reg.ageGroupLabel}</Badge>}
-                      </div>
-                    )}
                     <div className="space-y-1 mb-3">
                       {reg.players?.map((p: any) => (
                         <div key={p.id} className="flex items-center gap-2 text-[10px] text-secondary-foreground bg-ink-3 rounded-lg px-2.5 py-1.5">
