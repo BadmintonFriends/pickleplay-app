@@ -65,6 +65,7 @@ export default function TournamentManagePage() {
   const [activeTab, setActiveTab] = useState<ManageTab>("registrations");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventFilter, setEventFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const isAllowed = user?.role === "admin" || user?.role === "super_admin" || !!user;
 
@@ -342,6 +343,50 @@ export default function TournamentManagePage() {
     } catch { toast.error("엑셀 내보내기 실패"); }
   };
 
+  // 종목 필터 옵션 생성 (hooks는 조건부 리턴 전에 배치해야 함)
+  const eventFilterOptions = useMemo(() => {
+    if (!regData) return [];
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const r of regData) {
+      const key = `${r.eventType ?? ""}_${r.skillLevel ?? ""}`;
+      if (!seen.has(key) && (r.eventType || r.skillLevel)) {
+        seen.add(key);
+        options.push({ value: key, label: `${r.eventType ?? ""} ${r.skillLevel ?? ""}`.trim() });
+      }
+    }
+    return options;
+  }, [regData]);
+
+  // Filter registrations
+  const filteredRegs = useMemo(() => {
+    if (!regData) return [];
+    return regData.filter((r: any) => {
+      // 종목 필터
+      if (eventFilter !== "all") {
+        const key = `${r.eventType ?? ""}_${r.skillLevel ?? ""}`;
+        if (key !== eventFilter) return false;
+      }
+      // 상태 필터
+      if (statusFilter !== "all") {
+        if (statusFilter === "unpaid" || statusFilter === "paid" || statusFilter === "refunded") {
+          if (r.paymentStatus !== statusFilter) return false;
+        } else {
+          if (r.status !== statusFilter) return false;
+        }
+      }
+      // 검색 필터
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        r.registrationNumber?.toLowerCase().includes(q) ||
+        r.players?.some((p: any) =>
+          p.name.toLowerCase().includes(q) || p.phone.includes(q) || (p.affiliation && p.affiliation.toLowerCase().includes(q))
+        )
+      );
+    });
+  }, [regData, eventFilter, statusFilter, searchQuery]);
+
   // ─── Guard States ───
   if (authLoading || tournamentLoading) {
     return (
@@ -387,38 +432,7 @@ export default function TournamentManagePage() {
     );
   }
 
-  // 종목 필터 옵션 생성
-  const eventFilterOptions = useMemo(() => {
-    if (!regData) return [];
-    const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
-    for (const r of regData) {
-      const key = `${r.eventType ?? ""}_${r.skillLevel ?? ""}`;
-      if (!seen.has(key) && (r.eventType || r.skillLevel)) {
-        seen.add(key);
-        options.push({ value: key, label: `${r.eventType ?? ""} ${r.skillLevel ?? ""}`.trim() });
-      }
-    }
-    return options;
-  }, [regData]);
 
-  // Filter registrations
-  const filteredRegs = regData?.filter((r: any) => {
-    // 종목 필터
-    if (eventFilter !== "all") {
-      const key = `${r.eventType ?? ""}_${r.skillLevel ?? ""}`;
-      if (key !== eventFilter) return false;
-    }
-    // 검색 필터
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      r.registrationNumber?.toLowerCase().includes(q) ||
-      r.players?.some((p: any) =>
-        p.name.toLowerCase().includes(q) || p.phone.includes(q) || (p.affiliation && p.affiliation.toLowerCase().includes(q))
-      )
-    );
-  }) ?? [];
 
   const tabs: { key: ManageTab; label: string; icon: any }[] = [
     { key: "registrations", label: "접수", icon: Users },
@@ -504,24 +518,32 @@ export default function TournamentManagePage() {
             )}
 
             {regData && regData.length > 0 && (
-              <div className="grid grid-cols-4 gap-2">
-                <div className="bg-card rounded-lg p-2.5 text-center border border-line-strong">
-                  <p className="text-lg font-black text-foreground">{regData.length}</p>
-                  <p className="text-[9px] text-muted-foreground">전체</p>
-                </div>
-                <div className="bg-card rounded-lg p-2.5 text-center border border-line-strong">
-                  <p className="text-lg font-black text-primary">{regData.filter((r: any) => r.paymentStatus === "paid").length}</p>
-                  <p className="text-[9px] text-muted-foreground">입금완료</p>
-                </div>
-                <div className="bg-card rounded-lg p-2.5 text-center border border-line-strong">
-                  <p className="text-lg font-black text-primary">{regData.filter((r: any) => r.paymentStatus === "unpaid").length}</p>
-                  <p className="text-[9px] text-muted-foreground">미입금</p>
-                </div>
-                <div className="bg-card rounded-lg p-2.5 text-center border border-line-strong">
-                  <p className="text-lg font-black text-destructive">{regData.filter((r: any) => r.paymentStatus === "refunded").length}</p>
-                  <p className="text-[9px] text-muted-foreground">환불</p>
-                </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                <button onClick={() => setStatusFilter("all")} className={`rounded-lg p-2 text-center border transition-all ${statusFilter === "all" ? "border-primary bg-primary/10" : "border-line-strong bg-card hover:bg-ink-3"}`}>
+                  <p className="text-base font-black text-foreground">{regData.length}</p>
+                  <p className="text-[8px] text-muted-foreground">전체</p>
+                </button>
+                <button onClick={() => setStatusFilter("paid")} className={`rounded-lg p-2 text-center border transition-all ${statusFilter === "paid" ? "border-primary bg-primary/10" : "border-line-strong bg-card hover:bg-ink-3"}`}>
+                  <p className="text-base font-black text-primary">{regData.filter((r: any) => r.paymentStatus === "paid").length}</p>
+                  <p className="text-[8px] text-muted-foreground">입금완료</p>
+                </button>
+                <button onClick={() => setStatusFilter("unpaid")} className={`rounded-lg p-2 text-center border transition-all ${statusFilter === "unpaid" ? "border-primary bg-primary/10" : "border-line-strong bg-card hover:bg-ink-3"}`}>
+                  <p className="text-base font-black text-yellow-500">{regData.filter((r: any) => r.paymentStatus === "unpaid").length}</p>
+                  <p className="text-[8px] text-muted-foreground">미입금</p>
+                </button>
+                <button onClick={() => setStatusFilter("confirmed")} className={`rounded-lg p-2 text-center border transition-all ${statusFilter === "confirmed" ? "border-primary bg-primary/10" : "border-line-strong bg-card hover:bg-ink-3"}`}>
+                  <p className="text-base font-black text-green-500">{regData.filter((r: any) => r.status === "confirmed").length}</p>
+                  <p className="text-[8px] text-muted-foreground">확정</p>
+                </button>
+                <button onClick={() => setStatusFilter("cancelled")} className={`rounded-lg p-2 text-center border transition-all ${statusFilter === "cancelled" ? "border-primary bg-primary/10" : "border-line-strong bg-card hover:bg-ink-3"}`}>
+                  <p className="text-base font-black text-destructive">{regData.filter((r: any) => r.status === "cancelled").length}</p>
+                  <p className="text-[8px] text-muted-foreground">취소</p>
+                </button>
               </div>
+            )}
+
+            {(eventFilter !== "all" || statusFilter !== "all" || searchQuery) && regData && filteredRegs.length > 0 && (
+              <p className="text-[10px] text-muted-foreground">필터 결과: <span className="font-bold text-foreground">{filteredRegs.length}</span>건</p>
             )}
 
             {!regData ? (
@@ -529,7 +551,7 @@ export default function TournamentManagePage() {
             ) : filteredRegs.length === 0 ? (
               <div className="text-center py-10">
                 <Users className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">{searchQuery ? "검색 결과가 없습니다" : "접수 내역이 없습니다"}</p>
+                <p className="text-xs text-muted-foreground">{searchQuery || eventFilter !== "all" || statusFilter !== "all" ? "필터 조건에 맞는 접수가 없습니다" : "접수 내역이 없습니다"}</p>
               </div>
             ) : (
               filteredRegs.map((reg: any) => {
