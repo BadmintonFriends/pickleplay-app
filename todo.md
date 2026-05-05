@@ -469,3 +469,8 @@
 
 - [x] 서버: addTournamentOrganizer/removeTournamentOrganizer 권한을 대회 관리자(owner/manager)도 가능하도록 변경 (protectedProcedure + isTournamentOrganizer 체크)
 - [x] 프론트엔드: TournamentManagePage 관리자 추가/삭제 버튼 isAdminRole 조건 제거 (모든 대회 관리자 가능)
+
+## 접수 탭 팀별 상세 정보 표시
+
+- [x] 접수 탭에서 팀별 신청 종목/나이대(있을 경우)/급수 표시
+- [x] 신청 일시(시분초까지) 표시 추가

@@ -313,7 +313,7 @@ export default function TournamentManagePage() {
     try {
       const XLSX = await import("xlsx");
       const rows: any[][] = [
-        ["접수번호", "접수상태", "입금상태", "종목", "급수", "선수1이름", "선수1소속", "선수1생년월일", "선수1전화번호", "선수1사이즈", "선수2이름", "선수2소속", "선수2생년월일", "선수2전화번호", "선수2사이즈", "접수일시"],
+        ["접수번호", "접수상태", "입금상태", "종목", "급수", "나이대", "선수1이름", "선수1소속", "선수1생년월일", "선수1전화번호", "선수1사이즈", "선수2이름", "선수2소속", "선수2생년월일", "선수2전화번호", "선수2사이즈", "접수일시"],
       ];
       for (const reg of regData) {
         const p1 = reg.players?.[0];
@@ -322,7 +322,7 @@ export default function TournamentManagePage() {
           reg.registrationNumber,
           reg.status === "pending" ? "대기" : reg.status === "confirmed" ? "확정" : "취소",
           reg.paymentStatus === "unpaid" ? "미입금" : reg.paymentStatus === "paid" ? "입금완료" : "환불",
-          (reg as any).eventType ?? "", (reg as any).skillLevel ?? "",
+          reg.eventType ?? "", reg.skillLevel ?? "", reg.ageGroupLabel ?? "",
           p1?.name ?? "", p1?.affiliation ?? "", p1?.birthDate ?? "", p1?.phone ?? "", p1?.giftSize ?? "",
           p2?.name ?? "", p2?.affiliation ?? "", p2?.birthDate ?? "", p2?.phone ?? "", p2?.giftSize ?? "",
           reg.createdAt ? new Date(reg.createdAt).toLocaleString("ko-KR") : "",
@@ -331,9 +331,9 @@ export default function TournamentManagePage() {
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(rows);
       ws["!cols"] = [
-        { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 8 },
+        { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 8 }, { wch: 10 },
         { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 },
-        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 }, { wch: 18 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 6 }, { wch: 20 },
       ];
       XLSX.utils.book_append_sheet(wb, ws, "접수명단");
       XLSX.writeFile(wb, `${tournament?.name ?? "대회"}_접수명단.xlsx`);
@@ -503,13 +503,14 @@ export default function TournamentManagePage() {
                         <Badge className={`${ps.color} text-[8px] font-bold border`}>{ps.label}</Badge>
                       </div>
                       <span className="text-[9px] text-muted-foreground">
-                        {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString("ko-KR") : ""}
+                        {reg.createdAt ? new Date(reg.createdAt).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) : ""}
                       </span>
                     </div>
-                    {((reg as any).eventType || (reg as any).skillLevel) && (
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Badge variant="outline" className="text-[8px] font-bold">{(reg as any).eventType}</Badge>
-                        <Badge variant="outline" className="text-[8px]">{(reg as any).skillLevel}</Badge>
+                    {(reg.eventType || reg.skillLevel || reg.ageGroupLabel) && (
+                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                        {reg.eventType && <Badge variant="outline" className="text-[8px] font-bold">{reg.eventType}</Badge>}
+                        {reg.skillLevel && <Badge variant="outline" className="text-[8px]">{reg.skillLevel}</Badge>}
+                        {reg.ageGroupLabel && <Badge variant="outline" className="text-[8px] text-blue-600 border-blue-300">{reg.ageGroupLabel}</Badge>}
                       </div>
                     )}
                     <div className="space-y-1 mb-3">

@@ -406,10 +406,23 @@ export async function getRegistrationsWithPlayers(tournamentId: number) {
   const db = await getDb();
   if (!db) return [];
   const regs = await getRegistrationsByTournament(tournamentId);
+  // 종목/나이대 정보를 한 번에 조회
+  const events = await getEventsByTournament(tournamentId);
+  const ageGroups = await getAgeGroupsByTournament(tournamentId);
+  const eventMap = new Map(events.map(e => [e.id, e]));
+  const ageGroupMap = new Map(ageGroups.map(a => [a.id, a]));
   const result = [];
   for (const reg of regs) {
     const playerList = await getPlayersByRegistration(reg.id);
-    result.push({ ...reg, players: playerList });
+    const event = eventMap.get(reg.tournamentEventId);
+    const ageGroup = reg.ageGroupId ? ageGroupMap.get(reg.ageGroupId) : null;
+    result.push({
+      ...reg,
+      players: playerList,
+      eventType: event?.eventType ?? null,
+      skillLevel: event?.skillLevel ?? null,
+      ageGroupLabel: ageGroup?.label ?? null,
+    });
   }
   return result;
 }
