@@ -698,12 +698,10 @@ export default function TournamentManagePage() {
                 <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5" /> 대회 관리자
                 </h3>
-                {isAdminRole && (
-                  <button onClick={() => setShowOrganizerModal(true)}
-                    className="text-[10px] font-bold text-primary flex items-center gap-0.5">
-                    <Plus className="w-3 h-3" /> 추가
-                  </button>
-                )}
+                <button onClick={() => setShowOrganizerModal(true)}
+                  className="text-[10px] font-bold text-primary flex items-center gap-0.5">
+                  <Plus className="w-3 h-3" /> 추가
+                </button>
               </div>
               {!organizerList || organizerList.length === 0 ? (
                 <p className="text-[10px] text-muted-foreground text-center py-2">등록된 관리자가 없습니다</p>
@@ -722,7 +720,7 @@ export default function TournamentManagePage() {
                           </p>
                         </div>
                       </div>
-                      {isAdminRole && org.role !== "owner" && (
+                      {org.role !== "owner" && (
                         <button
                           onClick={() => {
                             if (confirm(`${org.userName || org.userEmail} 관리자를 제거하시겠습니까?`)) {

@@ -464,3 +464,8 @@
 ## 버그 수정: tournament_organizers 쿼리 에러
 
 - [x] getTournamentOrganizers ORDER BY role, assignedAt 쿼리 실패 수정 (tournament_organizers 테이블 생성 + orderBy asc() 래퍼 적용 + 데이터 백필)
+
+## 대회 관리자 추가/삭제 권한 변경
+
+- [x] 서버: addTournamentOrganizer/removeTournamentOrganizer 권한을 대회 관리자(owner/manager)도 가능하도록 변경 (protectedProcedure + isTournamentOrganizer 체크)
+- [x] 프론트엔드: TournamentManagePage 관리자 추가/삭제 버튼 isAdminRole 조건 제거 (모든 대회 관리자 가능)

@@ -607,12 +607,18 @@ const adminRouter = router({
       return db.getTournamentOrganizers(input.tournamentId);
     }),
 
-  addTournamentOrganizer: adminProcedure
+  addTournamentOrganizer: protectedProcedure
     .input(z.object({
       tournamentId: z.number(),
       userId: z.number(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // 운영진(admin/super_admin) 또는 해당 대회 관리자만 추가 가능
+      const isAdmin = ctx.user.role === "admin" || ctx.user.role === "super_admin";
+      const isOrganizer = await db.isTournamentOrganizer(input.tournamentId, ctx.user.id);
+      if (!isAdmin && !isOrganizer) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+      }
       // 이미 등록된지 확인
       const isAlready = await db.isTournamentOrganizer(input.tournamentId, input.userId);
       if (isAlready) {
@@ -622,17 +628,23 @@ const adminRouter = router({
       return { success: true };
     }),
 
-  removeTournamentOrganizer: adminProcedure
+  removeTournamentOrganizer: protectedProcedure
     .input(z.object({
       tournamentId: z.number(),
       userId: z.number(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // 운영진(admin/super_admin) 또는 해당 대회 관리자만 삭제 가능
+      const isAdmin = ctx.user.role === "admin" || ctx.user.role === "super_admin";
+      const isOrganizer = await db.isTournamentOrganizer(input.tournamentId, ctx.user.id);
+      if (!isAdmin && !isOrganizer) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+      }
       await db.removeTournamentOrganizer(input.tournamentId, input.userId);
       return { success: true };
     }),
 
-  searchUsersForOrganizer: adminProcedure
+  searchUsersForOrganizer: protectedProcedure
     .input(z.object({ query: z.string().min(1) }))
     .query(async ({ input }) => {
       const allUsers = await db.getAllUsers();
