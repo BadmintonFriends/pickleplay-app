@@ -171,7 +171,9 @@ export async function createTournamentEvent(data: InsertTournamentEvent) {
 export async function getEventsByTournament(tournamentId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(tournamentEvents).where(eq(tournamentEvents.tournamentId, tournamentId)).orderBy(asc(tournamentEvents.sortOrder), asc(tournamentEvents.id));
+  return db.select().from(tournamentEvents).where(
+    and(eq(tournamentEvents.tournamentId, tournamentId), gte(tournamentEvents.sortOrder, 0))
+  ).orderBy(asc(tournamentEvents.sortOrder), asc(tournamentEvents.id));
 }
 
 export async function updateTournamentEvent(id: number, data: Partial<InsertTournamentEvent>) {
@@ -190,6 +192,13 @@ export async function deleteEventsByTournament(tournamentId: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(tournamentEvents).where(eq(tournamentEvents.tournamentId, tournamentId));
+}
+
+export async function hasRegistrationsForEvent(eventId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.select({ id: registrations.id }).from(registrations).where(eq(registrations.tournamentEventId, eventId)).limit(1);
+  return result.length > 0;
 }
 
 export async function updateEventSortOrders(orders: { id: number; sortOrder: number }[]) {

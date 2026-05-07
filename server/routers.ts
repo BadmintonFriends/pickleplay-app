@@ -439,6 +439,7 @@ const adminRouter = router({
     .input(z.object({
       tournamentId: z.number(),
       events: z.array(z.object({
+        id: z.number().optional(), // 기존 이벤트 ID (업데이트 시)
         eventType: z.enum(["남복", "여복", "혼복", "남단", "여단"]),
         skillLevel: z.string(),
         maxTeams: z.number().default(40),
@@ -447,13 +448,47 @@ const adminRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       await verifyTournamentOwnership(ctx.user, input.tournamentId);
-      await db.deleteEventsByTournament(input.tournamentId);
+      
+      // 기존 이벤트 조회
+      const existingEvents = await db.getEventsByTournament(input.tournamentId);
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const inputIds = new Set(input.events.filter(e => e.id).map(e => e.id!));
+      
+      // 접수가 있는 이벤트는 삭제하지 않고 비활성화만 함
+      const removedIds = [...existingIds].filter(id => !inputIds.has(id));
+      for (const removedId of removedIds) {
+        const hasRegistrations = await db.hasRegistrationsForEvent(removedId);
+        if (hasRegistrations) {
+          // 접수가 있는 종목은 삭제 대신 sortOrder를 -1로 설정 (숨김 처리)
+          await db.updateTournamentEvent(removedId, { sortOrder: -1 });
+        } else {
+          await db.deleteTournamentEvent(removedId);
+        }
+      }
+      
+      // 업데이트 또는 생성
       for (let i = 0; i < input.events.length; i++) {
-        await db.createTournamentEvent({
-          tournamentId: input.tournamentId,
-          ...input.events[i],
-          sortOrder: i,
-        });
+        const event = input.events[i];
+        if (event.id && existingIds.has(event.id)) {
+          // 기존 이벤트 업데이트
+          await db.updateTournamentEvent(event.id, {
+            eventType: event.eventType,
+            skillLevel: event.skillLevel,
+            maxTeams: event.maxTeams,
+            dayLabel: event.dayLabel,
+            sortOrder: i,
+          });
+        } else {
+          // 새 이벤트 생성
+          await db.createTournamentEvent({
+            tournamentId: input.tournamentId,
+            eventType: event.eventType,
+            skillLevel: event.skillLevel,
+            maxTeams: event.maxTeams,
+            dayLabel: event.dayLabel,
+            sortOrder: i,
+          });
+        }
       }
       return { success: true };
     }),

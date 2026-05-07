@@ -40,6 +40,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 type ManageTab = "registrations" | "info" | "events" | "media" | "status";
 
 interface EventFormData {
+  id?: number; // 기존 이벤트 ID (업데이트 시 사용)
   eventType: "남복" | "여복" | "혼복" | "남단" | "여단";
   skillLevel: string;
   maxTeams: number;
@@ -194,7 +195,7 @@ export default function TournamentManagePage() {
     });
     if (tournament.events && tournament.events.length > 0) {
       setEvents(tournament.events.map((e: any) => ({
-        eventType: e.eventType, skillLevel: e.skillLevel, maxTeams: e.maxTeams, dayLabel: e.dayLabel ?? "",
+        id: e.id, eventType: e.eventType, skillLevel: e.skillLevel, maxTeams: e.maxTeams, dayLabel: e.dayLabel ?? "",
       })));
     } else {
       setEvents([emptyEvent()]);
