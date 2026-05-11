@@ -9,6 +9,7 @@ import {
   Settings, FileText, Trophy, AlertCircle, GripVertical, Pencil,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -72,6 +73,7 @@ export default function TournamentManagePage() {
   const [editEventId, setEditEventId] = useState<string>("");
   const [editAgeGroupId, setEditAgeGroupId] = useState<string>("");
   const [editSizes, setEditSizes] = useState<Record<number, string>>({});
+  const [editPlayers, setEditPlayers] = useState<Record<number, { name: string; birthDate: string; phone: string; affiliation: string }>>({});
   const [visibleCount, setVisibleCount] = useState(15);
   const observerRef = useRef<HTMLDivElement>(null);
 
@@ -137,6 +139,10 @@ export default function TournamentManagePage() {
   });
   const updatePlayerSizeMutation = trpc.admin.updatePlayerGiftSize.useMutation({
     onSuccess: () => { toast.success("사이즈가 변경되었습니다"); refetchRegs(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const updatePlayerInfoMutation = trpc.admin.updatePlayerInfo.useMutation({
+    onSuccess: () => { toast.success("선수 정보가 변경되었습니다"); refetchRegs(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -280,13 +286,36 @@ export default function TournamentManagePage() {
     }
   };
 
+  const formatPhoneEdit = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  };
+  const formatBirthEdit = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+  };
+
   const handleOpenEdit = (reg: any) => {
     setEditingReg(reg);
     setEditEventId(String(reg.tournamentEventId));
     setEditAgeGroupId(reg.ageGroupId ? String(reg.ageGroupId) : "");
     const sizes: Record<number, string> = {};
-    reg.players?.forEach((p: any) => { if (p.giftSize) sizes[p.id] = p.giftSize; });
+    const playerInfo: Record<number, { name: string; birthDate: string; phone: string; affiliation: string }> = {};
+    reg.players?.forEach((p: any) => {
+      if (p.giftSize) sizes[p.id] = p.giftSize;
+      playerInfo[p.id] = {
+        name: p.name || "",
+        birthDate: p.birthDate || "",
+        phone: formatPhoneEdit(p.phone || ""),
+        affiliation: p.affiliation || "",
+      };
+    });
     setEditSizes(sizes);
+    setEditPlayers(playerInfo);
   };
 
   const handleSaveEdit = () => {
@@ -296,11 +325,28 @@ export default function TournamentManagePage() {
       tournamentEventId: Number(editEventId),
       ageGroupId: editAgeGroupId ? Number(editAgeGroupId) : null,
     });
-    // 사이즈 변경도 함께 저장
+    // 사이즈 변경 + 선수 정보 변경도 함께 저장
     editingReg.players?.forEach((p: any) => {
       const newSize = editSizes[p.id];
       if (newSize !== undefined && newSize !== (p.giftSize || "")) {
         updatePlayerSizeMutation.mutate({ playerId: p.id, giftSize: newSize });
+      }
+      const info = editPlayers[p.id];
+      if (info) {
+        const phoneDigits = info.phone.replace(/\D/g, "");
+        const changed = info.name !== (p.name || "") ||
+          info.birthDate !== (p.birthDate || "") ||
+          phoneDigits !== (p.phone || "").replace(/\D/g, "") ||
+          info.affiliation !== (p.affiliation || "");
+        if (changed) {
+          updatePlayerInfoMutation.mutate({
+            playerId: p.id,
+            name: info.name.trim(),
+            birthDate: info.birthDate,
+            phone: phoneDigits,
+            affiliation: info.affiliation.trim(),
+          });
+        }
       }
     });
   };
@@ -1193,7 +1239,7 @@ export default function TournamentManagePage() {
 
       {/* ─── Edit Registration Modal ─── */}
       <Dialog open={!!editingReg} onOpenChange={(open) => !open && setEditingReg(null)}>
-        <DialogContent className="max-w-[360px] rounded-2xl">
+        <DialogContent className="max-w-[400px] max-h-[85vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-sm font-bold">
               접수 정보 수정 <span className="text-muted-foreground font-mono text-xs">{editingReg?.registrationNumber}</span>
@@ -1237,30 +1283,74 @@ export default function TournamentManagePage() {
               </div>
             )}
 
-            {/* 선수별 사이즈 */}
-            {sizeOptionsList.length > 0 && editingReg?.players?.map((p: any) => (
-              <div key={p.id}>
-                <label className="text-[10px] font-semibold text-muted-foreground block mb-1">{p.name} 사이즈</label>
-                <Select value={editSizes[p.id] || ""} onValueChange={(v) => setEditSizes(prev => ({ ...prev, [p.id]: v }))}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="사이즈 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sizeOptionsList.map((size: string) => (
-                      <SelectItem key={size} value={size} className="text-xs">{size}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* 선수별 정보 수정 */}
+            {editingReg?.players?.map((p: any, idx: number) => (
+              <div key={p.id} className="space-y-2 p-3 bg-muted/30 rounded-xl border border-border">
+                <div className="text-[10px] font-bold text-muted-foreground">선수 {idx + 1}</div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground block mb-1">이름</label>
+                  <Input
+                    value={editPlayers[p.id]?.name || ""}
+                    onChange={(e) => setEditPlayers(prev => ({ ...prev, [p.id]: { ...prev[p.id], name: e.target.value } }))}
+                    className="h-8 text-xs"
+                    placeholder="이름"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground block mb-1">생년월일</label>
+                  <Input
+                    value={editPlayers[p.id]?.birthDate || ""}
+                    onChange={(e) => setEditPlayers(prev => ({ ...prev, [p.id]: { ...prev[p.id], birthDate: formatBirthEdit(e.target.value) } }))}
+                    className="h-8 text-xs"
+                    placeholder="YYYY-MM-DD"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground block mb-1">전화번호</label>
+                  <Input
+                    value={editPlayers[p.id]?.phone || ""}
+                    onChange={(e) => setEditPlayers(prev => ({ ...prev, [p.id]: { ...prev[p.id], phone: formatPhoneEdit(e.target.value) } }))}
+                    className="h-8 text-xs"
+                    placeholder="010-0000-0000"
+                    inputMode="tel"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-muted-foreground block mb-1">소속</label>
+                  <Input
+                    value={editPlayers[p.id]?.affiliation || ""}
+                    onChange={(e) => setEditPlayers(prev => ({ ...prev, [p.id]: { ...prev[p.id], affiliation: e.target.value } }))}
+                    className="h-8 text-xs"
+                    placeholder="클럽명 또는 소속"
+                  />
+                </div>
+                {/* 사이즈 */}
+                {sizeOptionsList.length > 0 && (
+                  <div>
+                    <label className="text-[10px] font-semibold text-muted-foreground block mb-1">사이즈</label>
+                    <Select value={editSizes[p.id] || ""} onValueChange={(v) => setEditSizes(prev => ({ ...prev, [p.id]: v }))}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="사이즈 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sizeOptionsList.map((size: string) => (
+                          <SelectItem key={size} value={size} className="text-xs">{size}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             ))}
 
             <button
               onClick={handleSaveEdit}
-              disabled={updateRegEventMutation.isPending}
+              disabled={updateRegEventMutation.isPending || updatePlayerInfoMutation.isPending}
               className="w-full bg-primary text-foreground text-sm font-black py-3 rounded-xl hover:bg-optic-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
             >
-              {updateRegEventMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {updateRegEventMutation.isPending ? "저장 중..." : "변경 저장"}
+              {(updateRegEventMutation.isPending || updatePlayerInfoMutation.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {(updateRegEventMutation.isPending || updatePlayerInfoMutation.isPending) ? "저장 중..." : "변경 저장"}
             </button>
           </div>
         </DialogContent>

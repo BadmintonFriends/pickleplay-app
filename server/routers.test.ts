@@ -150,7 +150,8 @@ vi.mock("./db", () => {
     getKprTotalParticipants: vi.fn().mockResolvedValue(2),
     getKprRank: vi.fn().mockResolvedValue(1),
     getRecentMatches: vi.fn().mockResolvedValue([]),
-    getPlayerById: vi.fn().mockResolvedValue({ id: 1, registrationId: 1, name: "테스트선수", phone: "01012345678", giftSize: "L" }),
+    getPlayerById: vi.fn().mockResolvedValue({ id: 1, registrationId: 1, name: "테스트선수", phone: "01012345678", birthDate: "1990-01-01", affiliation: "테스트클럽", giftSize: "L" }),
+    updatePlayer: vi.fn().mockResolvedValue(undefined),
     // Phase 38: tournament_organizers
     getTournamentOrganizers: vi.fn().mockResolvedValue([]),
     isTournamentOrganizer: vi.fn().mockImplementation(async (tournamentId: number, userId: number) => {
@@ -882,5 +883,74 @@ describe("kpr router", () => {
   it("stats - 공개 통계를 반환한다", async () => {
     const result = await caller(anonCtx).kpr.stats();
     expect(result.totalParticipants).toBe(2);
+  });
+});
+
+
+// ─── updatePlayerInfo 테스트 ─────────────────────────────
+describe("admin.updatePlayerInfo", () => {
+  const caller = (ctx: TrpcContext) => appRouter.createCaller(ctx);
+
+  it("대회 관리자가 선수 정보를 수정할 수 있다", async () => {
+    const ctx = createTournamentManagerContext();
+    const result = await caller(ctx).admin.updatePlayerInfo({
+      playerId: 1,
+      name: "수정된이름",
+      birthDate: "1995-06-15",
+      phone: "01098765432",
+      affiliation: "새클럽",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("admin이 선수 정보를 수정할 수 있다", async () => {
+    const ctx = createAdminContext("admin");
+    const result = await caller(ctx).admin.updatePlayerInfo({
+      playerId: 1,
+      name: "관리자수정",
+      birthDate: "1988-12-25",
+      phone: "01011112222",
+      affiliation: "관리클럽",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("비로그인 사용자는 선수 정보를 수정할 수 없다", async () => {
+    const ctx = createPublicContext();
+    await expect(
+      caller(ctx).admin.updatePlayerInfo({
+        playerId: 1,
+        name: "해커",
+        birthDate: "2000-01-01",
+        phone: "01099999999",
+        affiliation: "",
+      })
+    ).rejects.toThrow();
+  });
+
+  it("잘못된 생년월일 형식은 거부된다", async () => {
+    const ctx = createTournamentManagerContext();
+    await expect(
+      caller(ctx).admin.updatePlayerInfo({
+        playerId: 1,
+        name: "테스트",
+        birthDate: "19900101", // YYYY-MM-DD 형식이 아님
+        phone: "01012345678",
+        affiliation: "",
+      })
+    ).rejects.toThrow();
+  });
+
+  it("이름이 비어있으면 거부된다", async () => {
+    const ctx = createTournamentManagerContext();
+    await expect(
+      caller(ctx).admin.updatePlayerInfo({
+        playerId: 1,
+        name: "",
+        birthDate: "1990-01-01",
+        phone: "01012345678",
+        affiliation: "",
+      })
+    ).rejects.toThrow();
   });
 });

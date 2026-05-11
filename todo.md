@@ -499,3 +499,9 @@
 
 - [x] N+1 쿼리 최적화: getRegistrationsWithPlayers에서 개별 getPlayersByRegistration 루프 호출(115회) → inArray 일괄 조회(1회)로 변경
 - [x] vitest 111개 전체 통과 확인
+
+## 접수 관리: 선수 정보(이름/생년월일/전화번호/소속) 편집 기능
+
+- [x] 서버 API: updatePlayerInfo 프로시저 추가 (이름, 생년월일, 전화번호, 소속 변경)
+- [x] 프론트엔드: 기존 편집 모달에 선수 정보 수정 필드 추가
+- [x] vitest 테스트 추가 및 전체 통과 확인 (116개)

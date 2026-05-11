@@ -403,6 +403,29 @@ const adminRouter = router({
       return { success: true };
     }),
 
+  updatePlayerInfo: protectedProcedure
+    .input(z.object({
+      playerId: z.number(),
+      name: z.string().min(1, "이름을 입력해주세요"),
+      birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "생년월일 형식: YYYY-MM-DD"),
+      phone: z.string().min(10, "전화번호를 입력해주세요"),
+      affiliation: z.string().default(""),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const player = await db.getPlayerById(input.playerId);
+      if (!player) throw new TRPCError({ code: "NOT_FOUND" });
+      const reg = await db.getRegistrationById(player.registrationId);
+      if (!reg) throw new TRPCError({ code: "NOT_FOUND" });
+      await verifyTournamentOwnership(ctx.user, reg.tournamentId);
+      await db.updatePlayer(input.playerId, {
+        name: input.name,
+        birthDate: input.birthDate,
+        phone: input.phone,
+        affiliation: input.affiliation,
+      });
+      return { success: true };
+    }),
+
   createTournament: adminProcedure
     .input(z.object({
       name: z.string().min(1),
