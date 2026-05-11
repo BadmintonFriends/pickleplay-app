@@ -150,6 +150,7 @@ vi.mock("./db", () => {
     getKprTotalParticipants: vi.fn().mockResolvedValue(2),
     getKprRank: vi.fn().mockResolvedValue(1),
     getRecentMatches: vi.fn().mockResolvedValue([]),
+    getPlayerById: vi.fn().mockResolvedValue({ id: 1, registrationId: 1, name: "테스트선수", phone: "01012345678", giftSize: "L" }),
     // Phase 38: tournament_organizers
     getTournamentOrganizers: vi.fn().mockResolvedValue([]),
     isTournamentOrganizer: vi.fn().mockImplementation(async (tournamentId: number, userId: number) => {

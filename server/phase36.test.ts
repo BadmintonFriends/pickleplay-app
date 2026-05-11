@@ -111,6 +111,7 @@ vi.mock("./db", () => {
     getKprTotalParticipants: vi.fn().mockResolvedValue(0),
     getKprRank: vi.fn().mockResolvedValue(1),
     getRecentMatches: vi.fn().mockResolvedValue([]),
+    getPlayerById: vi.fn().mockResolvedValue({ id: 1, registrationId: 1, name: "테스트선수", phone: "01012345678", giftSize: "L" }),
     createPoster: vi.fn().mockResolvedValue(1),
     createDocument: vi.fn().mockResolvedValue(1),
     // Phase 38: tournament_organizers

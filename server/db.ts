@@ -364,6 +364,13 @@ export async function getPlayersByRegistration(registrationId: number) {
     .orderBy(players.playerOrder);
 }
 
+export async function getPlayerById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(players).where(eq(players.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function updatePlayer(id: number, data: Partial<InsertPlayer>) {
   const db = await getDb();
   if (!db) return;

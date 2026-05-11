@@ -6,10 +6,11 @@ import {
   ChevronLeft, ChevronUp, ChevronDown, Users, Download, Loader2, Shield,
   Search, Phone, DollarSign, RefreshCw, MessageSquare,
   Save, Plus, Trash2, Upload, Image as ImageIcon, X,
-  Settings, FileText, Trophy, AlertCircle, GripVertical,
+  Settings, FileText, Trophy, AlertCircle, GripVertical, Pencil,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -67,6 +68,12 @@ export default function TournamentManagePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [editingReg, setEditingReg] = useState<any>(null);
+  const [editEventId, setEditEventId] = useState<string>("");
+  const [editAgeGroupId, setEditAgeGroupId] = useState<string>("");
+  const [editSizes, setEditSizes] = useState<Record<number, string>>({});
+  const [visibleCount, setVisibleCount] = useState(15);
+  const observerRef = useRef<HTMLDivElement>(null);
 
   const isAllowed = user?.role === "admin" || user?.role === "super_admin" || !!user;
 
@@ -122,6 +129,14 @@ export default function TournamentManagePage() {
   });
   const deleteSizeGuideMutation = trpc.admin.deleteSizeGuide.useMutation({
     onSuccess: () => { toast.success("사이즈표가 삭제되었습니다!"); refetchTournament(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const updateRegEventMutation = trpc.admin.updateRegistrationEvent.useMutation({
+    onSuccess: () => { toast.success("종목/급수가 변경되었습니다"); refetchRegs(); setEditingReg(null); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const updatePlayerSizeMutation = trpc.admin.updatePlayerGiftSize.useMutation({
+    onSuccess: () => { toast.success("사이즈가 변경되었습니다"); refetchRegs(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -207,6 +222,25 @@ export default function TournamentManagePage() {
     }
   }, [tournament]);
 
+  // ─── Infinite Scroll ───
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [eventFilter, statusFilter, searchQuery]);
+
+  useEffect(() => {
+    if (!observerRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => prev + 15);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  });
+
   // ─── Handlers ───
   const handleInfoSubmit = () => {
     if (!tournamentId) return;
@@ -245,6 +279,37 @@ export default function TournamentManagePage() {
       setAgeGroupsMutation.mutate({ tournamentId, ageGroups: ageGroups.filter(ag => ag.code) });
     }
   };
+
+  const handleOpenEdit = (reg: any) => {
+    setEditingReg(reg);
+    setEditEventId(String(reg.tournamentEventId));
+    setEditAgeGroupId(reg.ageGroupId ? String(reg.ageGroupId) : "");
+    const sizes: Record<number, string> = {};
+    reg.players?.forEach((p: any) => { if (p.giftSize) sizes[p.id] = p.giftSize; });
+    setEditSizes(sizes);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingReg) return;
+    updateRegEventMutation.mutate({
+      registrationId: editingReg.id,
+      tournamentEventId: Number(editEventId),
+      ageGroupId: editAgeGroupId ? Number(editAgeGroupId) : null,
+    });
+    // 사이즈 변경도 함께 저장
+    editingReg.players?.forEach((p: any) => {
+      const newSize = editSizes[p.id];
+      if (newSize !== undefined && newSize !== (p.giftSize || "")) {
+        updatePlayerSizeMutation.mutate({ playerId: p.id, giftSize: newSize });
+      }
+    });
+  };
+
+  // sizeOptions 파싱
+  const sizeOptionsList = useMemo(() => {
+    if (!tournament?.sizeOptions) return [];
+    try { return JSON.parse(tournament.sizeOptions) as string[]; } catch { return []; }
+  }, [tournament?.sizeOptions]);
 
   const handleStatusChange = (newStatus: "draft" | "open" | "closed" | "cancelled") => {
     if (!tournamentId) return;
@@ -555,7 +620,7 @@ export default function TournamentManagePage() {
                 <p className="text-xs text-muted-foreground">{searchQuery || eventFilter !== "all" || statusFilter !== "all" ? "필터 조건에 맞는 접수가 없습니다" : "접수 내역이 없습니다"}</p>
               </div>
             ) : (
-              filteredRegs.map((reg: any) => {
+              filteredRegs.slice(0, visibleCount).map((reg: any) => {
                 const ps = paymentStatusConfig[reg.paymentStatus] || paymentStatusConfig.unpaid;
                 const rs = regStatusConfig[reg.status] || regStatusConfig.pending;
                 return (
@@ -569,9 +634,14 @@ export default function TournamentManagePage() {
                         <Badge className={`${rs.color} text-[8px] font-bold border`}>{rs.label}</Badge>
                         <Badge className={`${ps.color} text-[8px] font-bold border`}>{ps.label}</Badge>
                       </div>
-                      <span className="text-[9px] text-muted-foreground whitespace-nowrap ml-2">
-                        {reg.createdAt ? new Date(reg.createdAt).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) : ""}
-                      </span>
+                      <div className="flex items-center gap-1.5 ml-2">
+                        <span className="text-[9px] text-muted-foreground whitespace-nowrap">
+                          {reg.createdAt ? new Date(reg.createdAt).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) : ""}
+                        </span>
+                        <button onClick={() => handleOpenEdit(reg)} className="p-1 rounded-md hover:bg-ink-3 text-muted-foreground hover:text-foreground transition-colors" title="종목/급수/사이즈 변경">
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-1 mb-3">
                       {reg.players?.map((p: any) => (
@@ -629,6 +699,12 @@ export default function TournamentManagePage() {
                   </div>
                 );
               })
+            )}
+            {filteredRegs.length > visibleCount && (
+              <div ref={observerRef} className="flex items-center justify-center py-4">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                <span className="text-[10px] text-muted-foreground ml-2">{visibleCount} / {filteredRegs.length}팀 표시 중</span>
+              </div>
             )}
           </motion.div>
         )}
@@ -1114,6 +1190,81 @@ export default function TournamentManagePage() {
           </motion.div>
         )}
       </div>
+
+      {/* ─── Edit Registration Modal ─── */}
+      <Dialog open={!!editingReg} onOpenChange={(open) => !open && setEditingReg(null)}>
+        <DialogContent className="max-w-[360px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold">
+              접수 정보 수정 <span className="text-muted-foreground font-mono text-xs">{editingReg?.registrationNumber}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {/* 종목/급수 선택 */}
+            <div>
+              <label className="text-[10px] font-semibold text-muted-foreground block mb-1">종목 / 급수</label>
+              <Select value={editEventId} onValueChange={setEditEventId}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="종목 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tournament?.events?.map((ev: any) => (
+                    <SelectItem key={ev.id} value={String(ev.id)} className="text-xs">
+                      {ev.eventType} {ev.skillLevel}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 나이대 선택 */}
+            {tournament?.hasAgeGroup && tournament?.ageGroups?.length > 0 && (
+              <div>
+                <label className="text-[10px] font-semibold text-muted-foreground block mb-1">나이대</label>
+                <Select value={editAgeGroupId} onValueChange={setEditAgeGroupId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="나이대 선택 (선택사항)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs">없음</SelectItem>
+                    {tournament.ageGroups.map((ag: any) => (
+                      <SelectItem key={ag.id} value={String(ag.id)} className="text-xs">
+                        {ag.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* 선수별 사이즈 */}
+            {sizeOptionsList.length > 0 && editingReg?.players?.map((p: any) => (
+              <div key={p.id}>
+                <label className="text-[10px] font-semibold text-muted-foreground block mb-1">{p.name} 사이즈</label>
+                <Select value={editSizes[p.id] || ""} onValueChange={(v) => setEditSizes(prev => ({ ...prev, [p.id]: v }))}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="사이즈 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sizeOptionsList.map((size: string) => (
+                      <SelectItem key={size} value={size} className="text-xs">{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+
+            <button
+              onClick={handleSaveEdit}
+              disabled={updateRegEventMutation.isPending}
+              className="w-full bg-primary text-foreground text-sm font-black py-3 rounded-xl hover:bg-optic-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+            >
+              {updateRegEventMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {updateRegEventMutation.isPending ? "저장 중..." : "변경 저장"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

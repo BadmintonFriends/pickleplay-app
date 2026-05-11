@@ -370,6 +370,39 @@ const adminRouter = router({
       return { success: true };
     }),
 
+  // ─── Update Registration Event (종목/급수 변경) ───
+  updateRegistrationEvent: protectedProcedure
+    .input(z.object({
+      registrationId: z.number(),
+      tournamentEventId: z.number(),
+      ageGroupId: z.number().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const reg = await db.getRegistrationById(input.registrationId);
+      if (!reg) throw new TRPCError({ code: "NOT_FOUND" });
+      await verifyTournamentOwnership(ctx.user, reg.tournamentId);
+      const updateData: any = { tournamentEventId: input.tournamentEventId };
+      if (input.ageGroupId !== undefined) updateData.ageGroupId = input.ageGroupId;
+      await db.updateRegistration(input.registrationId, updateData);
+      return { success: true };
+    }),
+
+  // ─── Update Player Gift Size (사이즈 변경) ───
+  updatePlayerGiftSize: protectedProcedure
+    .input(z.object({
+      playerId: z.number(),
+      giftSize: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const player = await db.getPlayerById(input.playerId);
+      if (!player) throw new TRPCError({ code: "NOT_FOUND" });
+      const reg = await db.getRegistrationById(player.registrationId);
+      if (!reg) throw new TRPCError({ code: "NOT_FOUND" });
+      await verifyTournamentOwnership(ctx.user, reg.tournamentId);
+      await db.updatePlayer(input.playerId, { giftSize: input.giftSize });
+      return { success: true };
+    }),
+
   createTournament: adminProcedure
     .input(z.object({
       name: z.string().min(1),
