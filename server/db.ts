@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, sql, or, like, ne, gte } from "drizzle-orm";
+import { eq, and, desc, asc, sql, or, like, ne, gte, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -422,25 +422,37 @@ export async function getRegistrationsWithPlayers(tournamentId: number) {
   const db = await getDb();
   if (!db) return [];
   const regs = await getRegistrationsByTournament(tournamentId);
+  if (regs.length === 0) return [];
   // 종목/나이대 정보를 한 번에 조회
   const events = await getEventsByTournament(tournamentId);
   const ageGroups = await getAgeGroupsByTournament(tournamentId);
   const eventMap = new Map(events.map(e => [e.id, e]));
   const ageGroupMap = new Map(ageGroups.map(a => [a.id, a]));
-  const result = [];
-  for (const reg of regs) {
-    const playerList = await getPlayersByRegistration(reg.id);
+
+  // N+1 쿼리 최적화: 모든 선수를 한 번에 조회 후 registrationId로 그룹핑
+  const regIds = regs.map(r => r.id);
+  const allPlayers = await db.select().from(players)
+    .where(inArray(players.registrationId, regIds))
+    .orderBy(players.playerOrder);
+  const playersByRegId = new Map<number, typeof allPlayers>();
+  for (const p of allPlayers) {
+    if (!playersByRegId.has(p.registrationId)) {
+      playersByRegId.set(p.registrationId, []);
+    }
+    playersByRegId.get(p.registrationId)!.push(p);
+  }
+
+  return regs.map(reg => {
     const event = eventMap.get(reg.tournamentEventId);
     const ageGroup = reg.ageGroupId ? ageGroupMap.get(reg.ageGroupId) : null;
-    result.push({
+    return {
       ...reg,
-      players: playerList,
+      players: playersByRegId.get(reg.id) ?? [],
       eventType: event?.eventType ?? null,
       skillLevel: event?.skillLevel ?? null,
       ageGroupLabel: ageGroup?.label ?? null,
-    });
-  }
-  return result;
+    };
+  });
 }
 
 export async function incrementEventTeamCount(eventId: number) {

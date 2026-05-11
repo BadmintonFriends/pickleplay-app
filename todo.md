@@ -485,14 +485,17 @@
 - [x] useMemo를 조건부 리턴 앞으로 이동 (React Hooks 규칙 위반 수정)
 - [x] 접수 상태별 필터 추가 (전체/입금완료/미입금/확정/취소 - 클릭 가능한 통계 카드)
 
-<<<<<<< Updated upstream
 ## 버그: 접수 내역에서 종목/급수 미표시
 
 - [x] R001-0001~R001-0012 접수 내역 종목/급수 복구 (tournamentEventId +30000 매핑) + setEvents upsert 방식 개선 + 데이터 보호 원칙 프로젝트 지식 저장
-=======
+
 ## 접수 관리: 종목/급수/사이즈 변경 + 무한 스크롤
 
 - [x] 서버 API: updateRegistrationEvent + updatePlayerGiftSize 프로시저 추가 (protectedProcedure + 대회 관리자 권한 검증)
 - [x] 프론트엔드: 접수 카드 연필 버튼 → 모달에서 종목/급수/나이대/선수별 사이즈 변경 가능
 - [x] 프론트엔드: IntersectionObserver 기반 15팀씩 자동 스크롤 페이징 + 필터 변경 시 리셋
->>>>>>> Stashed changes
+
+## 접수 리스트 로딩 속도 최적화
+
+- [x] N+1 쿼리 최적화: getRegistrationsWithPlayers에서 개별 getPlayersByRegistration 루프 호출(115회) → inArray 일괄 조회(1회)로 변경
+- [x] vitest 111개 전체 통과 확인
