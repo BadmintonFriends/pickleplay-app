@@ -1,0 +1,16 @@
+{
+  "query": "SELECT \n  CASE \n    WHEN phone LIKE '%-%' THEN 'has_hyphen'\n    WHEN phone LIKE '+%' THEN 'has_plus'\n    ELSE 'digits_only'\n  END as format_type,\n  COUNT(*) as cnt,\n  MIN(phone) as sample_min,\n  MAX(phone) as sample_max\nFROM players\nGROUP BY format_type;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ZY2ZWM4ebkftov.590f81a18743 --database QZUsZsvEpqV3TZCzpUyULD --execute SELECT \n  CASE \n    WHEN phone LIKE '%-%' THEN 'has_hyphen'\n    WHEN phone LIKE '+%' THEN 'has_plus'\n    ELSE 'digits_only'\n  END as format_type,\n  COUNT(*) as cnt,\n  MIN(phone) as sample_min,\n  MAX(phone) as sample_max\nFROM players\nGROUP BY format_type;",
+  "rows": [
+    {
+      "format_type": "digits_only",
+      "cnt": "238",
+      "sample_min": "01012345678",
+      "sample_max": "01098765432"
+    }
+  ],
+  "messages": [],
+  "stdout": "format_type\tcnt\tsample_min\tsample_max\ndigits_only\t238\t01012345678\t01098765432\n",
+  "stderr": "",
+  "execution_time_ms": 1780
+}

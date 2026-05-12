@@ -226,7 +226,14 @@ const registrationRouter = router({
         // 대회 관리자인지 확인
         const isOrganizer = await db.isTournamentOrganizer(reg.tournamentId, ctx.user.id);
         if (!isOrganizer) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+          // 선수로 등록된 본인인지 확인 (대리접수 건)
+          const userPhone = ctx.user.phone?.replace(/\D/g, "");
+          const isPlayerInReg = userPhone && reg.players?.some(
+            (p: any) => p.phone.replace(/\D/g, "") === userPhone
+          );
+          if (!isPlayerInReg) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+          }
         }
       }
       return reg;
