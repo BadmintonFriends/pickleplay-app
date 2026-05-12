@@ -308,6 +308,39 @@ export async function getRegistrationsByUser(userId: number) {
     .orderBy(desc(registrations.createdAt));
 }
 
+// 내가 접수한 건 + 내가 선수로 등록된 건(대리접수) 모두 조회
+export async function getRegistrationsByUserOrPlayer(userId: number, userPhone: string | null) {
+  const db = await getDb();
+  if (!db) return [];
+  // 1) 내가 직접 접수한 건
+  const myRegs = await db.select().from(registrations)
+    .where(eq(registrations.userId, userId))
+    .orderBy(desc(registrations.createdAt));
+  
+  if (!userPhone) return myRegs.map(r => ({ ...r, isProxy: false }));
+  
+  // 2) 내 전화번호로 선수 등록된 접수 (다른 사람이 대리 접수한 건)
+  const phoneDigits = userPhone.replace(/\D/g, "");
+  const playerRows = await db.select({ registrationId: players.registrationId })
+    .from(players)
+    .where(eq(players.phone, phoneDigits));
+  
+  const proxyRegIds = playerRows
+    .map(p => p.registrationId)
+    .filter(regId => !myRegs.some(r => r.id === regId));
+  
+  if (proxyRegIds.length === 0) return myRegs.map(r => ({ ...r, isProxy: false }));
+  
+  const proxyRegs = await db.select().from(registrations)
+    .where(inArray(registrations.id, proxyRegIds))
+    .orderBy(desc(registrations.createdAt));
+  
+  return [
+    ...myRegs.map(r => ({ ...r, isProxy: false })),
+    ...proxyRegs.map(r => ({ ...r, isProxy: true })),
+  ];
+}
+
 export async function getRegistrationsByTournament(tournamentId: number) {
   const db = await getDb();
   if (!db) return [];

@@ -1,0 +1,22 @@
+{
+  "query": "SELECT r.id, r.tournamentId, r.tournamentEventId, r.userId, r.status, r.paymentStatus, r.registrationNumber, r.createdAt,\n       te.eventType, te.skillLevel\nFROM registrations r\nLEFT JOIN tournament_events te ON te.id = r.tournamentEventId\nWHERE r.tournamentId = 1\nAND r.userId IN (\n  SELECT u.id FROM users u WHERE u.name LIKE '%임재호%'\n)\nORDER BY r.createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ZY2ZWM4ebkftov.590f81a18743 --database QZUsZsvEpqV3TZCzpUyULD --execute SELECT r.id, r.tournamentId, r.tournamentEventId, r.userId, r.status, r.paymentStatus, r.registrationNumber, r.createdAt,\n       te.eventType, te.skillLevel\nFROM registrations r\nLEFT JOIN tournament_events te ON te.id = r.tournamentEventId\nWHERE r.tournamentId = 1\nAND r.userId IN (\n  SELECT u.id FROM users u WHERE u.name LIKE '%임재호%'\n)\nORDER BY r.createdAt DESC;",
+  "rows": [
+    {
+      "id": "30001",
+      "tournamentId": "1",
+      "tournamentEventId": "150001",
+      "userId": "540021",
+      "status": "cancelled",
+      "paymentStatus": "unpaid",
+      "registrationNumber": "R001-0001",
+      "createdAt": "2026-04-29 13:40:11",
+      "eventType": "남복",
+      "skillLevel": "오픈부"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttournamentId\ttournamentEventId\tuserId\tstatus\tpaymentStatus\tregistrationNumber\tcreatedAt\teventType\tskillLevel\n30001\t1\t150001\t540021\tcancelled\tunpaid\tR001-0001\t2026-04-29 13:40:11\t남복\t오픈부\n",
+  "stderr": "",
+  "execution_time_ms": 1883
+}

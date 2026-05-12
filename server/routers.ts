@@ -199,7 +199,7 @@ const registrationRouter = router({
     }),
 
   myRegistrations: protectedProcedure.query(async ({ ctx }) => {
-    const regs = await db.getRegistrationsByUser(ctx.user.id);
+    const regs = await db.getRegistrationsByUserOrPlayer(ctx.user.id, ctx.user.phone ?? null);
     const result = [];
     for (const reg of regs) {
       const playerList = await db.getPlayersByRegistration(reg.id);

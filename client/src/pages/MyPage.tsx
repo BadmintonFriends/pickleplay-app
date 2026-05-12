@@ -251,12 +251,17 @@ export default function MyPage() {
                         <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
                       </div>
 
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center gap-2 mb-3 flex-wrap">
                         <Badge className={`${status.color} text-xs px-2 py-0.5 rounded-full font-medium`}>{status.label}</Badge>
                         <Badge className={`${payment.color} text-xs px-2 py-0.5 rounded-full font-medium`}>{payment.label}</Badge>
                         {reg.eventType && (
                           <Badge variant="outline" className="text-xs px-2 py-0.5 rounded-full border-primary/30 text-primary">
                             {reg.eventType} {reg.skillLevel}
+                          </Badge>
+                        )}
+                        {reg.isProxy && (
+                          <Badge className="bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded-full font-medium">
+                            대리접수
                           </Badge>
                         )}
                       </div>

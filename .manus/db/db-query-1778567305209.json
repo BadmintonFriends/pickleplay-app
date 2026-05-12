@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, name, phone, openId FROM users WHERE id IN (540021, 5370062);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ZY2ZWM4ebkftov.590f81a18743 --database QZUsZsvEpqV3TZCzpUyULD --execute SELECT id, name, phone, openId FROM users WHERE id IN (540021, 5370062);",
+  "rows": [
+    {
+      "id": "540021",
+      "name": "임재호",
+      "phone": "01045455433",
+      "openId": "phone_01045455433"
+    },
+    {
+      "id": "5370062",
+      "name": "서나리",
+      "phone": "01049182181",
+      "openId": "phone_01049182181"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tphone\topenId\n540021\t임재호\t01045455433\tphone_01045455433\n5370062\t서나리\t01049182181\tphone_01049182181\n",
+  "stderr": "",
+  "execution_time_ms": 1847
+}

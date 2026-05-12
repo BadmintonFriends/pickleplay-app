@@ -1,0 +1,40 @@
+{
+  "query": "SELECT p.id, p.registrationId, p.name, p.birthDate, p.phone, p.affiliation,\n       r.id as regId, r.tournamentEventId, r.userId, r.status, r.registrationNumber,\n       te.eventType, te.skillLevel\nFROM players p\nJOIN registrations r ON r.id = p.registrationId\nLEFT JOIN tournament_events te ON te.id = r.tournamentEventId\nWHERE p.name LIKE '%임재호%' AND r.tournamentId = 1\nORDER BY r.createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ZY2ZWM4ebkftov.590f81a18743 --database QZUsZsvEpqV3TZCzpUyULD --execute SELECT p.id, p.registrationId, p.name, p.birthDate, p.phone, p.affiliation,\n       r.id as regId, r.tournamentEventId, r.userId, r.status, r.registrationNumber,\n       te.eventType, te.skillLevel\nFROM players p\nJOIN registrations r ON r.id = p.registrationId\nLEFT JOIN tournament_events te ON te.id = r.tournamentEventId\nWHERE p.name LIKE '%임재호%' AND r.tournamentId = 1\nORDER BY r.createdAt DESC;",
+  "rows": [
+    {
+      "id": "1020035",
+      "registrationId": "1020018",
+      "name": "임재호",
+      "birthDate": "1964-12-02",
+      "phone": "01045455433",
+      "affiliation": "포항피클볼클럽",
+      "regId": "1020018",
+      "tournamentEventId": "150003",
+      "userId": "5370062",
+      "status": "confirmed",
+      "registrationNumber": "R001-0093",
+      "eventType": "남복",
+      "skillLevel": "3부"
+    },
+    {
+      "id": "30001",
+      "registrationId": "30001",
+      "name": "임재호",
+      "birthDate": "1964-12-05",
+      "phone": "01045455433",
+      "affiliation": "",
+      "regId": "30001",
+      "tournamentEventId": "150001",
+      "userId": "540021",
+      "status": "cancelled",
+      "registrationNumber": "R001-0001",
+      "eventType": "남복",
+      "skillLevel": "오픈부"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tregistrationId\tname\tbirthDate\tphone\taffiliation\tregId\ttournamentEventId\tuserId\tstatus\tregistrationNumber\teventType\tskillLevel\n1020035\t1020018\t임재호\t1964-12-02\t01045455433\t포항피클볼클럽\t1020018\t150003\t5370062\tconfirmed\tR001-0093\t남복\t3부\n30001\t30001\t임재호\t1964-12-05\t01045455433\t\t30001\t150001\t540021\tcancelled\tR001-0001\t남복\t오픈부\n",
+  "stderr": "",
+  "execution_time_ms": 1870
+}

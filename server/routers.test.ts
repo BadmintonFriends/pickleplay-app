@@ -84,6 +84,7 @@ vi.mock("./db", () => {
     incrementEventTeamCount: vi.fn().mockResolvedValue(undefined),
     decrementEventTeamCount: vi.fn().mockResolvedValue(undefined),
     getRegistrationsByUser: vi.fn().mockResolvedValue([]),
+    getRegistrationsByUserOrPlayer: vi.fn().mockResolvedValue([]),
     getRegistrationById: vi.fn().mockImplementation(async (id: number) => {
       return mockRegistrations.find(r => r.id === id) ?? undefined;
     }),
