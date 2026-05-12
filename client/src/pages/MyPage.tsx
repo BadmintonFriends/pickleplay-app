@@ -279,7 +279,13 @@ export default function MyPage() {
                         ))}
                       </div>
 
-                      <p className="text-xs text-muted-foreground mt-2">
+                      {reg.isProxy && reg.registeredByName && (
+                        <p className="text-xs text-blue-400 mt-2">
+                          접수자: {reg.registeredByName}
+                        </p>
+                      )}
+
+                      <p className="text-xs text-muted-foreground mt-1">
                         {new Date(reg.createdAt).toLocaleDateString("ko-KR", {
                           year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
                         })}

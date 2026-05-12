@@ -206,12 +206,19 @@ const registrationRouter = router({
       const tournament = await db.getTournamentById(reg.tournamentId);
       const events = await db.getEventsByTournament(reg.tournamentId);
       const event = events.find(e => e.id === reg.tournamentEventId);
+      // 대리접수 건의 경우 접수자 이름 조회
+      let registeredByName = "";
+      if (reg.isProxy) {
+        const registrant = await db.getUserById(reg.userId);
+        registeredByName = registrant?.name ?? "알 수 없음";
+      }
       result.push({
         ...reg,
         players: playerList,
         tournamentName: tournament?.name ?? "",
         eventType: event?.eventType ?? "",
         skillLevel: event?.skillLevel ?? "",
+        registeredByName,
       });
     }
     return result;
@@ -250,7 +257,15 @@ const registrationRouter = router({
       if (reg.userId !== ctx.user.id && !['admin', 'super_admin'].includes(ctx.user.role)) {
         const isOrganizer = await db.isTournamentOrganizer(reg.tournamentId, ctx.user.id);
         if (!isOrganizer) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+          // 선수로 등록된 본인인지 확인 (대리접수 건)
+          const userPhone = ctx.user.phone?.replace(/\D/g, "");
+          const playerList = await db.getPlayersByRegistration(input.id);
+          const isPlayerInReg = userPhone && playerList.some(
+            (p) => p.phone.replace(/\D/g, "") === userPhone
+          );
+          if (!isPlayerInReg) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+          }
         }
       }
       if (reg.status === "cancelled") throw new TRPCError({ code: "BAD_REQUEST", message: "취소된 접수는 수정할 수 없습니다" });
@@ -278,7 +293,15 @@ const registrationRouter = router({
       if (reg.userId !== ctx.user.id && !['admin', 'super_admin'].includes(ctx.user.role)) {
         const isOrganizer = await db.isTournamentOrganizer(reg.tournamentId, ctx.user.id);
         if (!isOrganizer) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+          // 선수로 등록된 본인인지 확인 (대리접수 건)
+          const userPhone = ctx.user.phone?.replace(/\D/g, "");
+          const playerList = await db.getPlayersByRegistration(input.id);
+          const isPlayerInReg = userPhone && playerList.some(
+            (p) => p.phone.replace(/\D/g, "") === userPhone
+          );
+          if (!isPlayerInReg) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
+          }
         }
       }
       if (reg.status === "cancelled") throw new TRPCError({ code: "BAD_REQUEST", message: "이미 취소된 접수입니다" });

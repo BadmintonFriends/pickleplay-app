@@ -511,3 +511,10 @@
 - [x] 서버: myRegistrations에서 userId 기준 조회 + players.phone 매칭 조회 병합 (중복 제거)
 - [x] 프론트엔드: 대리접수 건 구분 표시 ("대리접수" 뼉지 추가)
 - [x] vitest 116개 전체 통과 확인
+
+## 대리접수 권한 확장 + 접수자 정보 표시
+
+- [x] 서버: update/cancel 프로시저에 선수 phone 매칭 권한 추가 (대리접수 건도 선수 본인이 수정/취소 가능)
+- [x] 서버: myRegistrations 응답에 접수자(userId) 이름 포함
+- [x] 프론트엔드: 대리접수 카드에 "접수자: OOO" 표시
+- [x] vitest 116개 전체 통과 확인
