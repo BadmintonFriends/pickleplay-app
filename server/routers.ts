@@ -9,6 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { sendVerificationCode, verifyCode, normalizePhoneToDigits, sendSmsMessage } from "./sms";
 import { communityRouter } from "./communityRouter";
+import { bracketRouter } from "./bracketRouter";
 import { sdk } from "./_core/sdk";
 
 // ─── Validation schemas ──────────────────────────────────
@@ -996,5 +997,6 @@ export const appRouter = router({
   admin: adminRouter,
   kpr: kprRouter,
   community: communityRouter,
+  bracket: bracketRouter,
 });
 export type AppRouter = typeof appRouter;

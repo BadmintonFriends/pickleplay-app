@@ -35,6 +35,24 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Bracket Excel export (REST endpoint for file download)
+  app.get("/api/tournaments/:tournamentId/bracket/export", async (req, res) => {
+    try {
+      const tournamentId = parseInt(req.params.tournamentId);
+      if (isNaN(tournamentId)) {
+        res.status(400).json({ error: "Invalid tournamentId" });
+        return;
+      }
+      const { generateBracketExcel } = await import("../bracketRouter");
+      const buffer = await generateBracketExcel(tournamentId);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=bracket_${tournamentId}.xlsx`);
+      res.send(buffer);
+    } catch (err: any) {
+      console.error("[bracket/export]", err);
+      res.status(500).json({ error: err.message ?? "Internal error" });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",

@@ -335,3 +335,107 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// ─── Bracket: Settings (종목별 대진 설정) ────────────────
+export const bracketSettings = mysqlTable("bracket_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournamentId").notNull(),
+  tournamentEventId: int("tournamentEventId").notNull(),
+  qualifyingScore: int("qualifyingScore").notNull().default(15),
+  mainScore: int("mainScore").notNull().default(15),
+  deuceEnabled: boolean("deuceEnabled").notNull().default(true),
+  deuceMaxScore: int("deuceMaxScore").notNull().default(17),
+  advanceCount: int("advanceCount").notNull().default(1), // 1 or 2
+  hasThirdPlace: boolean("hasThirdPlace").notNull().default(false),
+  eventOrder: int("eventOrder").notNull().default(0),
+  matchDate: varchar("matchDate", { length: 10 }),
+  status: mysqlEnum("status", ["draft", "qualifying", "main", "completed"]).notNull().default("draft"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  uqTournamentEvent: unique().on(table.tournamentId, table.tournamentEventId),
+}));
+
+export type BracketSettings = typeof bracketSettings.$inferSelect;
+export type InsertBracketSettings = typeof bracketSettings.$inferInsert;
+
+// ─── Bracket: Court Settings (날짜별 코트 설정) ──────────
+export const bracketCourtSettings = mysqlTable("bracket_court_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournamentId").notNull(),
+  matchDate: varchar("matchDate", { length: 10 }).notNull(),
+  courtCount: int("courtCount").notNull().default(1),
+  startTime: varchar("startTime", { length: 5 }).notNull().default("09:00"),
+  estimatedMinutes: int("estimatedMinutes").notNull().default(15),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  uqTournamentDate: unique().on(table.tournamentId, table.matchDate),
+}));
+
+export type BracketCourtSettings = typeof bracketCourtSettings.$inferSelect;
+export type InsertBracketCourtSettings = typeof bracketCourtSettings.$inferInsert;
+
+// ─── Bracket: Groups (예선 조) ───────────────────────────
+export const bracketGroups = mysqlTable("bracket_groups", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournamentId").notNull(),
+  tournamentEventId: int("tournamentEventId").notNull(),
+  groupNumber: int("groupNumber").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  uqEventGroup: unique().on(table.tournamentEventId, table.groupNumber),
+}));
+
+export type BracketGroup = typeof bracketGroups.$inferSelect;
+export type InsertBracketGroup = typeof bracketGroups.$inferInsert;
+
+// ─── Bracket: Group Teams (조별 팀 배정) ─────────────────
+export const bracketGroupTeams = mysqlTable("bracket_group_teams", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  registrationId: int("registrationId").notNull(),
+  finalRank: int("finalRank"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BracketGroupTeam = typeof bracketGroupTeams.$inferSelect;
+export type InsertBracketGroupTeam = typeof bracketGroupTeams.$inferInsert;
+
+// ─── Bracket: Matches (전체 경기 - 예선 + 본선) ──────────
+export const bracketMatches = mysqlTable("bracket_matches", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournamentId").notNull(),
+  tournamentEventId: int("tournamentEventId").notNull(),
+  phase: mysqlEnum("phase", ["qualifying", "main"]).notNull(),
+  roundNumber: int("roundNumber").notNull().default(1),
+  matchNumber: int("matchNumber").notNull(), // 0 = 3·4위전
+  groupId: int("groupId"),                  // 예선 조 (qualifying only)
+  team1Id: int("team1Id"),                  // registrations.id
+  team2Id: int("team2Id"),
+  team1Score: int("team1Score"),
+  team2Score: int("team2Score"),
+  winnerId: int("winnerId"),
+  isBye: boolean("isBye").notNull().default(false),
+  courtNumber: int("courtNumber"),
+  scheduledAt: timestamp("scheduledAt"),
+  // 본선 팀 출처 (대진표 라벨용)
+  team1SourceType: mysqlEnum("team1SourceType", ["group_rank", "match_winner"]),
+  team1SourceGroupId: int("team1SourceGroupId"),
+  team1SourceRank: int("team1SourceRank"),
+  team1SourceMatchId: int("team1SourceMatchId"),
+  team2SourceType: mysqlEnum("team2SourceType", ["group_rank", "match_winner"]),
+  team2SourceGroupId: int("team2SourceGroupId"),
+  team2SourceRank: int("team2SourceRank"),
+  team2SourceMatchId: int("team2SourceMatchId"),
+  // 본선 다음 경기 연결
+  nextMatchId: int("nextMatchId"),
+  nextMatchPosition: int("nextMatchPosition"), // 1 or 2
+  loserNextMatchId: int("loserNextMatchId"),    // 3·4위전용
+  loserNextMatchPosition: int("loserNextMatchPosition"),
+  status: mysqlEnum("status", ["scheduled", "completed"]).notNull().default("scheduled"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BracketMatch = typeof bracketMatches.$inferSelect;
+export type InsertBracketMatch = typeof bracketMatches.$inferInsert;
