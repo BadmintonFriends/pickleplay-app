@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -43,12 +44,24 @@ async function startServer() {
         res.status(400).json({ error: "Invalid tournamentId" });
         return;
       }
-      const { generateBracketExcel } = await import("../bracketRouter");
+      let user: Awaited<ReturnType<typeof sdk.authenticateRequest>>;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        res.status(401).json({ error: "인증이 필요합니다" });
+        return;
+      }
+      const { generateBracketExcel, verifyBracketAccess } = await import("../bracketRouter");
+      await verifyBracketAccess(user, tournamentId);
       const buffer = await generateBracketExcel(tournamentId);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=bracket_${tournamentId}.xlsx`);
       res.send(buffer);
     } catch (err: any) {
+      if (err?.code === "FORBIDDEN") {
+        res.status(403).json({ error: err.message ?? "권한이 없습니다" });
+        return;
+      }
       console.error("[bracket/export]", err);
       res.status(500).json({ error: err.message ?? "Internal error" });
     }

@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 
 // ─── Permission Helper ───────────────────────────────────
 
-async function verifyBracketAccess(user: { id: number; role: string }, tournamentId: number) {
+export async function verifyBracketAccess(user: { id: number; role: string }, tournamentId: number) {
   if (user.role === "admin" || user.role === "super_admin") return;
   const isOrganizer = await db.isTournamentOrganizer(tournamentId, user.id);
   if (!isOrganizer) throw new TRPCError({ code: "FORBIDDEN", message: "권한이 없습니다" });
@@ -221,29 +221,60 @@ function buildBracketSlots(numGroups: number, advanceCount: number, hasThirdPlac
   return slots;
 }
 
-/** 같은 소속이 같은 하프에 있으면 반대 하프로 교체 시도 */
+/** 같은 조 출신 팀이 같은 하프에 있거나 1라운드에서 직접 대결하지 않도록 조정 */
 function adjustBracketForAffiliation(slots: BracketSlot[], firstRoundCount: number) {
   const half = firstRoundCount / 2;
-  for (let pass = 0; pass < 5; pass++) {
+
+  function groupOf(s: Seed | null): number | null {
+    return s?.type === "team" ? s.groupNumber : null;
+  }
+
+  for (let pass = 0; pass < 10; pass++) {
     let improved = false;
+
+    // 1) 같은 슬롯 내 seed1-seed2가 같은 조인 경우 (직접 1라운드 충돌) 수정
     for (let i = 0; i < firstRoundCount; i++) {
-      for (let j = i + 1; j < firstRoundCount; j++) {
-        const si = slots[i].seed1;
-        const sj = slots[j].seed1;
-        if (!si || !sj || si.type === "bye" || sj.type === "bye") continue;
-        if (si.type === "team" && sj.type === "team" && si.groupNumber === sj.groupNumber) {
-          // 같은 조 팀 (같은 소속 가능성 높음) - 다른 하프로 이동
-          if (Math.floor(i / half) === Math.floor(j / half)) {
-            // 같은 하프 - 반대 하프의 미러 위치와 교체
-            const mirror = i < half ? i + half : i - half;
-            if (mirror !== j && mirror < firstRoundCount) {
-              [slots[j].seed1, slots[mirror].seed1] = [slots[mirror].seed1, slots[j].seed1];
-              improved = true;
-            }
+      const gi1 = groupOf(slots[i].seed1);
+      const gi2 = groupOf(slots[i].seed2);
+      if (gi1 !== null && gi2 !== null && gi1 === gi2) {
+        const otherHalfStart = i < half ? half : 0;
+        for (let j = otherHalfStart; j < otherHalfStart + half; j++) {
+          const gj1 = groupOf(slots[j].seed1);
+          if (gj1 !== null && gj1 !== gi1 && groupOf(slots[j].seed2) !== gi1) {
+            [slots[i].seed2, slots[j].seed1] = [slots[j].seed1, slots[i].seed2];
+            improved = true;
+            break;
           }
         }
       }
     }
+
+    // 2) 같은 하프에 같은 조 팀이 있는 경우 수정 (seed1/seed2 모두 체크)
+    for (let i = 0; i < firstRoundCount; i++) {
+      for (let j = i + 1; j < firstRoundCount; j++) {
+        if (Math.floor(i / half) !== Math.floor(j / half)) continue;
+
+        const gi1 = groupOf(slots[i].seed1);
+        const gi2 = groupOf(slots[i].seed2);
+        const gj1 = groupOf(slots[j].seed1);
+        const gj2 = groupOf(slots[j].seed2);
+
+        const conflict =
+          (gi1 !== null && gj1 !== null && gi1 === gj1) ||
+          (gi1 !== null && gj2 !== null && gi1 === gj2) ||
+          (gi2 !== null && gj1 !== null && gi2 === gj1) ||
+          (gi2 !== null && gj2 !== null && gi2 === gj2);
+
+        if (conflict) {
+          const mirror = i < half ? i + half : i - half;
+          if (mirror !== j && mirror < firstRoundCount) {
+            [slots[j].seed1, slots[mirror].seed1] = [slots[mirror].seed1, slots[j].seed1];
+            improved = true;
+          }
+        }
+      }
+    }
+
     if (!improved) break;
   }
 }
@@ -266,14 +297,15 @@ interface ScheduleResult {
 function computeSchedule(
   matches: SchedulableMatch[],
   courtSetting: { courtCount: number; startTime: string; estimatedMinutes: number },
-  matchDate: string
-): ScheduleResult[] {
+  matchDate: string,
+  startSlotOffset = 0
+): { results: ScheduleResult[]; slotsUsed: number } {
   const results: ScheduleResult[] = [];
   const [startHour, startMin] = courtSetting.startTime.split(":").map(Number);
   const [year, month, day] = matchDate.split("-").map(Number);
 
   const queue = [...matches].sort((a, b) => a.eventOrder - b.eventOrder);
-  let slotIndex = 0;
+  let slotIndex = startSlotOffset;
   const prevSlotPhones = new Set<string>();
 
   let safety = 0;
@@ -308,7 +340,7 @@ function computeSchedule(
     queue.splice(0, queue.length, ...remaining);
     slotIndex++;
   }
-  return results;
+  return { results, slotsUsed: slotIndex };
 }
 
 // ─── Standings Calculation ───────────────────────────────
@@ -348,12 +380,31 @@ function computeStandings(
 
   const list = [...standings.values()];
 
+  // 승수가 같은 팀들끼리 H2H 승리 수를 미리 계산 (순환 타이 방지)
+  const winGroups = new Map<number, number[]>();
+  for (const s of list) {
+    if (!winGroups.has(s.wins)) winGroups.set(s.wins, []);
+    winGroups.get(s.wins)!.push(s.registrationId);
+  }
+  const h2hGroupWins = new Map<number, number>();
+  for (const [, groupIds] of winGroups) {
+    const idSet = new Set(groupIds);
+    for (const id of groupIds) h2hGroupWins.set(id, 0);
+    for (const m of completedMatches) {
+      if (!m.team1Id || !m.team2Id) continue;
+      if (!idSet.has(m.team1Id) || !idSet.has(m.team2Id)) continue;
+      const winner = m.team1Score! > m.team2Score! ? m.team1Id : m.team2Id;
+      h2hGroupWins.set(winner, (h2hGroupWins.get(winner) ?? 0) + 1);
+    }
+  }
+
   list.sort((a, b) => {
     // 1) 승수
     if (b.wins !== a.wins) return b.wins - a.wins;
-    // 2) 승자승 (head-to-head)
-    const h2h = getHeadToHead(a.registrationId, b.registrationId, completedMatches);
-    if (h2h !== 0) return h2h;
+    // 2) 승자승 (동일 승수 그룹 내 H2H 승리 수 - 순환 타이도 올바르게 처리)
+    const h2hA = h2hGroupWins.get(a.registrationId) ?? 0;
+    const h2hB = h2hGroupWins.get(b.registrationId) ?? 0;
+    if (h2hB !== h2hA) return h2hB - h2hA;
     // 3) 득실 (점수 차)
     const diffA = a.pointsFor - a.pointsAgainst;
     const diffB = b.pointsFor - b.pointsAgainst;
@@ -576,6 +627,14 @@ export const bracketRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       await verifyBracketAccess(ctx.user!, input.tournamentId);
+      // 이벤트가 해당 대회 소속인지 검증
+      const events = await db.getEventsByTournament(input.tournamentId);
+      const validEventIds = new Set(events.map(e => e.id));
+      for (const s of input.settings) {
+        if (!validEventIds.has(s.tournamentEventId)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "이벤트가 해당 대회에 속하지 않습니다" });
+        }
+      }
       for (const s of input.settings) {
         await bdb.upsertBracketSettings({
           tournamentId: input.tournamentId,
@@ -763,11 +822,35 @@ export const bracketRouter = router({
         dateGroups.get(m.matchDate)!.push(m);
       }
 
+      const dateSlotsUsed = new Map<string, number>();
       for (const [date, matches] of dateGroups) {
         const cs = courtMap.get(date);
         if (!cs) continue;
-        const schedResults = computeSchedule(matches, cs, date);
+        const { results: schedResults, slotsUsed } = computeSchedule(matches, cs, date);
+        dateSlotsUsed.set(date, slotsUsed);
         for (const sr of schedResults) {
+          await bdb.updateBracketMatch(sr.matchId, { courtNumber: sr.courtNumber, scheduledAt: sr.scheduledAt });
+        }
+      }
+
+      // 9. 날짜별 본선 스케줄링 (예선 종료 이후 슬롯부터 배정)
+      for (const settings of allSettings) {
+        const eventId = settings.tournamentEventId;
+        const matchDate = settings.matchDate ?? "";
+        const cs = courtMap.get(matchDate);
+        if (!cs) continue;
+        const mainMatches = (await bdb.getBracketMatches(input.tournamentId, eventId))
+          .filter(m => m.phase === "main" && !m.isBye);
+        if (mainMatches.length === 0) continue;
+        const startOffset = dateSlotsUsed.get(matchDate) ?? 0;
+        const mainSchedulable: SchedulableMatch[] = mainMatches.map(m => ({
+          matchId: m.id,
+          eventOrder: settings.eventOrder,
+          team1Phones: [],
+          team2Phones: [],
+        }));
+        const { results: mainResults } = computeSchedule(mainSchedulable, cs, matchDate, startOffset);
+        for (const sr of mainResults) {
           await bdb.updateBracketMatch(sr.matchId, { courtNumber: sr.courtNumber, scheduledAt: sr.scheduledAt });
         }
       }
@@ -868,6 +951,10 @@ export const bracketRouter = router({
       if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "경기를 찾을 수 없습니다" });
       await verifyBracketAccess(ctx.user!, match.tournamentId);
 
+      if (input.team1Score === input.team2Score) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "동점은 유효한 결과가 아닙니다. 점수를 다시 확인해주세요." });
+      }
+
       const winnerId = input.team1Score > input.team2Score ? match.team1Id : match.team2Id;
       const loserId = input.team1Score > input.team2Score ? match.team2Id : match.team1Id;
 
@@ -909,27 +996,29 @@ export const bracketRouter = router({
       toGroupId: z.number(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const fromGroup = await bdb.getBracketGroupById(input.fromGroupId);
+      if (!fromGroup) throw new TRPCError({ code: "NOT_FOUND", message: "조를 찾을 수 없습니다" });
+      await verifyBracketAccess(ctx.user!, fromGroup.tournamentId);
+
+      const toGroup = await bdb.getBracketGroupById(input.toGroupId);
+      if (!toGroup || toGroup.tournamentId !== fromGroup.tournamentId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "대상 조가 같은 대회에 속하지 않습니다" });
+      }
+
       const fromTeams = await bdb.getBracketGroupTeams(input.fromGroupId);
-      const toTeams = await bdb.getBracketGroupTeams(input.toGroupId);
-      const fromGroups = await bdb.getBracketGroups(0); // tournamentId needed - handled below
       const target = fromTeams.find(t => t.registrationId === input.registrationId);
       if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "해당 조에 팀이 없습니다" });
 
-      const fromGroupDetail = (await bdb.getBracketGroupTeams(input.fromGroupId)).find(() => true);
-      // Get tournamentId from group
-      const allGroups = await (async () => {
-        // Need to get group details to verify access - simplified check
-        return [];
-      })();
-
-      await bdb.updateGroupTeamRank(target.id, 0); // rank 초기화
-      // groupId 변경은 direct update 필요 - bracketDb에서 처리
       const db2 = await (await import("./db")).getDb();
-      if (db2) {
-        const { bracketGroupTeams: bgt } = await import("../drizzle/schema");
-        const { eq } = await import("drizzle-orm");
-        await db2.update(bgt).set({ groupId: input.toGroupId }).where(eq(bgt.id, target.id));
-      }
+      if (!db2) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const { bracketGroupTeams: bgt } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      await db2.update(bgt).set({ groupId: input.toGroupId, finalRank: null }).where(eq(bgt.id, target.id));
+
+      // 예선 경기 데이터 동기화: 영향받은 두 조의 경기 삭제
+      await bdb.deleteBracketMatchesByGroupId(input.fromGroupId);
+      await bdb.deleteBracketMatchesByGroupId(input.toGroupId);
+
       return { success: true };
     }),
 
@@ -951,10 +1040,26 @@ export const bracketRouter = router({
 
       if (!rows[0] || !rows2[0]) throw new TRPCError({ code: "NOT_FOUND" });
 
+      const group1 = await bdb.getBracketGroupById(rows[0].groupId);
+      if (!group1) throw new TRPCError({ code: "NOT_FOUND" });
+      await verifyBracketAccess(ctx.user!, group1.tournamentId);
+
+      const group2 = await bdb.getBracketGroupById(rows2[0].groupId);
+      if (!group2 || group2.tournamentId !== group1.tournamentId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "두 팀이 같은 대회에 속하지 않습니다" });
+      }
+
       const g1 = rows[0].groupId;
       const g2 = rows2[0].groupId;
-      await db2.update(bgt).set({ groupId: g2 }).where(eq(bgt.id, rows[0].id));
-      await db2.update(bgt).set({ groupId: g1 }).where(eq(bgt.id, rows2[0].id));
+      await db2.update(bgt).set({ groupId: g2, finalRank: null }).where(eq(bgt.id, rows[0].id));
+      await db2.update(bgt).set({ groupId: g1, finalRank: null }).where(eq(bgt.id, rows2[0].id));
+
+      // 예선 경기 데이터 동기화: 영향받은 두 조의 경기 삭제
+      if (g1 !== g2) {
+        await bdb.deleteBracketMatchesByGroupId(g1);
+        await bdb.deleteBracketMatchesByGroupId(g2);
+      }
+
       return { success: true };
     }),
 });

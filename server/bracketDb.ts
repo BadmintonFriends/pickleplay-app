@@ -178,6 +178,19 @@ export async function deleteBracketMatches(tournamentId: number) {
   await db.delete(bracketMatches).where(eq(bracketMatches.tournamentId, tournamentId));
 }
 
+export async function getBracketGroupById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(bracketGroups).where(eq(bracketGroups.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function deleteBracketMatchesByGroupId(groupId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(bracketMatches).where(eq(bracketMatches.groupId, groupId));
+}
+
 // ─── Composite Delete ────────────────────────────────────
 
 export async function deleteBracketData(tournamentId: number) {
