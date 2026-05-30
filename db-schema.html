@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>PicklePlay DB Schema</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #f8fafc;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 40px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      margin-top: 48px;
+      padding-left: 4px;
+      border-left: 3px solid #334155;
+      padding-left: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .table-card {
+      background: #1e2433;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #2d3748;
+    }
+
+    .table-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .table-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-left: auto;
+    }
+
+    .fields {
+      padding: 4px 0 8px;
+    }
+
+    .field {
+      display: flex;
+      align-items: center;
+      padding: 5px 16px;
+      gap: 8px;
+      font-size: 12px;
+      border-bottom: 1px solid #1a2030;
+    }
+
+    .field:last-child {
+      border-bottom: none;
+    }
+
+    .field:hover {
+      background: #252d3d;
+    }
+
+    .field-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+
+    .field-name {
+      flex: 1;
+      color: #cbd5e1;
+      font-family: 'Courier New', monospace;
+    }
+
+    .field-name.pk { color: #fbbf24; font-weight: 700; }
+    .field-name.fk { color: #60a5fa; }
+    .field-name.unique { color: #a78bfa; }
+
+    .field-type {
+      color: #475569;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .field-constraint {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .badge-pk { background: #451a03; color: #fbbf24; }
+    .badge-fk { background: #1e3a5f; color: #60a5fa; }
+    .badge-uq { background: #2e1065; color: #a78bfa; }
+    .badge-nn { background: #1a2e1a; color: #4ade80; }
+
+    /* 테마별 헤더 색상 */
+    .theme-user .table-header { background: linear-gradient(135deg, #1e3a5f, #1e2d4a); border-bottom: 2px solid #3b82f6; }
+    .theme-user .table-name { color: #60a5fa; }
+    .theme-user .table-badge { background: #1e3a5f; color: #60a5fa; }
+
+    .theme-tournament .table-header { background: linear-gradient(135deg, #3b1f00, #2d1a00); border-bottom: 2px solid #f59e0b; }
+    .theme-tournament .table-name { color: #fbbf24; }
+    .theme-tournament .table-badge { background: #3b1f00; color: #fbbf24; }
+
+    .theme-registration .table-header { background: linear-gradient(135deg, #1a3320, #142b1a); border-bottom: 2px solid #22c55e; }
+    .theme-registration .table-name { color: #4ade80; }
+    .theme-registration .table-badge { background: #1a3320; color: #4ade80; }
+
+    .theme-kpr .table-header { background: linear-gradient(135deg, #2d1a3d, #231530); border-bottom: 2px solid #a855f7; }
+    .theme-kpr .table-name { color: #c084fc; }
+    .theme-kpr .table-badge { background: #2d1a3d; color: #c084fc; }
+
+    .theme-community .table-header { background: linear-gradient(135deg, #1f1a3d, #181530); border-bottom: 2px solid #6366f1; }
+    .theme-community .table-name { color: #818cf8; }
+    .theme-community .table-badge { background: #1f1a3d; color: #818cf8; }
+
+    /* 관계선 설명 */
+    .relations-section {
+      margin-top: 48px;
+    }
+
+    .relations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 12px;
+    }
+
+    .relation-card {
+      background: #1e2433;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .rel-from {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .rel-arrow {
+      color: #475569;
+      font-size: 16px;
+    }
+
+    .rel-to {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .rel-type {
+      margin-left: auto;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: #0f172a;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    .rel-desc {
+      color: #64748b;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .rel-content {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>PicklePlay DB Schema</h1>
+  <p class="subtitle">drizzle/schema.ts 기반 · MySQL</p>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div> PK (Primary Key)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div> FK (Foreign Key)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div> UNIQUE</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div> NOT NULL</div>
+  </div>
+
+  <!-- 사용자 -->
+  <div class="section-title">사용자</div>
+  <div class="grid">
+
+    <div class="table-card theme-user">
+      <div class="table-header">
+        <div class="table-name">users</div>
+        <div class="table-badge">회원</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name unique">openId</span><span class="field-type">varchar(64)</span><span class="field-constraint badge-uq">UQ</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">name</span><span class="field-type">text</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">email</span><span class="field-type">varchar(320)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name unique">phone</span><span class="field-type">varchar(20)</span><span class="field-constraint badge-uq">UQ</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">gender</span><span class="field-type">enum(male, female)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">birthDate</span><span class="field-type">varchar(10)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name unique">nickname</span><span class="field-type">varchar(30)</span><span class="field-constraint badge-uq">UQ</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">role</span><span class="field-type">enum(user, admin, super_admin)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">loginMethod</span><span class="field-type">varchar(64)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">pushEnabled</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">termsAcceptedAt</span><span class="field-type">timestamp</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">privacyAcceptedAt</span><span class="field-type">timestamp</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">lastSignedIn</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">updatedAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 대회 -->
+  <div class="section-title">대회</div>
+  <div class="grid">
+
+    <div class="table-card theme-tournament">
+      <div class="table-header">
+        <div class="table-name">tournaments</div>
+        <div class="table-badge">대회</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">name</span><span class="field-type">varchar(200)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">description</span><span class="field-type">text</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">startDate</span><span class="field-type">varchar(10)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">endDate</span><span class="field-type">varchar(10)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">venue</span><span class="field-type">varchar(200)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">address</span><span class="field-type">varchar(500)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">organizerInfo</span><span class="field-type">text (JSON)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">registrationStart</span><span class="field-type">timestamp</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">registrationEnd</span><span class="field-type">timestamp</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">feePerTeam</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">giftDescription</span><span class="field-type">varchar(500)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sizeType</span><span class="field-type">enum(numeric, alpha)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sizeOptions</span><span class="field-type">varchar(500) JSON</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">hasAgeGroup</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">hasSingles</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">bankName</span><span class="field-type">varchar(100)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">accountNumber</span><span class="field-type">varchar(100)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">accountHolder</span><span class="field-type">varchar(100)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">paymentNote</span><span class="field-type">text</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sizeGuideImageUrl</span><span class="field-type">varchar(1000)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sizeGuideFileKey</span><span class="field-type">varchar(500)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">status</span><span class="field-type">enum(draft,open,closed,cancelled)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">officialDocUrl</span><span class="field-type">varchar(1000)</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">organizerId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">updatedAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-tournament">
+      <div class="table-header">
+        <div class="table-name">tournament_events</div>
+        <div class="table-badge">종목/급수</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentId</span><span class="field-type">int → tournaments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">eventType</span><span class="field-type">enum(남복,여복,혼복,남단,여단)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">skillLevel</span><span class="field-type">varchar(50)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">maxTeams</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">currentTeams</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">dayLabel</span><span class="field-type">varchar(50)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sortOrder</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-tournament">
+      <div class="table-header">
+        <div class="table-name">tournament_age_groups</div>
+        <div class="table-badge">연령대</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentId</span><span class="field-type">int → tournaments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">code</span><span class="field-type">varchar(20)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">label</span><span class="field-type">varchar(50)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">minAge</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">maxAge</span><span class="field-type">int</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-tournament">
+      <div class="table-header">
+        <div class="table-name">tournament_posters</div>
+        <div class="table-badge">포스터</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentId</span><span class="field-type">int → tournaments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">imageUrl</span><span class="field-type">varchar(1000)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">fileKey</span><span class="field-type">varchar(500)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sortOrder</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-tournament">
+      <div class="table-header">
+        <div class="table-name">tournament_documents</div>
+        <div class="table-badge">공문/PDF</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentId</span><span class="field-type">int → tournaments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">title</span><span class="field-type">varchar(200)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">fileUrl</span><span class="field-type">varchar(1000)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">fileKey</span><span class="field-type">varchar(500)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">fileSize</span><span class="field-type">int (bytes)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sortOrder</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-tournament">
+      <div class="table-header">
+        <div class="table-name">tournament_organizers</div>
+        <div class="table-badge">대회 관리자</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentId</span><span class="field-type">int → tournaments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">userId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">role</span><span class="field-type">enum(owner, manager)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">assignedAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field" style="padding-top:6px;padding-bottom:6px;background:#161e2e">
+          <span style="font-size:10px;color:#475569;font-style:italic;">UNIQUE(tournamentId, userId)</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 접수 -->
+  <div class="section-title">접수 / 선수</div>
+  <div class="grid">
+
+    <div class="table-card theme-registration">
+      <div class="table-header">
+        <div class="table-name">registrations</div>
+        <div class="table-badge">접수 (= 팀)</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentId</span><span class="field-type">int → tournaments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentEventId</span><span class="field-type">int → tournament_events.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">userId</span><span class="field-type">int → users.id (접수자)</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">ageGroupId</span><span class="field-type">int → tournament_age_groups.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">registrationNumber</span><span class="field-type">varchar(20)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">isSelfParticipant</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">status</span><span class="field-type">enum(pending,confirmed,cancelled)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">paymentStatus</span><span class="field-type">enum(unpaid,paid,refunded)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">paymentAmount</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">updatedAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-registration">
+      <div class="table-header">
+        <div class="table-name">players</div>
+        <div class="table-badge">선수</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">registrationId</span><span class="field-type">int → registrations.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">playerOrder</span><span class="field-type">int (1 또는 2)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">name</span><span class="field-type">varchar(100)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">birthDate</span><span class="field-type">varchar(10)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">phone</span><span class="field-type">varchar(20)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">affiliation</span><span class="field-type">varchar(100) (클럽명, 자유텍스트)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">giftSize</span><span class="field-type">varchar(20)</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- KPR -->
+  <div class="section-title">KPR 랭킹</div>
+  <div class="grid">
+
+    <div class="table-card theme-kpr">
+      <div class="table-header">
+        <div class="table-name">kpr_ratings</div>
+        <div class="table-badge">ELO 점수</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">userId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">rating</span><span class="field-type">int (초기 1000)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">ratingDelta</span><span class="field-type">int (최근 변동)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">totalMatches</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">wins</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">losses</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">winStreak</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">bestRating</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">weeklyRankDelta</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">updatedAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-kpr">
+      <div class="table-header">
+        <div class="table-name">match_results</div>
+        <div class="table-badge">경기 결과</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">tournamentId</span><span class="field-type">int → tournaments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">matchDate</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">matchType</span><span class="field-type">enum(singles,doubles,mixed)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">winner1Id</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">winner2Id</span><span class="field-type">int → users.id (복식)</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">loser1Id</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">loser2Id</span><span class="field-type">int → users.id (복식)</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">winnerScore</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">loserScore</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">ratingChange</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 커뮤니티 -->
+  <div class="section-title">커뮤니티</div>
+  <div class="grid">
+
+    <div class="table-card theme-community">
+      <div class="table-header">
+        <div class="table-name">posts</div>
+        <div class="table-badge">게시글</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">authorId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">title</span><span class="field-type">varchar(200)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">content</span><span class="field-type">text</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">isPinned</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">isNotice</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">isHidden</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">hiddenBy / hiddenAt / hiddenReason</span><span class="field-type">숨김 처리 정보</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">commentCount</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">likeCount</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt / updatedAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-community">
+      <div class="table-header">
+        <div class="table-name">post_images</div>
+        <div class="table-badge">게시글 이미지</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">postId</span><span class="field-type">int → posts.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">imageUrl</span><span class="field-type">varchar(1000)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">thumbnailUrl</span><span class="field-type">varchar(1000)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">fileKey / thumbnailFileKey</span><span class="field-type">S3 키</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">width / height</span><span class="field-type">int</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">sortOrder</span><span class="field-type">int</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-community">
+      <div class="table-header">
+        <div class="table-name">comments</div>
+        <div class="table-badge">댓글</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">postId</span><span class="field-type">int → posts.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">authorId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">content</span><span class="field-type">text</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">isHidden</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">hiddenBy / hiddenAt / hiddenReason</span><span class="field-type">숨김 처리 정보</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt / updatedAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-community">
+      <div class="table-header">
+        <div class="table-name">post_likes</div>
+        <div class="table-badge">좋아요</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">postId</span><span class="field-type">int → posts.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">userId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-community">
+      <div class="table-header">
+        <div class="table-name">reports</div>
+        <div class="table-badge">신고</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">reporterId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">targetType</span><span class="field-type">enum(post, comment)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">targetId</span><span class="field-type">int (post/comment id)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">reason</span><span class="field-type">enum(spam,abuse,inappropriate...)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">description</span><span class="field-type">text</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">status</span><span class="field-type">enum(pending,reviewed,resolved,dismissed)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">reviewedBy</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">reviewedAt / reviewNote</span><span class="field-type">검토 정보</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+    <div class="table-card theme-community">
+      <div class="table-header">
+        <div class="table-name">notifications</div>
+        <div class="table-badge">알림</div>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="field-icon">🔑</span><span class="field-name pk">id</span><span class="field-type">int</span><span class="field-constraint badge-pk">PK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">userId</span><span class="field-type">int → users.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">type</span><span class="field-type">enum(comment,like,notice,report_result,hidden)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">title</span><span class="field-type">varchar(200)</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">body</span><span class="field-type">text</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">relatedPostId</span><span class="field-type">int → posts.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon">🔗</span><span class="field-name fk">relatedCommentId</span><span class="field-type">int → comments.id</span><span class="field-constraint badge-fk">FK</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">isRead</span><span class="field-type">boolean</span><span class="field-constraint badge-nn">NN</span></div>
+        <div class="field"><span class="field-icon"></span><span class="field-name">createdAt</span><span class="field-type">timestamp</span><span class="field-constraint badge-nn">NN</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 관계 요약 -->
+  <div class="section-title relations-section">테이블 관계 요약</div>
+  <div class="relations-grid">
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">tournaments</span> <span class="rel-arrow">→</span> <span class="rel-to">tournament_events</span></div>
+        <div class="rel-desc">대회 1개는 여러 종목/급수를 가짐</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">tournaments</span> <span class="rel-arrow">→</span> <span class="rel-to">tournament_age_groups</span></div>
+        <div class="rel-desc">대회 1개는 여러 연령대를 가짐</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">tournaments</span> <span class="rel-arrow">→</span> <span class="rel-to">tournament_posters</span></div>
+        <div class="rel-desc">대회 1개는 여러 포스터 이미지를 가짐</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">tournaments</span> <span class="rel-arrow">→</span> <span class="rel-to">tournament_documents</span></div>
+        <div class="rel-desc">대회 1개는 여러 공문/PDF를 가짐</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">tournaments</span> <span class="rel-arrow">↔</span> <span class="rel-to">users</span></div>
+        <div class="rel-desc">대회 관리자 (tournament_organizers 중간 테이블)</div>
+      </div>
+      <span class="rel-type">N : M</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">registrations</span> <span class="rel-arrow">→</span> <span class="rel-to">players</span></div>
+        <div class="rel-desc">접수 1건 = 팀. 선수 1~2명 소속</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">users</span> <span class="rel-arrow">→</span> <span class="rel-to">registrations</span></div>
+        <div class="rel-desc">유저 1명은 여러 접수를 가짐</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">users</span> <span class="rel-arrow">→</span> <span class="rel-to">kpr_ratings</span></div>
+        <div class="rel-desc">유저 1명당 KPR 점수 1개</div>
+      </div>
+      <span class="rel-type">1 : 1</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">users</span> <span class="rel-arrow">→</span> <span class="rel-to">posts</span></div>
+        <div class="rel-desc">유저 1명은 여러 게시글 작성 가능</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">posts</span> <span class="rel-arrow">→</span> <span class="rel-to">comments</span></div>
+        <div class="rel-desc">게시글 1개는 여러 댓글을 가짐</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">posts</span> <span class="rel-arrow">→</span> <span class="rel-to">post_images</span></div>
+        <div class="rel-desc">게시글 1개는 여러 이미지를 가짐</div>
+      </div>
+      <span class="rel-type">1 : N</span>
+    </div>
+
+    <div class="relation-card">
+      <div class="rel-content">
+        <div><span class="rel-from">posts</span> <span class="rel-arrow">↔</span> <span class="rel-to">users</span></div>
+        <div class="rel-desc">좋아요 (post_likes 중간 테이블)</div>
+      </div>
+      <span class="rel-type">N : M</span>
+    </div>
+
+  </div>
+
+  <div style="text-align:center; margin-top: 60px; color: #334155; font-size: 12px;">
+    총 17개 테이블 · PicklePlay App · drizzle/schema.ts
+  </div>
+
+</body>
+</html>
