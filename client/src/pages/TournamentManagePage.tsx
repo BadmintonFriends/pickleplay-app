@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronUp, ChevronDown, Users, Download, Loader2, Shield,
   Search, Phone, DollarSign, RefreshCw, MessageSquare,
   Save, Plus, Trash2, Upload, Image as ImageIcon, X,
-  Settings, FileText, Trophy, AlertCircle, GripVertical, Pencil,
+  Settings, FileText, Trophy, AlertCircle, GripVertical, Pencil, GitBranch,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   cancelled: { label: "취소", color: "bg-red-100 text-red-700" },
 };
 
-type ManageTab = "registrations" | "info" | "events" | "media" | "status";
+type ManageTab = "registrations" | "info" | "events" | "media" | "status" | "bracket";
 
 interface EventFormData {
   id?: number; // 기존 이벤트 ID (업데이트 시 사용)
@@ -169,6 +169,98 @@ export default function TournamentManagePage() {
   );
 
   const isAdminRole = user?.role === "admin" || user?.role === "super_admin";
+
+  // ─── Bracket Tab State ───
+  const [bracketEventId, setBracketEventId] = useState<number | null>(null);
+  const [matchResultForm, setMatchResultForm] = useState<{ matchId: string; score1: string; score2: string }>({ matchId: "", score1: "", score2: "" });
+  const [settingsForm, setSettingsForm] = useState<{
+    tournamentEventId: number; eventOrder: number; qualifyingScore: number; mainScore: number;
+    deuceEnabled: boolean; deuceMaxScore: number; advanceCount: number; hasThirdPlace: boolean; matchDate: string;
+  }[]>([]);
+  const [bulkForm, setBulkForm] = useState({ qualifyingScore: 15, mainScore: 15, deuceEnabled: true, deuceMaxScore: 17, advanceCount: 1, hasThirdPlace: false, matchDate: "" });
+  const [selectedEventIndices, setSelectedEventIndices] = useState<Set<number>>(new Set());
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const dragIdx = useRef<number | null>(null);
+
+  const tournamentDates = useMemo(() => {
+    if (!tournament?.startDate || !tournament?.endDate) return [];
+    const dates: string[] = [];
+    const cur = new Date(tournament.startDate);
+    const end = new Date(tournament.endDate);
+    while (cur <= end) {
+      dates.push(cur.toISOString().slice(0, 10));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return dates;
+  }, [tournament?.startDate, tournament?.endDate]);
+
+  // ─── Bracket Queries & Mutations ───
+  const { data: bracketSettings, refetch: refetchBracketSettings } = trpc.bracket.getSettings.useQuery(
+    { tournamentId: tournamentId! },
+    { enabled: !!tournamentId && activeTab === "bracket" }
+  );
+  const { data: bracketGroups, refetch: refetchGroups } = trpc.bracket.getGroups.useQuery(
+    { tournamentId: tournamentId!, tournamentEventId: bracketEventId! },
+    { enabled: !!tournamentId && !!bracketEventId && activeTab === "bracket" }
+  );
+  const { data: bracketSchedule, refetch: refetchSchedule } = trpc.bracket.getSchedule.useQuery(
+    { tournamentId: tournamentId! },
+    { enabled: !!tournamentId && activeTab === "bracket" }
+  );
+  const { data: mainBracket, refetch: refetchMainBracket } = trpc.bracket.getMainBracket.useQuery(
+    { tournamentId: tournamentId!, tournamentEventId: bracketEventId! },
+    { enabled: !!tournamentId && !!bracketEventId && activeTab === "bracket" }
+  );
+  const generateMutation = trpc.bracket.generate.useMutation({
+    onSuccess: () => { toast.success("대진이 생성되었습니다!"); refetchBracketSettings(); refetchGroups(); refetchSchedule(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const regenerateMutation = trpc.bracket.regenerate.useMutation({
+    onSuccess: () => { toast.success("대진이 재생성되었습니다!"); refetchGroups(); refetchSchedule(); refetchMainBracket(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const updateMatchResultMutation = trpc.bracket.updateMatchResult.useMutation({
+    onSuccess: () => { toast.success("경기 결과가 저장되었습니다!"); setMatchResultForm({ matchId: "", score1: "", score2: "" }); refetchGroups(); refetchMainBracket(); refetchSchedule(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const saveSettingsMutation = trpc.bracket.saveSettings.useMutation({
+    onSuccess: () => { toast.success("설정이 저장되었습니다!"); refetchBracketSettings(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // settingsForm 초기화: bracketSettings 또는 tournament events 기반
+  useEffect(() => {
+    if (activeTab !== "bracket" || !tournament?.events) return;
+    const events = tournament.events as any[];
+    if (bracketSettings && bracketSettings.length > 0) {
+      setSettingsForm(events.map((e: any) => {
+        const existing = (bracketSettings as any[]).find((s: any) => s.tournamentEventId === e.id);
+        return {
+          tournamentEventId: e.id,
+          eventOrder: existing?.eventOrder ?? 0,
+          qualifyingScore: existing?.qualifyingScore ?? 15,
+          mainScore: existing?.mainScore ?? 15,
+          deuceEnabled: existing?.deuceEnabled ?? true,
+          deuceMaxScore: existing?.deuceMaxScore ?? 17,
+          advanceCount: existing?.advanceCount ?? 1,
+          hasThirdPlace: existing?.hasThirdPlace ?? false,
+          matchDate: existing?.matchDate ?? "",
+        };
+      }));
+    } else {
+      setSettingsForm(events.map((e: any, i: number) => ({
+        tournamentEventId: e.id,
+        eventOrder: i,
+        qualifyingScore: 15,
+        mainScore: 15,
+        deuceEnabled: true,
+        deuceMaxScore: 17,
+        advanceCount: 1,
+        hasThirdPlace: false,
+        matchDate: "",
+      })));
+    }
+  }, [bracketSettings, tournament?.events, activeTab]);
 
   // ─── Info Tab State ───
   const [infoForm, setInfoForm] = useState({
@@ -552,6 +644,7 @@ export default function TournamentManagePage() {
     { key: "events", label: "종목", icon: Trophy },
     { key: "media", label: "미디어", icon: ImageIcon },
     { key: "status", label: "상태", icon: Settings },
+    { key: "bracket", label: "대진", icon: GitBranch },
   ];
 
   return (
@@ -1185,6 +1278,312 @@ export default function TournamentManagePage() {
                 </div>
               )}
               <input ref={sizeGuideInputRef} type="file" accept="image/*" className="hidden" onChange={handleSizeGuideUpload} />
+            </div>
+          </motion.div>
+        )}
+
+        {/* ─── Bracket Tab ─── */}
+        {activeTab === "bracket" && (
+          <motion.div className="space-y-4" initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+            {/* 대진 생성 */}
+            <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+              <h3 className="text-xs font-bold text-foreground">대진 생성</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => tournamentId && generateMutation.mutate({ tournamentId })}
+                  disabled={generateMutation.isPending}
+                  className="flex items-center gap-1.5 bg-primary text-white text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
+                >
+                  {generateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <GitBranch className="w-3 h-3" />}
+                  대진 생성
+                </button>
+                <button
+                  onClick={() => tournamentId && regenerateMutation.mutate({ tournamentId })}
+                  disabled={regenerateMutation.isPending}
+                  className="flex items-center gap-1.5 bg-card border border-line-strong text-foreground text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-ink-3 transition-colors disabled:opacity-50"
+                >
+                  {regenerateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                  대진 재생성
+                </button>
+              </div>
+            </div>
+
+            {/* 대진 설정 폼 (saveSettings) */}
+            <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-foreground">대진 설정</h3>
+                <button
+                  onClick={() => tournamentId && saveSettingsMutation.mutate({ tournamentId, settings: settingsForm })}
+                  disabled={saveSettingsMutation.isPending || settingsForm.length === 0}
+                  className="flex items-center gap-1 bg-primary text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
+                >
+                  {saveSettingsMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  저장
+                </button>
+              </div>
+
+              {/* 일괄 적용 */}
+              <div className="bg-ink-3 rounded-lg p-3 space-y-2 border border-line-strong">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-bold text-foreground">일괄 적용</p>
+                  <div className="flex gap-1.5">
+                    {selectedEventIndices.size > 0 && (
+                      <button
+                        onClick={() => setSettingsForm(prev => prev.map((item, i) => selectedEventIndices.has(i) ? { ...item, ...bulkForm } : item))}
+                        className="text-[9px] font-bold bg-primary text-white px-2 py-1 rounded-lg hover:bg-optic-deep transition-colors"
+                      >
+                        선택 적용 ({selectedEventIndices.size})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSettingsForm(prev => prev.map(item => ({ ...item, ...bulkForm })))}
+                      className="text-[9px] font-bold bg-primary/10 text-primary px-2 py-1 rounded-lg hover:bg-primary/20 transition-colors"
+                    >
+                      전체 적용
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] text-muted-foreground block mb-0.5">경기일</label>
+                    <select value={bulkForm.matchDate} onChange={e => setBulkForm(f => ({ ...f, matchDate: e.target.value }))}
+                      className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary">
+                      <option value="">선택</option>
+                      {tournamentDates.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted-foreground block mb-0.5">본선 진출 팀 수</label>
+                    <select value={bulkForm.advanceCount} onChange={e => setBulkForm(f => ({ ...f, advanceCount: Number(e.target.value) }))}
+                      className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary">
+                      <option value={1}>1팀</option>
+                      <option value={2}>2팀</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted-foreground block mb-0.5">예선 점수</label>
+                    <input type="number" value={bulkForm.qualifyingScore} onChange={e => setBulkForm(f => ({ ...f, qualifyingScore: Number(e.target.value) }))}
+                      className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted-foreground block mb-0.5">본선 점수</label>
+                    <input type="number" value={bulkForm.mainScore} onChange={e => setBulkForm(f => ({ ...f, mainScore: Number(e.target.value) }))}
+                      className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted-foreground block mb-0.5">듀스 최대 점수</label>
+                    <input type="number" value={bulkForm.deuceMaxScore} onChange={e => setBulkForm(f => ({ ...f, deuceMaxScore: Number(e.target.value) }))}
+                      className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary" />
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-1.5 text-[10px] cursor-pointer">
+                    <input type="checkbox" checked={bulkForm.deuceEnabled} onChange={e => setBulkForm(f => ({ ...f, deuceEnabled: e.target.checked }))} className="w-3 h-3" />
+                    듀스 허용
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[10px] cursor-pointer">
+                    <input type="checkbox" checked={bulkForm.hasThirdPlace} onChange={e => setBulkForm(f => ({ ...f, hasThirdPlace: e.target.checked }))} className="w-3 h-3" />
+                    3위전
+                  </label>
+                </div>
+              </div>
+
+              {/* 종목 리스트 (순서만) */}
+              {settingsForm.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground">종목 정보 없음</p>
+              ) : (
+                <div className="space-y-2">
+                  {settingsForm.map((s, idx) => {
+                    const event = (tournament?.events as any[])?.find((e: any) => e.id === s.tournamentEventId);
+                    return (
+                      <div
+                        key={s.tournamentEventId}
+                        draggable
+                        onDragStart={() => { dragIdx.current = idx; }}
+                        onDragOver={e => { e.preventDefault(); setDragOverIdx(idx); }}
+                        onDragLeave={() => setDragOverIdx(null)}
+                        onDrop={() => {
+                          if (dragIdx.current === null || dragIdx.current === idx) { setDragOverIdx(null); return; }
+                          setSettingsForm(prev => {
+                            const next = [...prev];
+                            const [moved] = next.splice(dragIdx.current!, 1);
+                            next.splice(idx, 0, moved);
+                            return next.map((item, i) => ({ ...item, eventOrder: i }));
+                          });
+                          setSelectedEventIndices(new Set());
+                          dragIdx.current = null;
+                          setDragOverIdx(null);
+                        }}
+                        onDragEnd={() => { dragIdx.current = null; setDragOverIdx(null); }}
+                        className={`border rounded-lg px-3 py-2 flex items-center gap-3 transition-colors cursor-default
+                          ${selectedEventIndices.has(idx) ? "border-primary bg-primary/5" : "border-line-strong"}
+                          ${dragOverIdx === idx ? "border-primary border-dashed bg-primary/10" : ""}
+                        `}
+                      >
+                        <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0 cursor-grab active:cursor-grabbing" />
+                        <input
+                          type="checkbox"
+                          checked={selectedEventIndices.has(idx)}
+                          onChange={e => setSelectedEventIndices(prev => {
+                            const next = new Set(prev);
+                            e.target.checked ? next.add(idx) : next.delete(idx);
+                            return next;
+                          })}
+                          className="w-3 h-3 accent-primary shrink-0"
+                        />
+                        <span className="text-[10px] font-bold text-foreground flex-1">
+                          {event ? `${event.eventType} ${event.skillLevel}` : `이벤트 ${s.tournamentEventId}`}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground shrink-0">#{s.eventOrder + 1}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 이벤트 선택 */}
+            <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+              <h3 className="text-xs font-bold text-foreground">종목 선택 (조편성/본선 조회용)</h3>
+              <div className="flex flex-wrap gap-2">
+                {(tournament?.events ?? []).map((e: any) => (
+                  <button
+                    key={e.id}
+                    onClick={() => setBracketEventId(e.id)}
+                    className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                      bracketEventId === e.id
+                        ? "bg-primary text-white border-primary"
+                        : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
+                    }`}
+                  >
+                    {e.eventType} {e.skillLevel}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 조편성 (getGroups) */}
+            {bracketEventId && (
+              <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+                <h3 className="text-xs font-bold text-foreground">조편성 (getGroups)</h3>
+                {!bracketGroups || bracketGroups.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">조편성 데이터 없음</p>
+                ) : (
+                  <div className="space-y-3">
+                    {bracketGroups.map((group: any) => (
+                      <div key={group.id} className="border border-line-strong rounded-lg p-3">
+                        <p className="text-[10px] font-bold mb-2">{group.groupLabel ?? `${group.groupIndex + 1}조`}</p>
+                        <div className="space-y-1">
+                          {(group.teams ?? []).map((t: any, i: number) => (
+                            <div key={i} className="text-[10px] flex justify-between">
+                              <span>{t.teamName ?? `팀 ${t.registrationId}`}</span>
+                              <span className="text-muted-foreground">{t.wins ?? 0}승 {t.losses ?? 0}패</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 본선 대진 (getMainBracket) */}
+            {bracketEventId && (
+              <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+                <h3 className="text-xs font-bold text-foreground">본선 대진 (getMainBracket)</h3>
+                {!mainBracket || mainBracket.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">본선 대진 데이터 없음</p>
+                ) : (
+                  <div className="space-y-2">
+                    {mainBracket.map((m: any) => (
+                      <div key={m.id} className="text-[10px] bg-ink-3 rounded-lg p-2 flex justify-between items-center">
+                        <div>
+                          <span className="font-bold">Match #{m.id}</span>
+                          <span className="text-muted-foreground ml-2">{m.round}라운드</span>
+                        </div>
+                        <div className="text-right">
+                          <p>{m.team1Name ?? "TBD"} vs {m.team2Name ?? "TBD"}</p>
+                          {m.score1 != null && <p className="font-bold">{m.score1} : {m.score2}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 전체 일정 (getSchedule) */}
+            <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+              <h3 className="text-xs font-bold text-foreground">전체 일정 (getSchedule)</h3>
+              {!bracketSchedule || bracketSchedule.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground">일정 없음</p>
+              ) : (
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {bracketSchedule.map((m: any) => (
+                    <div key={m.id} className="text-[10px] flex justify-between items-center py-1 border-b border-line-strong last:border-0">
+                      <div>
+                        <span className="font-bold">#{m.id}</span>
+                        <span className="text-muted-foreground ml-1">{m.scheduledTime ?? "시간미정"}</span>
+                        <span className="text-muted-foreground ml-1">코트{m.courtNumber ?? "-"}</span>
+                      </div>
+                      <span>{m.team1Name ?? "TBD"} vs {m.team2Name ?? "TBD"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 경기 결과 입력 (updateMatchResult) */}
+            <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+              <h3 className="text-xs font-bold text-foreground">경기 결과 입력 (updateMatchResult)</h3>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-[10px] text-muted-foreground block mb-1">Match ID</label>
+                  <input
+                    type="number"
+                    value={matchResultForm.matchId}
+                    onChange={e => setMatchResultForm(f => ({ ...f, matchId: e.target.value }))}
+                    placeholder="경기 ID"
+                    className="w-full px-2 py-1.5 bg-ink-3 rounded-lg text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div className="w-16">
+                  <label className="text-[10px] text-muted-foreground block mb-1">점수1</label>
+                  <input
+                    type="number"
+                    value={matchResultForm.score1}
+                    onChange={e => setMatchResultForm(f => ({ ...f, score1: e.target.value }))}
+                    placeholder="0"
+                    className="w-full px-2 py-1.5 bg-ink-3 rounded-lg text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div className="w-16">
+                  <label className="text-[10px] text-muted-foreground block mb-1">점수2</label>
+                  <input
+                    type="number"
+                    value={matchResultForm.score2}
+                    onChange={e => setMatchResultForm(f => ({ ...f, score2: e.target.value }))}
+                    placeholder="0"
+                    className="w-full px-2 py-1.5 bg-ink-3 rounded-lg text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (!matchResultForm.matchId) return;
+                    updateMatchResultMutation.mutate({
+                      matchId: Number(matchResultForm.matchId),
+                      team1Score: Number(matchResultForm.score1),
+                      team2Score: Number(matchResultForm.score2),
+                    });
+                  }}
+                  disabled={updateMatchResultMutation.isPending || !matchResultForm.matchId}
+                  className="flex items-center gap-1 bg-primary text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {updateMatchResultMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  저장
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
