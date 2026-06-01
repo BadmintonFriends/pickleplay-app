@@ -329,7 +329,7 @@ export default function RefereeMatchPage() {
 
 // ─── 팀 카드 ─────────────────────────────────────────────
 
-type PlayerInfo = { name: string; affiliation: string; birthDate: string; phone: string };
+type PlayerInfo = { name: string; affiliation: string; birthDate: string };
 
 function TeamCard({
   label, players, result, score, isWinner,

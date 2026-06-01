@@ -1657,7 +1657,6 @@ export const bracketRouter = router({
           name: p.name,
           affiliation: p.affiliation,
           birthDate: p.birthDate,
-          phone: p.phone,
         }));
       }
 
@@ -1723,6 +1722,8 @@ export const bracketRouter = router({
       const tournament = await db.getTournamentById(match.tournamentId);
       if (!tournament?.refereePin || tournament.refereePin !== input.pin)
         throw new TRPCError({ code: "FORBIDDEN", message: "PIN이 올바르지 않습니다" });
+      if (tournament.status !== "in_progress")
+        throw new TRPCError({ code: "FORBIDDEN", message: "대회 진행중 상태가 아닙니다" });
       if (!match.team1Id || !match.team2Id)
         throw new TRPCError({ code: "BAD_REQUEST", message: "양 팀이 확정된 후 결과를 입력할 수 있습니다" });
       if (input.team1Score === input.team2Score)
@@ -1745,6 +1746,34 @@ export const bracketRouter = router({
         });
       }
 
+      const allMatches = await bdb.getBracketMatches(match.tournamentId);
+
+      // 상위 라운드가 이미 완료된 경우 변경 차단
+      function isEffectivelyCompleted(matchId: number, visited = new Set<number>()): boolean {
+        if (visited.has(matchId)) return false;
+        visited.add(matchId);
+        const m = allMatches.find(x => x.id === matchId);
+        if (!m) return false;
+        if (m.isBye) return m.nextMatchId ? isEffectivelyCompleted(m.nextMatchId, visited) : false;
+        return m.status === "completed";
+      }
+
+      if (match.phase === "qualifying" && match.groupId) {
+        const dependentMains = allMatches.filter(m =>
+          m.phase === "main" &&
+          (m.team1SourceGroupId === match.groupId || m.team2SourceGroupId === match.groupId)
+        );
+        for (const dm of dependentMains) {
+          if (isEffectivelyCompleted(dm.id))
+            throw new TRPCError({ code: "BAD_REQUEST", message: "이 예선 경기를 통해 진출한 팀이 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
+        }
+      } else if (match.phase === "main") {
+        if (match.nextMatchId && isEffectivelyCompleted(match.nextMatchId))
+          throw new TRPCError({ code: "BAD_REQUEST", message: "이 경기의 승자가 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
+        if (match.loserNextMatchId && isEffectivelyCompleted(match.loserNextMatchId))
+          throw new TRPCError({ code: "BAD_REQUEST", message: "이 경기의 패자가 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
+      }
+
       const winner = input.team1Score > input.team2Score ? match.team1Id : match.team2Id;
       const loser = input.team1Score > input.team2Score ? match.team2Id : match.team1Id;
       await bdb.updateBracketMatch(input.matchId, {
@@ -1752,12 +1781,16 @@ export const bracketRouter = router({
         refereeUserId: ctx.user?.id ?? undefined,
       });
 
-      // 본선 승자 다음 경기 배정
+      // 본선 승자/패자 다음 경기 배정
       if (match.phase === "main") {
-        if (match.nextMatchId && winner)
-          await bdb.advanceTeamToNextMatch(match.nextMatchId, match.id, winner);
-        if (match.loserNextMatchId && loser)
-          await bdb.advanceTeamToNextMatch(match.loserNextMatchId, match.id, loser);
+        if (match.nextMatchId && winner) {
+          const npos = match.nextMatchPosition as 1 | 2;
+          await bdb.updateBracketMatch(match.nextMatchId, npos === 1 ? { team1Id: winner } : { team2Id: winner });
+        }
+        if (match.loserNextMatchId && loser) {
+          const lpos = match.loserNextMatchPosition as 1 | 2;
+          await bdb.updateBracketMatch(match.loserNextMatchId, lpos === 1 ? { team1Id: loser } : { team2Id: loser });
+        }
       }
       // 예선 완료 처리
       if (match.phase === "qualifying" && match.groupId)
