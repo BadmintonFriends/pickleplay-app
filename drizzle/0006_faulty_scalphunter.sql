@@ -1,2 +1,2 @@
-DROP TABLE `kpr_ratings`;--> statement-breakpoint
-DROP TABLE `match_results`;
+-- DROP TABLE `kpr_ratings`;--> statement-breakpoint
+-- DROP TABLE `match_results`;

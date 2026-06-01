@@ -3,17 +3,18 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
+  const viteModule = await import("vite");
+  const viteConfigModulePath = "../../vite.config";
+  const viteConfig = (await import(viteConfigModulePath)).default;
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
     allowedHosts: true as const,
   };
 
-  const vite = await createViteServer({
+  const vite = await viteModule.createServer({
     ...viteConfig,
     configFile: false,
     server: serverOptions,

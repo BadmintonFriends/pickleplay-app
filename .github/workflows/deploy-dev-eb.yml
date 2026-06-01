@@ -1,0 +1,79 @@
+name: Dev Build and Deploy
+
+on:
+  push:
+    branches:
+      - dev
+
+run-name: Dev Build and Deploy by @${{ github.actor }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Set Variables
+        id: set-variables
+        run: |
+          IMAGE_NAME=596776566549.dkr.ecr.ap-northeast-2.amazonaws.com/pickleplay/dev
+          TAG=$(date -u +'%Y%m%d%H%M%S')
+          IMAGE_URI=$IMAGE_NAME:$TAG
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo Will push image to ${IMAGE_URI}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        id: creds
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          aws-region: ap-northeast-2
+          role-to-assume: arn:aws:iam::596776566549:role/BFGithubAction
+          output-credentials: true
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: "${{ steps.set-variables.outputs.image_uri }}"
+
+      - name: Update docker-compose
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq '.services.app.image = "${{ steps.set-variables.outputs.image_uri }}"' -i docker-compose.eb.yaml
+
+      - name: Copy docker-compose file
+        run: cp docker-compose.eb.yaml docker-compose.yaml
+
+      - name: Generate deployment package
+        run: |
+          zip -r ${{ steps.set-variables.outputs.tag }}.zip \
+            docker-compose.yaml
+
+      - name: Deploy to EB
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ steps.creds.outputs.aws-access-key-id }}
+          aws_secret_key: ${{ steps.creds.outputs.aws-secret-access-key }}
+          aws_session_token: ${{ steps.creds.outputs.aws-session-token }}
+          application_name: ${{ vars.EB_APPLICATION_NAME_DEV || 'pickleplay-dev' }}
+          environment_name: ${{ vars.EB_ENVIRONMENT_DEV || 'pickleplay-dev' }}
+          version_label: ${{ steps.set-variables.outputs.tag }}
+          region: ap-northeast-2
+          deployment_package: ${{ steps.set-variables.outputs.tag }}.zip
+          wait_for_environment_recovery: 180
