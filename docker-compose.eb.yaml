@@ -1,6 +1,8 @@
 services:
   app:
     image: 596776566549.dkr.ecr.ap-northeast-2.amazonaws.com/pickleplay/dev:latest
+    env_file:
+      - .env
     ports:
       - "80:3000"
     environment:
