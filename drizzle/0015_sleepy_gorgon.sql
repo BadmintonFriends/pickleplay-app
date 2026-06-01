@@ -1,0 +1,1 @@
+ALTER TABLE `tournaments` MODIFY COLUMN `status` enum('draft','open','closed','bracket_published','in_progress','cancelled') NOT NULL DEFAULT 'draft';

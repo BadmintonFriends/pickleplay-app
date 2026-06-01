@@ -1,0 +1,1 @@
+ALTER TABLE `bracket_court_settings` ADD `targetEndTime` varchar(5) DEFAULT '18:00' NOT NULL;
