@@ -2347,90 +2347,121 @@ export default function TournamentManagePage() {
                     )
                   )}
 
-                  {/* 선택된 경기 액션 패널 */}
+                  {/* 선택된 경기 액션 패널 — 고정 바텀시트 */}
                   {selectedMatch && (
-                    <div className="bg-primary/5 border border-primary/30 rounded-xl p-4 space-y-3 sticky bottom-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-extrabold text-foreground">{selectedMatch.courtNumber}코트 {selectedMatch.courtGameNum}번게임 선택됨</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{selectedMatch.team1Name} vs {selectedMatch.team2Name}</p>
-                        </div>
-                        <button onClick={() => { setSelectedMatchId(null); setMoveMode(null); }} className="text-[10px] text-muted-foreground font-bold px-2 py-1 rounded-lg hover:bg-ink-3">취소</button>
-                      </div>
-                      {/* 액션 선택 */}
-                      {!moveMode && (
-                        <div className="flex gap-2">
-                          <button onClick={() => setMoveMode("swap")}
-                            className="flex-1 py-2.5 rounded-xl border border-line-strong bg-card text-xs font-bold text-foreground hover:border-primary transition-colors">
-                            같은 코트 순번 교체
-                          </button>
-                          <button onClick={() => setMoveMode("court")}
-                            className="flex-1 py-2.5 rounded-xl bg-primary text-white text-xs font-bold active:opacity-80 transition-colors">
-                            다른 코트로 이동
-                          </button>
-                        </div>
-                      )}
-                      {/* 순번 교체 */}
-                      {moveMode === "swap" && (
-                        <div className="space-y-2">
-                          <p className="text-[10px] font-bold text-muted-foreground">교체할 경기 선택 ({selectedMatch.courtNumber}코트)</p>
-                          <div className="space-y-1 max-h-48 overflow-y-auto">
-                            {sameCourtMatches.length === 0 ? (
-                              <p className="text-[10px] text-muted-foreground text-center py-2">같은 코트에 다른 경기 없음</p>
-                            ) : sameCourtMatches.map(m => (
-                              <button key={m.id} onClick={() => setSwapTargetId(swapTargetId === m.id ? null : m.id)}
-                                className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-bold transition-colors ${swapTargetId === m.id ? "bg-primary/10 border-primary text-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
-                                {m.courtGameNum}번 · {m.team1Name} vs {m.team2Name}
+                    <>
+                      {/* 백드롭 */}
+                      <div
+                        className="fixed inset-0 z-30 bg-black/40"
+                        onClick={() => { setSelectedMatchId(null); setMoveMode(null); setSwapTargetId(null); setTargetCourt(""); setTargetPos(""); }}
+                      />
+                      {/* 바텀시트 */}
+                      <div className="fixed bottom-0 inset-x-0 z-40">
+                        <div className="max-w-[480px] mx-auto">
+                          <div className="bg-card rounded-t-2xl border-t-2 border-primary shadow-2xl overflow-hidden">
+                            {/* 핸들 + 헤더 */}
+                            <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-line-strong">
+                              <div className="w-8 h-1 bg-muted-foreground/30 rounded-full absolute left-1/2 -translate-x-1/2 top-2" />
+                              <div className="mt-1">
+                                <p className="text-sm font-extrabold text-foreground">
+                                  {selectedMatch.courtNumber}코트 {selectedMatch.courtGameNum}번게임
+                                </p>
+                                <p className="text-[10px] text-muted-foreground truncate">{selectedMatch.team1Name} vs {selectedMatch.team2Name}</p>
+                              </div>
+                              <button
+                                onClick={() => { setSelectedMatchId(null); setMoveMode(null); setSwapTargetId(null); setTargetCourt(""); setTargetPos(""); }}
+                                className="w-7 h-7 flex items-center justify-center rounded-full bg-ink-3 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <X className="w-3.5 h-3.5" />
                               </button>
-                            ))}
-                          </div>
-                          <div className="flex gap-2 pt-1">
-                            <button onClick={() => { setMoveMode(null); setSwapTargetId(null); }} className="flex-1 py-2.5 rounded-xl border border-line-strong text-xs font-bold text-foreground">취소</button>
-                            <button
-                              onClick={() => swapTargetId && swapMatchMutation.mutate({ matchId1: selectedMatchId!, matchId2: swapTargetId })}
-                              disabled={!swapTargetId || swapMatchMutation.isPending}
-                              className="flex-1 py-2.5 rounded-xl bg-primary text-white text-xs font-bold disabled:opacity-50">
-                              {swapMatchMutation.isPending ? "교체 중..." : "순번 교체"}
-                            </button>
+                            </div>
+                            <div className="px-4 py-4 space-y-3">
+                              {/* 액션 선택 */}
+                              {!moveMode && (
+                                <div className="flex gap-2">
+                                  <button onClick={() => setMoveMode("swap")}
+                                    className="flex-1 py-3 rounded-xl border-2 border-line-strong bg-card text-xs font-bold text-foreground hover:border-primary hover:text-primary transition-colors">
+                                    순번 교체
+                                  </button>
+                                  <button onClick={() => setMoveMode("court")}
+                                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 active:scale-[0.98] transition-all">
+                                    코트 이동
+                                  </button>
+                                </div>
+                              )}
+                              {/* 순번 교체 */}
+                              {moveMode === "swap" && (
+                                <div className="space-y-2">
+                                  <p className="text-xs font-bold text-foreground">교체할 경기 선택 <span className="text-muted-foreground font-normal">({selectedMatch.courtNumber}코트)</span></p>
+                                  <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                                    {sameCourtMatches.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground text-center py-3">같은 코트에 다른 경기 없음</p>
+                                    ) : sameCourtMatches.map(m => (
+                                      <button key={m.id} onClick={() => setSwapTargetId(swapTargetId === m.id ? null : m.id)}
+                                        className={`w-full text-left px-3 py-2.5 rounded-xl border-2 text-xs font-bold transition-colors ${swapTargetId === m.id ? "bg-primary/10 border-primary text-primary" : "bg-ink-3 border-transparent text-foreground hover:border-primary/40"}`}>
+                                        <span className="font-black">{m.courtGameNum}번</span> · {m.team1Name} vs {m.team2Name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-2 pt-1">
+                                    <button onClick={() => { setMoveMode(null); setSwapTargetId(null); }}
+                                      className="flex-1 py-3 rounded-xl border-2 border-line-strong text-xs font-bold text-muted-foreground hover:text-foreground transition-colors">
+                                      뒤로
+                                    </button>
+                                    <button
+                                      onClick={() => swapTargetId && swapMatchMutation.mutate({ matchId1: selectedMatchId!, matchId2: swapTargetId })}
+                                      disabled={!swapTargetId || swapMatchMutation.isPending}
+                                      className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 disabled:opacity-40 transition-all">
+                                      {swapMatchMutation.isPending ? "교체 중..." : "순번 교체"}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              {/* 코트 이동 */}
+                              {moveMode === "court" && (
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1.5">
+                                      <p className="text-xs font-bold text-foreground">목표 코트</p>
+                                      <input type="number" min={1} value={targetCourt} onChange={e => setTargetCourt(e.target.value)} placeholder="예: 2"
+                                        className="w-full px-3 py-2.5 bg-ink-3 border-2 border-transparent rounded-xl text-sm font-bold focus:outline-none focus:border-primary transition-colors" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <p className="text-xs font-bold text-foreground">목표 게임 번호</p>
+                                      <input type="number" min={1} value={targetPos} onChange={e => setTargetPos(e.target.value)} placeholder="예: 8"
+                                        className="w-full px-3 py-2.5 bg-ink-3 border-2 border-transparent rounded-xl text-sm font-bold focus:outline-none focus:border-primary transition-colors" />
+                                    </div>
+                                  </div>
+                                  {targetCourt && targetPos && (
+                                    <p className="text-xs text-muted-foreground bg-ink-3 rounded-xl px-3 py-2">
+                                      <span className="text-primary font-bold">{targetCourt}코트 {targetPos}번</span> 위치로 이동 · 이후 경기 번호가 자동 조정됩니다
+                                    </p>
+                                  )}
+                                  <div className="flex gap-2">
+                                    <button onClick={() => { setMoveMode(null); setTargetCourt(""); setTargetPos(""); }}
+                                      className="flex-1 py-3 rounded-xl border-2 border-line-strong text-xs font-bold text-muted-foreground hover:text-foreground transition-colors">
+                                      뒤로
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const tc = parseInt(targetCourt), tp = parseInt(targetPos);
+                                        if (!tc || !tp) { toast.error("코트 번호와 게임 번호를 입력해주세요"); return; }
+                                        moveMatchMutation.mutate({ matchId: selectedMatchId!, targetCourtNumber: tc, targetSlotOrder: tp });
+                                      }}
+                                      disabled={!targetCourt || !targetPos || moveMatchMutation.isPending}
+                                      className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 disabled:opacity-40 transition-all">
+                                      {moveMatchMutation.isPending ? "이동 중..." : "이동 확정"}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {/* 하단 안전 영역 */}
+                            <div className="h-safe-bottom pb-2" />
                           </div>
                         </div>
-                      )}
-                      {/* 코트 이동 */}
-                      {moveMode === "court" && (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <p className="text-[10px] font-bold text-muted-foreground">목표 코트 번호</p>
-                              <input type="number" min={1} value={targetCourt} onChange={e => setTargetCourt(e.target.value)} placeholder="예: 2"
-                                className="w-full px-3 py-2 bg-background border border-line-strong rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-[10px] font-bold text-muted-foreground">목표 게임 번호</p>
-                              <input type="number" min={1} value={targetPos} onChange={e => setTargetPos(e.target.value)} placeholder="예: 8"
-                                className="w-full px-3 py-2 bg-background border border-line-strong rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                            </div>
-                          </div>
-                          {targetCourt && targetPos && (
-                            <p className="text-[10px] text-muted-foreground">
-                              → {targetCourt}코트의 {targetPos}번게임 위치로 이동. 이후 경기 번호가 자동 조정됩니다.
-                            </p>
-                          )}
-                          <div className="flex gap-2 pt-1">
-                            <button onClick={() => { setMoveMode(null); setTargetCourt(""); setTargetPos(""); }} className="flex-1 py-2.5 rounded-xl border border-line-strong text-xs font-bold text-foreground">취소</button>
-                            <button
-                              onClick={() => {
-                                const tc = parseInt(targetCourt), tp = parseInt(targetPos);
-                                if (!tc || !tp) { toast.error("코트 번호와 게임 번호를 입력해주세요"); return; }
-                                moveMatchMutation.mutate({ matchId: selectedMatchId!, targetCourtNumber: tc, targetSlotOrder: tp });
-                              }}
-                              disabled={!targetCourt || !targetPos || moveMatchMutation.isPending}
-                              className="flex-1 py-2.5 rounded-xl bg-primary text-white text-xs font-bold disabled:opacity-50">
-                              {moveMatchMutation.isPending ? "이동 중..." : "이동 확정"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    </>
                   )}
                 </>
               );
