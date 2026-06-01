@@ -478,7 +478,7 @@ const adminRouter = router({
       paymentNote: z.string().optional(),
       sizeGuideImageUrl: z.string().optional(),
       sizeGuideFileKey: z.string().optional(),
-      status: z.enum(["draft", "open", "closed", "cancelled"]).default("draft"),
+      status: z.enum(["draft", "open", "closed", "bracket_published", "in_progress", "cancelled"]).default("draft"),
     }))
     .mutation(async ({ ctx, input }) => {
       const id = await db.createTournament({
@@ -513,7 +513,8 @@ const adminRouter = router({
         paymentNote: z.string().optional(),
         sizeGuideImageUrl: z.string().optional(),
         sizeGuideFileKey: z.string().optional(),
-        status: z.enum(["draft", "open", "closed", "cancelled"]).optional(),
+        status: z.enum(["draft", "open", "closed", "bracket_published", "in_progress", "cancelled"]).optional(),
+        refereePin: z.string().max(10).optional(),
       }),
     }))
     .mutation(async ({ ctx, input }) => {

@@ -66,10 +66,11 @@ export const tournaments = mysqlTable("tournaments", {
   sizeGuideImageUrl: varchar("sizeGuideImageUrl", { length: 1000 }),
   sizeGuideFileKey: varchar("sizeGuideFileKey", { length: 500 }),
   // Status
-  status: mysqlEnum("status", ["draft", "open", "closed", "cancelled"])
+  status: mysqlEnum("status", ["draft", "open", "closed", "bracket_published", "in_progress", "cancelled"])
     .default("draft")
     .notNull(),
   officialDocUrl: varchar("officialDocUrl", { length: 1000 }), // 공문 링크 URL
+  refereePin: varchar("refereePin", { length: 10 }), // 심판 접근 PIN
   organizerId: int("organizerId"), // FK to users.id
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -367,6 +368,7 @@ export const bracketCourtSettings = mysqlTable("bracket_court_settings", {
   courtCount: int("courtCount").notNull().default(1),
   startTime: varchar("startTime", { length: 5 }).notNull().default("09:00"),
   estimatedMinutes: int("estimatedMinutes").notNull().default(15),
+  targetEndTime: varchar("targetEndTime", { length: 5 }).notNull().default("18:00"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   uqTournamentDate: unique().on(table.tournamentId, table.matchDate),
@@ -432,7 +434,9 @@ export const bracketMatches = mysqlTable("bracket_matches", {
   nextMatchPosition: int("nextMatchPosition"), // 1 or 2
   loserNextMatchId: int("loserNextMatchId"),    // 3·4위전용
   loserNextMatchPosition: int("loserNextMatchPosition"),
+  slotOrder: int("slotOrder"),                      // 코트 내 경기 순번 (관리자 조정용)
   status: mysqlEnum("status", ["scheduled", "completed"]).notNull().default("scheduled"),
+  refereeUserId: int("refereeUserId"),              // 점수 입력 심판 (FK to users.id)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

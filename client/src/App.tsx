@@ -18,6 +18,11 @@ import PostWritePage from "./pages/PostWritePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import AdminPage from "./pages/AdminPage";
 import TournamentManagePage from "./pages/TournamentManagePage";
+import BracketPublicPage from "./pages/BracketPublicPage";
+import RefereeLoginPage from "./pages/RefereeLoginPage";
+import RefereePage from "./pages/RefereePage";
+import RefereeCourtPage from "./pages/RefereeCourtPage";
+import RefereeMatchPage from "./pages/RefereeMatchPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MyPage from "./pages/MyPage";
@@ -38,6 +43,11 @@ function Router() {
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/tournament/:id/register/complete" component={RegistrationCompletePage} />
       <Route path="/tournament/:id/manage" component={TournamentManagePage} />
+      <Route path="/tournaments/:id/bracket" component={BracketPublicPage} />
+      <Route path="/tournament/:id/referee/login" component={RefereeLoginPage} />
+      <Route path="/tournament/:id/referee/match/:matchId" component={RefereeMatchPage} />
+      <Route path="/tournament/:id/referee/court/:court" component={RefereeCourtPage} />
+      <Route path="/tournament/:id/referee" component={RefereePage} />
 
       {/* Admin route - no AppLayout */}
       <Route path="/admin" component={AdminPage} />

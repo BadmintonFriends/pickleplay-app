@@ -73,6 +73,7 @@ export async function upsertBracketCourtSettings(data: InsertBracketCourtSetting
       courtCount: data.courtCount,
       startTime: data.startTime,
       estimatedMinutes: data.estimatedMinutes,
+      targetEndTime: data.targetEndTime,
     },
   });
 }
@@ -183,6 +184,14 @@ export async function getBracketGroupById(id: number) {
   if (!db) return null;
   const rows = await db.select().from(bracketGroups).where(eq(bracketGroups.id, id)).limit(1);
   return rows[0] ?? null;
+}
+
+export async function getBracketMatchesByGroupId(groupId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(bracketMatches)
+    .where(eq(bracketMatches.groupId, groupId))
+    .orderBy(bracketMatches.matchNumber);
 }
 
 export async function deleteBracketMatchesByGroupId(groupId: number) {
