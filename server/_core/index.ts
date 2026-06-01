@@ -53,9 +53,11 @@ async function startServer() {
       }
       const { generateBracketExcel, verifyBracketAccess } = await import("../bracketRouter");
       await verifyBracketAccess(user, tournamentId);
-      const buffer = await generateBracketExcel(tournamentId);
+      const { buffer, tournamentName } = await generateBracketExcel(tournamentId);
+      const safeName = tournamentName.replace(/[^\w가-힣\s-]/g, "").trim() || `bracket_${tournamentId}`;
+      const encodedName = encodeURIComponent(`${safeName}.xlsx`);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename=bracket_${tournamentId}.xlsx`);
+      res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodedName}`);
       res.send(buffer);
     } catch (err: any) {
       if (err?.code === "FORBIDDEN") {

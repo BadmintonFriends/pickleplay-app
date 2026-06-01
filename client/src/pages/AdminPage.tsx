@@ -34,7 +34,7 @@ interface TournamentFormData {
   accountNumber: string;
   accountHolder: string;
   paymentNote: string;
-  status: "draft" | "open" | "closed" | "cancelled";
+  status: "draft" | "open" | "closed" | "bracket_published" | "in_progress" | "cancelled";
   organizerHosts: string;
   organizerSponsors: string;
 }
@@ -75,6 +75,8 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   draft: { label: "준비 중", color: "bg-muted text-muted-foreground", icon: Settings },
   open: { label: "접수 중", color: "bg-primary/20 text-primary", icon: PlayCircle },
   closed: { label: "접수 마감", color: "bg-primary/20 text-primary", icon: PauseCircle },
+  bracket_published: { label: "대진표 공개", color: "bg-blue-100 text-blue-700", icon: PauseCircle },
+  in_progress: { label: "대회 진행중", color: "bg-purple-100 text-purple-700", icon: PlayCircle },
   cancelled: { label: "취소", color: "bg-destructive/20 text-destructive", icon: Ban },
 };
 
@@ -546,6 +548,8 @@ export default function AdminPage() {
                   <option value="draft">준비 중</option>
                   <option value="open">접수 중</option>
                   <option value="closed">접수 마감</option>
+                  <option value="bracket_published">대진표 공개</option>
+                  <option value="in_progress">대회 진행중</option>
                   <option value="cancelled">취소</option>
                 </select>
               </div>

@@ -1,0 +1,1 @@
+ALTER TABLE `bracket_matches` ADD `slotOrder` int;

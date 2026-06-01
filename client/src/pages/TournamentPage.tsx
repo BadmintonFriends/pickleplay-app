@@ -79,6 +79,16 @@ export default function TournamentPage() {
                           접수 중
                         </span>
                       )}
+                      {t.status === "bracket_published" && (
+                        <span className="text-[10px] font-bold bg-blue-500 text-white px-2.5 py-1 rounded-full">
+                          대진표 공개
+                        </span>
+                      )}
+                      {t.status === "in_progress" && (
+                        <span className="text-[10px] font-bold bg-purple-500 text-white px-2.5 py-1 rounded-full">
+                          진행중
+                        </span>
+                      )}
                     </div>
                     <div className="absolute bottom-3 left-3 right-3">
                       <h2 className="text-lg font-extrabold text-white leading-tight">{t.name}</h2>
