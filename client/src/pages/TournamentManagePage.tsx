@@ -210,7 +210,7 @@ export default function TournamentManagePage() {
     { enabled: !!tournamentId && activeTab === "bracket" }
   );
   const { data: bracketGroups, refetch: refetchGroups } = trpc.bracket.getGroups.useQuery(
-    { tournamentId: tournamentId!, tournamentEventId: bracketEventId! },
+    { tournamentId: tournamentId!, tournamentEventId: bracketEventId ?? 0 },
     { enabled: !!tournamentId && !!bracketEventId && activeTab === "bracket" }
   );
   const { data: bracketSchedule, refetch: refetchSchedule } = trpc.bracket.getSchedule.useQuery(
@@ -218,7 +218,7 @@ export default function TournamentManagePage() {
     { enabled: !!tournamentId && activeTab === "bracket" }
   );
   const { data: mainBracket, refetch: refetchMainBracket } = trpc.bracket.getMainBracket.useQuery(
-    { tournamentId: tournamentId!, tournamentEventId: bracketEventId! },
+    { tournamentId: tournamentId!, tournamentEventId: bracketEventId ?? 0 },
     { enabled: !!tournamentId && !!bracketEventId && activeTab === "bracket" }
   );
   const generateMutation = trpc.bracket.generate.useMutation({
