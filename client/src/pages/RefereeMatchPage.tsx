@@ -37,8 +37,8 @@ export default function RefereeMatchPage() {
   const pin = tournamentId ? (sessionStorage.getItem(`referee_pin_${tournamentId}`) ?? "") : "";
 
   const { data: match, isLoading, refetch } = trpc.bracket.getRefereeMatchDetail.useQuery(
-    { matchId: matchId! },
-    { enabled: !!matchId }
+    { matchId: matchId!, pin },
+    { enabled: !!matchId && !!pin }
   );
 
   const updateResult = trpc.bracket.refereeUpdateMatchResult.useMutation({

@@ -1465,7 +1465,7 @@ export const bracketRouter = router({
     .query(async ({ input }) => {
       const tournament = await db.getTournamentById(input.tournamentId);
       if (!tournament) throw new TRPCError({ code: "NOT_FOUND" });
-      if (!["bracket_published", "in_progress"].includes(tournament.status ?? "")) {
+      if (!["bracket_published", "in_progress", "closed"].includes(tournament.status ?? "")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "대진표가 공개되지 않은 대회입니다" });
       }
 
@@ -1637,13 +1637,15 @@ export const bracketRouter = router({
   // ── 심판 경기 상세 조회 (public) ─────────────────────────
 
   getRefereeMatchDetail: publicProcedure
-    .input(z.object({ matchId: z.number() }))
+    .input(z.object({ matchId: z.number(), pin: z.string() }))
     .query(async ({ input }) => {
       const match = await bdb.getBracketMatchById(input.matchId);
       if (!match) throw new TRPCError({ code: "NOT_FOUND" });
       const tournament = await db.getTournamentById(match.tournamentId);
       if (!tournament || tournament.status !== "in_progress")
         throw new TRPCError({ code: "FORBIDDEN" });
+      if (!tournament.refereePin || tournament.refereePin !== input.pin)
+        throw new TRPCError({ code: "FORBIDDEN", message: "PIN이 올바르지 않습니다" });
 
       const allGroups = await bdb.getBracketGroups(match.tournamentId);
       const groupsMap = new Map(allGroups.map(g => [g.id, g]));
@@ -1778,6 +1780,7 @@ export const bracketRouter = router({
       const loser = input.team1Score > input.team2Score ? match.team2Id : match.team1Id;
       await bdb.updateBracketMatch(input.matchId, {
         team1Score: input.team1Score, team2Score: input.team2Score, status: "completed",
+        winnerId: winner ?? undefined,
         refereeUserId: ctx.user?.id ?? undefined,
       });
 
@@ -1811,8 +1814,26 @@ export const bracketRouter = router({
       if (!match) throw new TRPCError({ code: "NOT_FOUND" });
       await verifyBracketAccess(ctx.user!, match.tournamentId);
 
+      if (!match.team1Id || !match.team2Id)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "양 팀이 확정된 후 결과를 입력할 수 있습니다" });
       if (input.team1Score === input.team2Score)
         throw new TRPCError({ code: "BAD_REQUEST", message: "동점은 유효하지 않습니다" });
+
+      const allSettings = await bdb.getBracketSettings(match.tournamentId);
+      const evSettings = allSettings.find(s => s.tournamentEventId === match.tournamentEventId);
+      const targetScore = match.phase === "qualifying"
+        ? (evSettings?.qualifyingScore ?? 21)
+        : (evSettings?.mainScore ?? 21);
+      const deuceEnabled = evSettings?.deuceEnabled ?? false;
+      const deuceMaxScore = evSettings?.deuceMaxScore ?? 25;
+      if (!isValidFinalScore(input.team1Score, input.team2Score, targetScore, deuceEnabled, deuceMaxScore)) {
+        const phaseStr = match.phase === "qualifying" ? "예선" : "본선";
+        const deuceStr = deuceEnabled ? ` (듀스 최대 ${deuceMaxScore}점)` : " (듀스 없음)";
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `유효하지 않은 점수입니다. ${phaseStr} 목표점수는 ${targetScore}점${deuceStr}입니다`,
+        });
+      }
 
       const allMatches = await bdb.getBracketMatches(match.tournamentId);
 
@@ -1923,6 +1944,24 @@ export const bracketRouter = router({
       if (!match || match.courtNumber == null) throw new TRPCError({ code: "NOT_FOUND" });
       await verifyBracketAccess(ctx.user!, match.tournamentId);
 
+      // 코트 번호 유효성 검증
+      const allSettings = await bdb.getBracketSettings(match.tournamentId);
+      const evSettings = allSettings.find(s => s.tournamentEventId === match.tournamentEventId);
+      if (evSettings && input.targetCourtNumber > evSettings.courtCount) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `코트 번호는 1~${evSettings.courtCount} 사이여야 합니다` });
+      }
+
+      // 경기 날짜 추출 (scheduledAt 기준)
+      const matchDateStr = match.scheduledAt
+        ? (() => { const d = new Date(match.scheduledAt); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` })()
+        : null;
+
+      const toDateStr = (scheduledAt: Date | string | null) => {
+        if (!scheduledAt) return null;
+        const d = new Date(scheduledAt);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      };
+
       const allMatches = await bdb.getBracketMatches(match.tournamentId);
 
       // slotOrder 미설정 시 scheduledAt 기준으로 초기화
@@ -1948,9 +1987,10 @@ export const bracketRouter = router({
       const targetCourt = input.targetCourtNumber;
       const targetPos = input.targetSlotOrder;
 
-      // 소스 코트 매치 (M 제외, slotOrder 순)
+      // 소스 코트 매치 (M 제외, 같은 날짜, slotOrder 순)
       const sourceList = allMatches
-        .filter(m => m.courtNumber === sourceCourt && !m.isBye && m.id !== match.id && m.slotOrder != null)
+        .filter(m => m.courtNumber === sourceCourt && !m.isBye && m.id !== match.id && m.slotOrder != null
+          && (!matchDateStr || toDateStr(m.scheduledAt) === matchDateStr))
         .sort((a, b) => a.slotOrder! - b.slotOrder!);
 
       if (sourceCourt === targetCourt) {
@@ -1969,9 +2009,10 @@ export const bracketRouter = router({
           if (sourceList[i].slotOrder !== newSlot)
             await bdb.updateBracketMatch(sourceList[i].id, { slotOrder: newSlot });
         }
-        // 타겟 코트에 삽입
+        // 타겟 코트에 삽입 (같은 날짜만)
         const targetList = allMatches
-          .filter(m => m.courtNumber === targetCourt && !m.isBye && m.slotOrder != null)
+          .filter(m => m.courtNumber === targetCourt && !m.isBye && m.slotOrder != null
+            && (!matchDateStr || toDateStr(m.scheduledAt) === matchDateStr))
           .sort((a, b) => a.slotOrder! - b.slotOrder!);
         const clampedPos = Math.min(targetPos, targetList.length + 1);
         targetList.splice(clampedPos - 1, 0, match as any);
@@ -1983,6 +2024,27 @@ export const bracketRouter = router({
             await bdb.updateBracketMatch(targetList[i].id, updates);
         }
       }
+
+      // scheduledAt 동기화 (slotOrder 기반 시간 재계산)
+      if (matchDateStr && evSettings) {
+        const [startH, startM] = evSettings.startTime.split(":").map(Number);
+        const estMin = evSettings.estimatedMinutes;
+        const refreshed = await bdb.getBracketMatches(match.tournamentId);
+        const courtsToSync = sourceCourt === targetCourt ? [sourceCourt] : [sourceCourt, targetCourt];
+        const [yr, mo, dy] = matchDateStr.split("-").map(Number);
+        for (const court of courtsToSync) {
+          const courtMatches = refreshed
+            .filter(m => m.courtNumber === court && m.slotOrder != null && m.scheduledAt != null
+              && toDateStr(m.scheduledAt) === matchDateStr)
+            .sort((a, b) => a.slotOrder! - b.slotOrder!);
+          for (const m of courtMatches) {
+            const totalMins = startH * 60 + startM + (m.slotOrder! - 1) * estMin;
+            const newAt = new Date(yr, mo - 1, dy, Math.floor(totalMins / 60), totalMins % 60);
+            await bdb.updateBracketMatch(m.id, { scheduledAt: newAt });
+          }
+        }
+      }
+
       return { success: true };
     }),
 
@@ -1995,6 +2057,8 @@ export const bracketRouter = router({
         bdb.getBracketMatchById(input.matchId2),
       ]);
       if (!m1 || !m2) throw new TRPCError({ code: "NOT_FOUND" });
+      if (m1.tournamentId !== m2.tournamentId)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "다른 대회의 경기는 교체할 수 없습니다" });
       if (m1.courtNumber !== m2.courtNumber)
         throw new TRPCError({ code: "BAD_REQUEST", message: "같은 코트 내의 경기만 순번을 교체할 수 있습니다" });
       await verifyBracketAccess(ctx.user!, m1.tournamentId);
@@ -2014,13 +2078,15 @@ export const bracketRouter = router({
         const refreshed = await bdb.getBracketMatches(m1.tournamentId);
         const r1 = refreshed.find(m => m.id === m1.id)!;
         const r2 = refreshed.find(m => m.id === m2.id)!;
-        await bdb.updateBracketMatch(m1.id, { slotOrder: r2.slotOrder! });
-        await bdb.updateBracketMatch(m2.id, { slotOrder: r1.slotOrder! });
+        await bdb.updateBracketMatch(m1.id, { slotOrder: r2.slotOrder!, scheduledAt: r2.scheduledAt ?? undefined });
+        await bdb.updateBracketMatch(m2.id, { slotOrder: r1.slotOrder!, scheduledAt: r1.scheduledAt ?? undefined });
       } else {
         const s1 = m1.slotOrder ?? 0;
         const s2 = m2.slotOrder ?? 0;
-        await bdb.updateBracketMatch(m1.id, { slotOrder: s2 });
-        await bdb.updateBracketMatch(m2.id, { slotOrder: s1 });
+        const at1 = m1.scheduledAt;
+        const at2 = m2.scheduledAt;
+        await bdb.updateBracketMatch(m1.id, { slotOrder: s2, scheduledAt: at2 ?? undefined });
+        await bdb.updateBracketMatch(m2.id, { slotOrder: s1, scheduledAt: at1 ?? undefined });
       }
       return { success: true };
     }),

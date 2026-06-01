@@ -154,7 +154,7 @@ export default function TournamentDetailPage() {
             </svg>
             대진표 확인
           </button>
-          {tournament.status === "in_progress" && isAuthenticated && (
+          {tournament.status === "in_progress" && (
             <button
               onClick={() => navigate(`/tournament/${tournamentId}/referee/login`)}
               className="w-full flex items-center justify-center gap-2 bg-card border border-line-strong text-foreground font-bold text-sm py-3.5 rounded-2xl hover:border-primary transition-colors active:scale-[0.98]"

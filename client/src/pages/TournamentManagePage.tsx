@@ -215,7 +215,7 @@ export default function TournamentManagePage() {
   );
   const { data: bracketSchedule, refetch: refetchSchedule } = trpc.bracket.getSchedule.useQuery(
     { tournamentId: tournamentId! },
-    { enabled: !!tournamentId && activeTab === "bracket" }
+    { enabled: !!tournamentId && (activeTab === "bracket" || activeTab === "status") }
   );
   const { data: mainBracket, refetch: refetchMainBracket } = trpc.bracket.getMainBracket.useQuery(
     { tournamentId: tournamentId!, tournamentEventId: bracketEventId ?? 0 },
@@ -1632,7 +1632,9 @@ export default function TournamentManagePage() {
                           onClick={() => {
                             const parsed = { ...bulkForm, qualifyingScore: Number(bulkForm.qualifyingScore) || 0, mainScore: Number(bulkForm.mainScore) || 0, deuceMaxScore: Number(bulkForm.deuceMaxScore) || 0 };
                             const newSettings = settingsForm.map((item, i) =>
-                              selectedEventIndices.has(i) && filteredSettingsIndices.includes(i) ? { ...item, ...parsed } : item
+                              selectedEventIndices.has(i) && filteredSettingsIndices.includes(i)
+                                ? { ...item, ...parsed, matchDate: parsed.matchDate || item.matchDate }
+                                : item
                             );
                             setSettingsForm(newSettings);
                             if (tournamentId) saveSettingsMutation.mutate({ tournamentId, settings: newSettings });
@@ -1647,7 +1649,9 @@ export default function TournamentManagePage() {
                         onClick={() => {
                           const parsed = { ...bulkForm, qualifyingScore: Number(bulkForm.qualifyingScore) || 0, mainScore: Number(bulkForm.mainScore) || 0, deuceMaxScore: Number(bulkForm.deuceMaxScore) || 0 };
                           const newSettings = settingsForm.map((item, i) =>
-                            filteredSettingsIndices.includes(i) ? { ...item, ...parsed } : item
+                            filteredSettingsIndices.includes(i)
+                              ? { ...item, ...parsed, matchDate: parsed.matchDate || item.matchDate }
+                              : item
                           );
                           setSettingsForm(newSettings);
                           if (tournamentId) saveSettingsMutation.mutate({ tournamentId, settings: newSettings });
