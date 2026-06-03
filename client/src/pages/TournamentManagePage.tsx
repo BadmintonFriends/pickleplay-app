@@ -792,7 +792,7 @@ export default function TournamentManagePage() {
                   className="w-full pl-10 pr-3 py-2.5 bg-card rounded-xl text-xs text-foreground placeholder:text-muted-foreground border border-line-strong focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
-              <button onClick={handleExcelExport} className="flex items-center gap-1.5 bg-primary text-white text-[10px] font-bold px-3 py-2.5 rounded-xl hover:bg-optic-deep transition-colors whitespace-nowrap">
+              <button onClick={handleExcelExport} className="flex items-center gap-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-2.5 rounded-xl hover:bg-optic-deep transition-colors whitespace-nowrap">
                 <Download className="w-3.5 h-3.5" /> 엑셀
               </button>
             </div>
@@ -800,7 +800,7 @@ export default function TournamentManagePage() {
               <div className="flex gap-1.5 flex-wrap">
                 <button
                   onClick={() => setEventFilter("all")}
-                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${eventFilter === "all" ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground border-line-strong hover:bg-ink-3"}`}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${eventFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-line-strong hover:bg-ink-3"}`}
                 >
                   전체
                 </button>
@@ -808,7 +808,7 @@ export default function TournamentManagePage() {
                   <button
                     key={opt.value}
                     onClick={() => setEventFilter(opt.value)}
-                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${eventFilter === opt.value ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground border-line-strong hover:bg-ink-3"}`}
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${eventFilter === opt.value ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-line-strong hover:bg-ink-3"}`}
                   >
                     {opt.label}
                   </button>
@@ -1436,7 +1436,7 @@ export default function TournamentManagePage() {
                 <button
                   onClick={() => tournamentId && generateMutation.mutate({ tournamentId })}
                   disabled={generateMutation.isPending || !["closed", "bracket_published", "in_progress"].includes(tournament?.status ?? "")}
-                  className="flex items-center gap-1.5 bg-primary text-white text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                 >
                   {generateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <GitBranch className="w-3 h-3" />}
                   대진 생성
@@ -1491,7 +1491,7 @@ export default function TournamentManagePage() {
                     });
                   }}
                   disabled={saveCourtSettingsMutation.isPending || courtForm.length === 0}
-                  className="flex items-center gap-1 bg-primary text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                 >
                   {saveCourtSettingsMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                   저장
@@ -1583,7 +1583,7 @@ export default function TournamentManagePage() {
                 <button
                   onClick={() => tournamentId && saveSettingsMutation.mutate({ tournamentId, settings: settingsForm })}
                   disabled={saveSettingsMutation.isPending || settingsForm.length === 0}
-                  className="flex items-center gap-1 bg-primary text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                 >
                   {saveSettingsMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                   저장
@@ -1596,7 +1596,7 @@ export default function TournamentManagePage() {
                   <button
                     onClick={() => { setSelectedDateTab(""); setSelectedEventIndices(new Set()); }}
                     className={`text-[10px] font-bold px-3 py-1 rounded-lg border whitespace-nowrap transition-colors ${
-                      selectedDateTab === "" ? "bg-primary text-white border-primary" : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
+                      selectedDateTab === "" ? "bg-primary text-primary-foreground border-primary" : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
                     }`}
                   >
                     미선택
@@ -1606,7 +1606,7 @@ export default function TournamentManagePage() {
                       key={d}
                       onClick={() => { setSelectedDateTab(d); setSelectedEventIndices(new Set()); }}
                       className={`text-[10px] font-bold px-3 py-1 rounded-lg border whitespace-nowrap transition-colors ${
-                        selectedDateTab === d ? "bg-primary text-white border-primary" : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
+                        selectedDateTab === d ? "bg-primary text-primary-foreground border-primary" : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
                       }`}
                     >
                       {d.slice(5).replace("-", "/")}
@@ -1640,7 +1640,7 @@ export default function TournamentManagePage() {
                             if (tournamentId) saveSettingsMutation.mutate({ tournamentId, settings: newSettings });
                           }}
                           disabled={saveSettingsMutation.isPending}
-                          className="text-[9px] font-bold bg-primary text-white px-2 py-1 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
+                          className="text-[9px] font-bold bg-primary text-primary-foreground px-2 py-1 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                         >
                           선택 적용 ({[...selectedEventIndices].filter(i => filteredSettingsIndices.includes(i)).length})
                         </button>
@@ -1856,7 +1856,7 @@ export default function TournamentManagePage() {
                       onClick={() => { setViewDateTab(d); setBracketEventId(null); setSchedGroupId(null); }}
                       className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
                         viewDateTab === d
-                          ? "bg-primary text-white border-primary"
+                          ? "bg-primary text-primary-foreground border-primary"
                           : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
                       }`}
                     >
@@ -1883,7 +1883,7 @@ export default function TournamentManagePage() {
                             onClick={() => { setBracketEventId(e.id); setSchedGroupId(null); }}
                             className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
                               bracketEventId === e.id
-                                ? "bg-primary text-white border-primary"
+                                ? "bg-primary text-primary-foreground border-primary"
                                 : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
                             }`}
                           >
@@ -2046,7 +2046,7 @@ export default function TournamentManagePage() {
                     });
                   }}
                   disabled={updateMatchResultMutation.isPending || !matchResultForm.matchId}
-                  className="flex items-center gap-1 bg-primary text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50 whitespace-nowrap"
+                  className="flex items-center gap-1 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50 whitespace-nowrap"
                 >
                   {updateMatchResultMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                   저장
@@ -2132,7 +2132,7 @@ export default function TournamentManagePage() {
                     updateTournamentMutation.mutate({ id: tournamentId!, data: { refereePin: refereePinInput } });
                   }}
                   disabled={updateTournamentMutation.isPending}
-                  className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                 >
                   저장
                 </button>
@@ -2193,7 +2193,7 @@ export default function TournamentManagePage() {
                     <div className="flex gap-2 flex-wrap">
                       {dates.map((d: string) => (
                         <button key={d} onClick={() => { setOnsiteDate(d); setOnsiteEventId(null); setOnsiteView(null); }}
-                          className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteDate === d ? "bg-primary text-white border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
+                          className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteDate === d ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
                           {d.slice(5).replace("-", "/")}
                         </button>
                       ))}
@@ -2205,7 +2205,7 @@ export default function TournamentManagePage() {
                       <div className="flex gap-2 flex-wrap">
                         {dateEvents.map((e: any) => (
                           <button key={e.id} onClick={() => { setOnsiteEventId(e.id); setOnsiteView(null); }}
-                            className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteEventId === e.id ? "bg-primary text-white border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
+                            className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteEventId === e.id ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
                             {e.label}
                           </button>
                         ))}
@@ -2218,13 +2218,13 @@ export default function TournamentManagePage() {
                       <div className="flex gap-2 flex-wrap">
                         {eventGroups.map((g: any) => (
                           <button key={g.id} onClick={() => setOnsiteView(g.id)}
-                            className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteView === g.id ? "bg-primary text-white border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
+                            className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteView === g.id ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
                             {eventGroups.length === 1 ? "풀리그" : `${g.groupNumber}조`}
                           </button>
                         ))}
                         {hasMain && (
                           <button onClick={() => setOnsiteView("main")}
-                            className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteView === "main" ? "bg-primary text-white border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
+                            className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteView === "main" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
                             본선
                           </button>
                         )}
@@ -2295,7 +2295,7 @@ export default function TournamentManagePage() {
                     <div className="flex gap-2 flex-wrap">
                       {dates.map((d: string) => (
                         <button key={d} onClick={() => { setOnsiteAssignDate(d); setSelectedAssignCourt(null); setSelectedMatchId(null); setMoveMode(null); }}
-                          className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${activeAssignDate === d ? "bg-primary text-white border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
+                          className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${activeAssignDate === d ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
                           {d.slice(5).replace("-", "/")}
                         </button>
                       ))}
@@ -2312,7 +2312,7 @@ export default function TournamentManagePage() {
                         {dateCourts.map(court => (
                           <button key={court}
                             onClick={() => { setSelectedAssignCourt(court === selectedAssignCourt ? null : court); setSelectedMatchId(null); setMoveMode(null); }}
-                            className={`text-xs font-bold px-4 py-2.5 rounded-xl border transition-colors ${selectedAssignCourt === court ? "bg-primary text-white border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
+                            className={`text-xs font-bold px-4 py-2.5 rounded-xl border transition-colors ${selectedAssignCourt === court ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}>
                             {court}코트
                           </button>
                         ))}
