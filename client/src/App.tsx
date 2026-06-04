@@ -5,7 +5,7 @@ import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AppLayout from "./components/AppLayout";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "./_core/hooks/useAuth";
 import { track, identify, reset, getPageName } from "./lib/mixpanel";
 import HomePage from "./pages/HomePage";
@@ -36,6 +36,7 @@ import RegistrationCompletePage from "./pages/RegistrationCompletePage";
 function PageTracker() {
   const [location] = useLocation();
   const { user, loading } = useAuth();
+  const prevUserIdRef = useRef<number | null | undefined>(undefined);
 
   useEffect(() => {
     track("Page Viewed", { page: getPageName(location), path: location });
@@ -45,9 +46,11 @@ function PageTracker() {
     if (loading) return;
     if (user) {
       identify(user.id, { name: user.name, phone: user.phone, role: user.role });
-    } else {
+    } else if (prevUserIdRef.current != null) {
+      // 로그인 상태에서 비로그인으로 전환된 경우(로그아웃)에만 reset
       reset();
     }
+    prevUserIdRef.current = user?.id ?? null;
   }, [user?.id, loading]);
 
   return null;
