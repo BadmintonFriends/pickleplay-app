@@ -35,8 +35,8 @@ export default function PostDetailPage() {
   const commentsQuery = trpc.community.comment.list.useQuery({ postId }, { enabled: !!postId });
 
   const likeMutation = trpc.community.post.toggleLike.useMutation({
-    onSuccess: () => {
-      track("Post - Like", { post_id: postId });
+    onSuccess: (data) => {
+      if (data.liked) track("Post - Like", { post_id: postId });
       utils.community.post.detail.invalidate({ id: postId });
       utils.community.post.list.invalidate();
     },
