@@ -3,6 +3,7 @@ name: Develop Tests
 on:
   pull_request:
     branches-ignore:
+      - develop
       - main
 
 run-name: Develop Tests by @${{ github.actor }}
