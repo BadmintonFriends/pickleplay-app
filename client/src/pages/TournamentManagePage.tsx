@@ -255,6 +255,7 @@ export default function TournamentManagePage() {
   // ─── Organizer Management ───
   const [showOrganizerModal, setShowOrganizerModal] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [showInProgressAlert, setShowInProgressAlert] = useState(false);
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
   const [orgSearching, setOrgSearching] = useState(false);
 
@@ -1887,6 +1888,23 @@ export default function TournamentManagePage() {
               </DialogContent>
             </Dialog>
 
+            <Dialog open={showInProgressAlert} onOpenChange={setShowInProgressAlert}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle className="text-sm">대진 생성 불가</DialogTitle>
+                </DialogHeader>
+                <p className="text-xs text-muted-foreground">대회 진행중에는 대진을 생성할 수 없습니다.</p>
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => setShowInProgressAlert(false)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity"
+                  >
+                    확인
+                  </button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Dialog
               open={showOrganizerModal}
               onOpenChange={setShowOrganizerModal}
@@ -2431,17 +2449,16 @@ export default function TournamentManagePage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() =>
-                        tournamentId &&
-                        generateMutation.mutate({ tournamentId })
-                      }
+                      onClick={() => {
+                        if (tournament?.status === "in_progress") {
+                          setShowInProgressAlert(true);
+                        } else if (tournamentId) {
+                          generateMutation.mutate({ tournamentId });
+                        }
+                      }}
                       disabled={
                         generateMutation.isPending ||
-                        ![
-                          "closed",
-                          "bracket_published",
-                          "in_progress",
-                        ].includes(tournament?.status ?? "")
+                        !["closed", "bracket_published", "in_progress"].includes(tournament?.status ?? "")
                       }
                       className="flex items-center gap-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                     >
