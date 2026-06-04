@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 
 export default function BracketPublicPage() {
@@ -16,6 +17,12 @@ export default function BracketPublicPage() {
     { tournamentId: tournamentId! },
     { enabled: !!tournamentId }
   );
+
+  useEffect(() => {
+    if (data) {
+      track("Bracket - View", { tournament_id: tournamentId, tournament_name: data.tournamentName });
+    }
+  }, [data?.tournamentName]);
 
   const handleBack = () => {
     if (tournamentId) navigate(`/tournament/${tournamentId}`);

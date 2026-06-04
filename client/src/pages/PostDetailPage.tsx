@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import NicknameModal from "@/components/NicknameModal";
@@ -35,6 +36,7 @@ export default function PostDetailPage() {
 
   const likeMutation = trpc.community.post.toggleLike.useMutation({
     onSuccess: () => {
+      track("Post - Like", { post_id: postId });
       utils.community.post.detail.invalidate({ id: postId });
       utils.community.post.list.invalidate();
     },
@@ -42,6 +44,7 @@ export default function PostDetailPage() {
 
   const commentMutation = trpc.community.comment.create.useMutation({
     onSuccess: () => {
+      track("Post - Comment", { post_id: postId });
       setCommentText("");
       utils.community.comment.list.invalidate({ postId });
       utils.community.post.detail.invalidate({ id: postId });

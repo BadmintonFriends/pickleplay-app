@@ -3,6 +3,7 @@
  * 다크 테마, Optic Yellow 액센트
  */
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AppHeader from "@/components/AppHeader";
 import { useRoute, useLocation } from "wouter";
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getEventColor } from "@/lib/eventColors";
 
 const fadeUp = {
@@ -47,6 +48,12 @@ export default function TournamentDetailPage() {
     { id: tournamentId },
     { enabled: !!tournamentId }
   );
+
+  useEffect(() => {
+    if (tournament) {
+      track("Tournament - View", { tournament_id: tournamentId, tournament_name: tournament.name });
+    }
+  }, [tournament?.id]);
 
   const isRoleAdmin = user?.role === "admin" || user?.role === "super_admin";
   const { data: managedTournamentIds } = trpc.admin.getUserManagedTournaments.useQuery(
@@ -86,6 +93,7 @@ export default function TournamentDetailPage() {
   const sizeOptions: string[] = tournament.sizeOptions ? JSON.parse(tournament.sizeOptions) : [];
 
   const handleRegisterClick = () => {
+    track("Tournament - Register Click", { tournament_id: tournamentId, tournament_name: tournament.name, is_authenticated: isAuthenticated });
     if (!isAuthenticated) {
       navigate(`/login?returnTo=/tournament/${tournamentId}/register`);
       return;
