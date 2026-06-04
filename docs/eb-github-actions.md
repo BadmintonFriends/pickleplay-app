@@ -9,8 +9,9 @@ This project has separate Elastic Beanstalk deployment workflows for `main` and
 - `.github/workflows/deploy-prod-eb.yml`: `main` -> ECR `pickleplay/prod` -> EB `pickleplay-prod`
 
 Each workflow follows the same pattern as the existing backend deployment:
-build and push an ECR image, update `docker-compose.eb.yaml`, copy it to
-`docker-compose.yaml`, zip it, and deploy that package to Elastic Beanstalk.
+build and push an ECR image, update the environment-specific compose template,
+copy it to `docker-compose.yaml`, zip it, and deploy that package to Elastic
+Beanstalk.
 
 ## AWS Role
 
@@ -82,11 +83,13 @@ ECR repositories.
 
 ## Elastic Beanstalk Bundle Files
 
-The compose template lives here:
+The compose templates live here:
 
 ```text
-docker-compose.eb.yaml
+docker-compose.dev.yaml
+docker-compose.prod.yaml
 ```
 
-The workflow updates `services.app.image` to the pushed ECR image URI, copies
-the file to `docker-compose.yaml`, and zips it for Elastic Beanstalk.
+Each workflow updates `services.app.image` to the pushed ECR image URI, copies
+the environment-specific file to `docker-compose.yaml`, and zips it for Elastic
+Beanstalk.

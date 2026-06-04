@@ -74,10 +74,10 @@ jobs:
       - name: Update docker-compose
         uses: mikefarah/yq@master
         with:
-          cmd: yq '.services.app.image = "${{ steps.set-variables.outputs.image_uri }}"' -i docker-compose.eb.yaml
+          cmd: yq '.services.app.image = "${{ steps.set-variables.outputs.image_uri }}"' -i docker-compose.dev.yaml
 
       - name: Copy docker-compose file
-        run: cp docker-compose.eb.yaml docker-compose.yaml
+        run: cp docker-compose.dev.yaml docker-compose.yaml
 
       - name: Generate deployment package
         run: |
