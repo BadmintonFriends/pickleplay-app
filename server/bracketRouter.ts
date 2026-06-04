@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import * as bdb from "./bracketDb";
-import { computeStandings, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
+import { computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
 import { createRequire } from "module";
 const XLSX: typeof import("xlsx") = createRequire(import.meta.url)("xlsx-js-style");
 
@@ -1589,11 +1589,11 @@ export const bracketRouter = router({
       }
 
       function sourceLabel(pos: 1 | 2): string {
-        const teamId = pos === 1 ? match.team1Id : match.team2Id;
+        const teamId = pos === 1 ? match!.team1Id : match!.team2Id;
         if (teamId) return "";
-        const srcType = pos === 1 ? match.team1SourceType : match.team2SourceType;
-        const srcGroupId = pos === 1 ? match.team1SourceGroupId : match.team2SourceGroupId;
-        const srcRank = pos === 1 ? match.team1SourceRank : match.team2SourceRank;
+        const srcType = pos === 1 ? match!.team1SourceType : match!.team2SourceType;
+        const srcGroupId = pos === 1 ? match!.team1SourceGroupId : match!.team2SourceGroupId;
+        const srcRank = pos === 1 ? match!.team1SourceRank : match!.team2SourceRank;
         if (srcType === "group_rank" && srcGroupId && srcRank) {
           const grp = groupsMap.get(srcGroupId);
           return grp ? `${grp.groupNumber}조 ${srcRank}위` : "미정";
@@ -1676,29 +1676,19 @@ export const bracketRouter = router({
 
       const allMatches = await bdb.getBracketMatches(match.tournamentId);
 
-      // 상위 라운드가 이미 완료된 경우 변경 차단
-      function isEffectivelyCompleted(matchId: number, visited = new Set<number>()): boolean {
-        if (visited.has(matchId)) return false;
-        visited.add(matchId);
-        const m = allMatches.find(x => x.id === matchId);
-        if (!m) return false;
-        if (m.isBye) return m.nextMatchId ? isEffectivelyCompleted(m.nextMatchId, visited) : false;
-        return m.status === "completed";
-      }
-
       if (match.phase === "qualifying" && match.groupId) {
         const dependentMains = allMatches.filter(m =>
           m.phase === "main" &&
           (m.team1SourceGroupId === match.groupId || m.team2SourceGroupId === match.groupId)
         );
         for (const dm of dependentMains) {
-          if (isEffectivelyCompleted(dm.id))
+          if (isEffectivelyCompleted(dm.id, allMatches))
             throw new TRPCError({ code: "BAD_REQUEST", message: "이 예선 경기를 통해 진출한 팀이 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
         }
       } else if (match.phase === "main") {
-        if (match.nextMatchId && isEffectivelyCompleted(match.nextMatchId))
+        if (match.nextMatchId && isEffectivelyCompleted(match.nextMatchId, allMatches))
           throw new TRPCError({ code: "BAD_REQUEST", message: "이 경기의 승자가 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
-        if (match.loserNextMatchId && isEffectivelyCompleted(match.loserNextMatchId))
+        if (match.loserNextMatchId && isEffectivelyCompleted(match.loserNextMatchId, allMatches))
           throw new TRPCError({ code: "BAD_REQUEST", message: "이 경기의 패자가 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
       }
 
@@ -1763,16 +1753,6 @@ export const bracketRouter = router({
 
       const allMatches = await bdb.getBracketMatches(match.tournamentId);
 
-      // 부전승 경기를 넘어서 실제 완료된 경기가 있는지 확인
-      function isEffectivelyCompleted(matchId: number, visited = new Set<number>()): boolean {
-        if (visited.has(matchId)) return false;
-        visited.add(matchId);
-        const m = allMatches.find(x => x.id === matchId);
-        if (!m) return false;
-        if (m.isBye) return m.nextMatchId ? isEffectivelyCompleted(m.nextMatchId, visited) : false;
-        return m.status === "completed";
-      }
-
       // 변경 가능 여부 검증
       if (match.phase === "qualifying" && match.groupId) {
         const dependentMains = allMatches.filter(m =>
@@ -1780,7 +1760,7 @@ export const bracketRouter = router({
           (m.team1SourceGroupId === match.groupId || m.team2SourceGroupId === match.groupId)
         );
         for (const dm of dependentMains) {
-          if (isEffectivelyCompleted(dm.id)) {
+          if (isEffectivelyCompleted(dm.id, allMatches)) {
             throw new TRPCError({
               code: "BAD_REQUEST",
               message: "이 예선 경기를 통해 진출한 팀이 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다.",
@@ -1788,9 +1768,9 @@ export const bracketRouter = router({
           }
         }
       } else if (match.phase === "main") {
-        if (match.nextMatchId && isEffectivelyCompleted(match.nextMatchId))
+        if (match.nextMatchId && isEffectivelyCompleted(match.nextMatchId, allMatches))
           throw new TRPCError({ code: "BAD_REQUEST", message: "이 경기의 승자가 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
-        if (match.loserNextMatchId && isEffectivelyCompleted(match.loserNextMatchId))
+        if (match.loserNextMatchId && isEffectivelyCompleted(match.loserNextMatchId, allMatches))
           throw new TRPCError({ code: "BAD_REQUEST", message: "이 경기의 패자가 이미 상위 라운드 경기를 완료했습니다. 결과를 변경할 수 없습니다." });
       }
 
@@ -1870,17 +1850,17 @@ export const bracketRouter = router({
       if (!match || match.courtNumber == null) throw new TRPCError({ code: "NOT_FOUND" });
       await verifyBracketAccess(ctx.user!, match.tournamentId);
 
-      // 코트 번호 유효성 검증
-      const allSettings = await bdb.getBracketSettings(match.tournamentId);
-      const evSettings = allSettings.find(s => s.tournamentEventId === match.tournamentEventId);
-      if (evSettings && input.targetCourtNumber > evSettings.courtCount) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `코트 번호는 1~${evSettings.courtCount} 사이여야 합니다` });
-      }
-
       // 경기 날짜 추출 (scheduledAt 기준)
       const matchDateStr = match.scheduledAt
         ? (() => { const d = new Date(match.scheduledAt); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` })()
         : null;
+
+      // 코트 번호 유효성 검증
+      const allCourtSettings = await bdb.getBracketCourtSettings(match.tournamentId);
+      const courtSettings = matchDateStr ? allCourtSettings.find(cs => cs.matchDate === matchDateStr) : null;
+      if (courtSettings && input.targetCourtNumber > courtSettings.courtCount) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `코트 번호는 1~${courtSettings.courtCount} 사이여야 합니다` });
+      }
 
       const toDateStr = (scheduledAt: Date | string | null) => {
         if (!scheduledAt) return null;
@@ -1952,9 +1932,9 @@ export const bracketRouter = router({
       }
 
       // scheduledAt 동기화 (slotOrder 기반 시간 재계산)
-      if (matchDateStr && evSettings) {
-        const [startH, startM] = evSettings.startTime.split(":").map(Number);
-        const estMin = evSettings.estimatedMinutes;
+      if (matchDateStr && courtSettings) {
+        const [startH, startM] = courtSettings.startTime.split(":").map(Number);
+        const estMin = courtSettings.estimatedMinutes;
         const refreshed = await bdb.getBracketMatches(match.tournamentId);
         const courtsToSync = sourceCourt === targetCourt ? [sourceCourt] : [sourceCourt, targetCourt];
         const [yr, mo, dy] = matchDateStr.split("-").map(Number);

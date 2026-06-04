@@ -134,6 +134,26 @@ export function computeStandings(
   return list;
 }
 
+export interface MatchForCompletionCheck {
+  id: number;
+  isBye: boolean;
+  status: string;
+  nextMatchId: number | null;
+}
+
+export function isEffectivelyCompleted(
+  matchId: number,
+  allMatches: MatchForCompletionCheck[],
+  visited = new Set<number>()
+): boolean {
+  if (visited.has(matchId)) return false;
+  visited.add(matchId);
+  const m = allMatches.find(x => x.id === matchId);
+  if (!m) return false;
+  if (m.isBye) return m.nextMatchId ? isEffectivelyCompleted(m.nextMatchId, allMatches, visited) : false;
+  return m.status === "completed";
+}
+
 export function planGroupAdvancement(input: {
   groupId: number;
   groupTeams: GroupTeamForAdvancement[];
