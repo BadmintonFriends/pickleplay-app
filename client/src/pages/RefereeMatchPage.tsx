@@ -289,7 +289,7 @@ export default function RefereeMatchPage() {
                   <button
                     onClick={handleSubmit}
                     disabled={!score1 || !score2 || updateResult.isPending}
-                    className="flex-1 py-3.5 rounded-xl bg-primary text-white text-sm font-bold disabled:opacity-50 active:scale-[0.98] transition-all"
+                    className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold disabled:opacity-50 active:scale-[0.98] transition-all"
                   >
                     {updateResult.isPending ? "저장 중..." : "결과 저장"}
                   </button>
@@ -349,7 +349,7 @@ function TeamCard({
         <div className="flex items-center gap-2">
           {result && (
             <span className={`text-xs font-black px-2.5 py-1 rounded-full ${
-              isWinner ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+              isWinner ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
             }`}>
               {result}
             </span>

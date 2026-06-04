@@ -100,7 +100,7 @@ export default function BracketPublicPage() {
                 onClick={() => { setSelectedDate(d); setSelectedEventId(null); setSelectedView(null); }}
                 className={`text-sm font-bold px-4 py-2.5 rounded-xl border transition-colors ${
                   selectedDate === d
-                    ? "bg-primary text-white border-primary"
+                    ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card border-line-strong text-foreground hover:border-primary"
                 }`}
               >
@@ -124,7 +124,7 @@ export default function BracketPublicPage() {
                     onClick={() => { setSelectedEventId(e.id); setSelectedView(null); }}
                     className={`text-sm font-bold px-4 py-2.5 rounded-xl border transition-colors ${
                       selectedEventId === e.id
-                        ? "bg-primary text-white border-primary"
+                        ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card border-line-strong text-foreground hover:border-primary"
                     }`}
                   >
@@ -150,7 +150,7 @@ export default function BracketPublicPage() {
                     onClick={() => setSelectedView(g.id)}
                     className={`text-sm font-bold px-4 py-2.5 rounded-xl border transition-colors ${
                       selectedView === g.id
-                        ? "bg-primary text-white border-primary"
+                        ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card border-line-strong text-foreground hover:border-primary"
                     }`}
                   >
@@ -162,7 +162,7 @@ export default function BracketPublicPage() {
                     onClick={() => setSelectedView("main")}
                     className={`text-sm font-bold px-4 py-2.5 rounded-xl border transition-colors ${
                       selectedView === "main"
-                        ? "bg-primary text-white border-primary"
+                        ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card border-line-strong text-foreground hover:border-primary"
                     }`}
                   >

@@ -3,7 +3,7 @@ name: Dev Build and Deploy
 on:
   push:
     branches:
-      - dev
+      - develop
 
 run-name: Dev Build and Deploy by @${{ github.actor }}
 
@@ -29,6 +29,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Configure AWS credentials
         id: creds
         uses: aws-actions/configure-aws-credentials@v6.1.0
@@ -52,6 +66,11 @@ jobs:
           push: true
           tags: "${{ steps.set-variables.outputs.image_uri }}"
 
+      - name: Apply database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DEV || secrets.DATABASE_URL }}
+        run: pnpm db:migrate
+
       - name: Update docker-compose
         uses: mikefarah/yq@master
         with:
@@ -72,7 +91,7 @@ jobs:
           aws_secret_key: ${{ steps.creds.outputs.aws-secret-access-key }}
           aws_session_token: ${{ steps.creds.outputs.aws-session-token }}
           application_name: ${{ vars.EB_APPLICATION_NAME_DEV || 'pickleplay-dev' }}
-          environment_name: ${{ vars.EB_ENVIRONMENT_DEV || 'pickleplay-dev' }}
+          environment_name: ${{ vars.EB_ENVIRONMENT_DEV || 'Pickleplay-dev-env' }}
           version_label: ${{ steps.set-variables.outputs.tag }}
           region: ap-northeast-2
           deployment_package: ${{ steps.set-variables.outputs.tag }}.zip

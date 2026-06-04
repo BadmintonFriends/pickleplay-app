@@ -81,7 +81,7 @@ export default function RefereePage() {
               {dates.map(d => (
                 <button key={d} onClick={() => setSelectedDate(d)}
                   className={`text-sm font-bold px-4 py-2.5 rounded-xl border transition-colors ${
-                    selectedDate === d ? "bg-primary text-white border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"
+                    selectedDate === d ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"
                   }`}>
                   {d.slice(5).replace("-", "/")}
                 </button>

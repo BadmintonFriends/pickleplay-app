@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import * as bdb from "./bracketDb";
+import { computeStandings, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
 import { createRequire } from "module";
 const XLSX: typeof import("xlsx") = createRequire(import.meta.url)("xlsx-js-style");
 
@@ -422,81 +423,6 @@ function computeSchedule(
     slotIndex++;
   }
   return { results, slotsUsed: slotIndex };
-}
-
-// ─── Standings Calculation ───────────────────────────────
-
-interface TeamStanding {
-  registrationId: number;
-  wins: number;
-  losses: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  ageDiff: number; // sum of birth years (smaller = older = higher rank)
-}
-
-function computeStandings(
-  teamIds: number[],
-  matches: { team1Id: number | null; team2Id: number | null; team1Score: number | null; team2Score: number | null; status: string }[],
-  ageMap: Map<number, number> // registrationId → sum of birthYears
-): TeamStanding[] {
-  const standings = new Map<number, TeamStanding>();
-  for (const id of teamIds) {
-    standings.set(id, { registrationId: id, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, ageDiff: ageMap.get(id) ?? 0 });
-  }
-
-  const completedMatches = matches.filter(m => m.status === "completed" && m.team1Id && m.team2Id && m.team1Score !== null && m.team2Score !== null);
-
-  for (const m of completedMatches) {
-    const t1 = standings.get(m.team1Id!);
-    const t2 = standings.get(m.team2Id!);
-    if (!t1 || !t2) continue;
-    t1.pointsFor += m.team1Score!;
-    t1.pointsAgainst += m.team2Score!;
-    t2.pointsFor += m.team2Score!;
-    t2.pointsAgainst += m.team1Score!;
-    if (m.team1Score! > m.team2Score!) { t1.wins++; t2.losses++; }
-    else if (m.team2Score! > m.team1Score!) { t2.wins++; t1.losses++; }
-  }
-
-  const list = [...standings.values()];
-
-  // 승수가 같은 팀들끼리 H2H 승리 수를 미리 계산 (순환 타이 방지)
-  const winGroups = new Map<number, number[]>();
-  for (const s of list) {
-    if (!winGroups.has(s.wins)) winGroups.set(s.wins, []);
-    winGroups.get(s.wins)!.push(s.registrationId);
-  }
-  const h2hGroupWins = new Map<number, number>();
-  for (const [, groupIds] of winGroups) {
-    const idSet = new Set(groupIds);
-    for (const id of groupIds) h2hGroupWins.set(id, 0);
-    for (const m of completedMatches) {
-      if (!m.team1Id || !m.team2Id) continue;
-      if (!idSet.has(m.team1Id) || !idSet.has(m.team2Id)) continue;
-      const winner = m.team1Score! > m.team2Score! ? m.team1Id : m.team2Id;
-      h2hGroupWins.set(winner, (h2hGroupWins.get(winner) ?? 0) + 1);
-    }
-  }
-
-  list.sort((a, b) => {
-    // 1) 승수
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    // 2) 승자승 (동일 승수 그룹 내 H2H 승리 수 - 순환 타이도 올바르게 처리)
-    const h2hA = h2hGroupWins.get(a.registrationId) ?? 0;
-    const h2hB = h2hGroupWins.get(b.registrationId) ?? 0;
-    if (h2hB !== h2hA) return h2hB - h2hA;
-    // 3) 득실 (점수 차)
-    const diffA = a.pointsFor - a.pointsAgainst;
-    const diffB = b.pointsFor - b.pointsAgainst;
-    if (diffB !== diffA) return diffB - diffA;
-    // 4) 다득점
-    if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-    // 5) 나이 합 많은 순 (birthYear 합 작을수록 나이 많음)
-    return a.ageDiff - b.ageDiff;
-  });
-
-  return list;
 }
 
 function getHeadToHead(
@@ -2210,9 +2136,7 @@ async function tryAdvanceGroupToMain(groupId: number, tournamentId: number, tour
   const groupMatches = (await bdb.getBracketMatches(tournamentId, tournamentEventId))
     .filter(m => m.phase === "qualifying" && m.groupId === groupId);
 
-  const totalMatches = groupMatches.length;
-  const completedMatches = groupMatches.filter(m => m.status === "completed").length;
-  if (completedMatches < totalMatches) return; // 조 경기 미완료
+  if (!isGroupComplete(groupMatches)) return; // 조 경기 미완료
 
   // 나이 합 계산
   const ageMap = new Map<number, number>();
@@ -2225,38 +2149,23 @@ async function tryAdvanceGroupToMain(groupId: number, tournamentId: number, tour
   const teamIds = groupTeams.map(t => t.registrationId);
   const standings = computeStandings(teamIds, groupMatches, ageMap);
 
-  // finalRank 저장
-  for (let i = 0; i < standings.length; i++) {
-    const gt = groupTeams.find(t => t.registrationId === standings[i].registrationId);
-    if (gt) await bdb.updateGroupTeamRank(gt.id, i + 1);
-  }
-
-  // 본선 대진에 진출 팀 세팅
   const settings = await bdb.getBracketSettingsByEvent(tournamentEventId);
   const advanceCount = settings?.advanceCount ?? 1;
   const mainMatches = (await bdb.getBracketMatches(tournamentId, tournamentEventId))
     .filter(m => m.phase === "main");
 
-  for (let rank = 1; rank <= advanceCount; rank++) {
-    const advancingTeam = standings[rank - 1];
-    if (!advancingTeam) continue;
+  const advancementPlan = planGroupAdvancement({
+    groupId,
+    groupTeams,
+    standings,
+    advanceCount,
+    mainMatches,
+  });
 
-    // 이 팀이 들어가야 하는 본선 경기 찾기 (group_rank source 기준)
-    for (const mm of mainMatches) {
-      if (mm.team1SourceType === "group_rank" && mm.team1SourceGroupId === groupId && mm.team1SourceRank === rank) {
-        await bdb.updateBracketMatch(mm.id, { team1Id: advancingTeam.registrationId });
-        if (mm.isBye) {
-          await bdb.updateBracketMatch(mm.id, { winnerId: advancingTeam.registrationId, status: "completed" });
-          if (mm.nextMatchId && mm.nextMatchPosition) {
-            const pos = mm.nextMatchPosition as 1 | 2;
-            if (pos === 1) await bdb.updateBracketMatch(mm.nextMatchId, { team1Id: advancingTeam.registrationId });
-            else await bdb.updateBracketMatch(mm.nextMatchId, { team2Id: advancingTeam.registrationId });
-          }
-        }
-      }
-      if (mm.team2SourceType === "group_rank" && mm.team2SourceGroupId === groupId && mm.team2SourceRank === rank) {
-        await bdb.updateBracketMatch(mm.id, { team2Id: advancingTeam.registrationId });
-      }
-    }
+  for (const update of advancementPlan.rankUpdates) {
+    await bdb.updateGroupTeamRank(update.groupTeamId, update.finalRank);
+  }
+  for (const update of advancementPlan.matchUpdates) {
+    await bdb.updateBracketMatch(update.matchId, update.patch);
   }
 }

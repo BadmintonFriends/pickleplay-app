@@ -135,7 +135,7 @@ export default function RefereeLoginPage() {
           disabled={pin.length < 4 || checkPin.isPending}
           className={`w-full max-w-[280px] py-4 rounded-2xl text-base font-bold transition-all ${
             pin.length >= 4 && !checkPin.isPending
-              ? "bg-primary text-white active:scale-[0.98]"
+              ? "bg-primary text-primary-foreground active:scale-[0.98]"
               : "bg-ink-3 text-muted-foreground cursor-not-allowed"
           }`}
         >
