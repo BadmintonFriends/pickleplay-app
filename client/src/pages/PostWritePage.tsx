@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import NicknameModal from "@/components/NicknameModal";
@@ -67,6 +68,7 @@ export default function PostWritePage() {
 
   const createMutation = trpc.community.post.create.useMutation({
     onSuccess: (data) => {
+      track("Post - Create", { post_id: data.id });
       toast.success("게시글이 작성되었습니다");
       utils.community.post.list.invalidate();
       navigate(`/social/post/${data.id}`);

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import AppHeader from "@/components/AppHeader";
@@ -65,6 +66,7 @@ export default function SocialPage() {
       setNicknameModalOpen(true);
       return;
     }
+    track("Social - Write Click");
     navigate("/social/write");
   };
 

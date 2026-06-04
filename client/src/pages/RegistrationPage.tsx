@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import AppHeader from "@/components/AppHeader";
@@ -60,6 +61,7 @@ export default function RegistrationPage() {
 
   const registerMutation = trpc.registration.create.useMutation({
     onSuccess: (data) => {
+      track("Registration - Success", { tournament_id: tournamentId, registration_number: data.registrationNumber });
       toast.success("참가 신청이 완료되었습니다!", { description: `접수번호: ${data.registrationNumber}` });
       navigate(`/tournament/${tournamentId}/register/complete`);
     },
@@ -71,6 +73,7 @@ export default function RegistrationPage() {
 
   const bulkRegisterMutation = trpc.registration.bulkCreate.useMutation({
     onSuccess: (data) => {
+      track("Registration - Bulk Success", { tournament_id: tournamentId, count: data.count });
       toast.success(`${data.count}건 일괄 접수 완료!`);
       navigate(`/tournament/${tournamentId}/register/complete`);
     },

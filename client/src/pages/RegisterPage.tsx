@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -60,6 +61,7 @@ export default function RegisterPage() {
 
   const registerMutation = trpc.smsAuth.register.useMutation({
     onSuccess: () => {
+      track("Register - Success");
       const params = new URLSearchParams(window.location.search);
       const returnTo = params.get("returnTo") || "/";
       window.location.href = returnTo;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeStandings,
+  isEffectivelyCompleted,
   isGroupComplete,
   planGroupAdvancement,
   type MainMatchForAdvancement,
@@ -294,5 +295,54 @@ describe("bracket advancement logic", () => {
       { matchId: 1001, patch: { team1Id: 103 } },
       { matchId: 1002, patch: { team2Id: 101 } },
     ]);
+  });
+
+  it("상황: 승수가 같은 두 팀은 H2H(직접 대결) 결과로 순위를 정한다", () => {
+    // 4팀: 팀1·팀3이 2W 1L 동률. 팀3이 팀1을 직접 이겼으므로 H2H로 팀3 > 팀1
+    // 팀2·팀4도 1W 2L 동률. 팀4가 팀2를 직접 이겼으므로 H2H로 팀4 > 팀2
+    const standings = computeStandings(
+      [1, 2, 3, 4],
+      [
+        { team1Id: 1, team2Id: 2, team1Score: 15, team2Score: 10, status: "completed" }, // 1 beats 2
+        { team1Id: 3, team2Id: 1, team1Score: 15, team2Score: 10, status: "completed" }, // 3 beats 1 (H2H)
+        { team1Id: 1, team2Id: 4, team1Score: 15, team2Score: 10, status: "completed" }, // 1 beats 4
+        { team1Id: 2, team2Id: 3, team1Score: 15, team2Score: 10, status: "completed" }, // 2 beats 3
+        { team1Id: 4, team2Id: 2, team1Score: 15, team2Score: 10, status: "completed" }, // 4 beats 2 (H2H)
+        { team1Id: 3, team2Id: 4, team1Score: 15, team2Score: 10, status: "completed" }, // 3 beats 4
+      ],
+      new Map([[1, 3980], [2, 3980], [3, 3980], [4, 3980]])
+    );
+
+    expect(standings.map((s) => s.registrationId)).toEqual([3, 1, 4, 2]);
+  });
+
+  it("상황: 상위 라운드 경기가 완료된 경우 하위 라운드 결과 변경이 차단되어야 함을 감지한다", () => {
+    const allMatches = [
+      { id: 1, isBye: false, status: "completed", nextMatchId: 2 }, // 하위 경기
+      { id: 2, isBye: false, status: "completed", nextMatchId: null }, // 상위 경기 (완료)
+    ];
+    expect(isEffectivelyCompleted(2, allMatches)).toBe(true);
+
+    const pendingMatches = [
+      { id: 1, isBye: false, status: "completed", nextMatchId: 2 },
+      { id: 2, isBye: false, status: "scheduled", nextMatchId: null },
+    ];
+    expect(isEffectivelyCompleted(2, pendingMatches)).toBe(false);
+  });
+
+  it("상황: 부전승 너머 실제 완료된 상위 경기가 있으면 변경 차단을 감지한다", () => {
+    const allMatches = [
+      { id: 1, isBye: false, status: "completed", nextMatchId: 2 }, // 하위 경기
+      { id: 2, isBye: true, status: "completed", nextMatchId: 3 }, // 부전승 (건너뜀)
+      { id: 3, isBye: false, status: "completed", nextMatchId: null }, // 실제 상위 경기 완료
+    ];
+    expect(isEffectivelyCompleted(2, allMatches)).toBe(true);
+
+    const pendingMatches = [
+      { id: 1, isBye: false, status: "completed", nextMatchId: 2 },
+      { id: 2, isBye: true, status: "completed", nextMatchId: 3 },
+      { id: 3, isBye: false, status: "scheduled", nextMatchId: null },
+    ];
+    expect(isEffectivelyCompleted(2, pendingMatches)).toBe(false);
   });
 });
