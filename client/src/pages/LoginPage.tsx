@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { track } from "@/lib/mixpanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -45,6 +46,7 @@ export default function LoginPage() {
 
   const sendCodeMutation = trpc.smsAuth.sendCode.useMutation({
     onSuccess: (data) => {
+      track("Login - Send Code", { is_existing_user: data.isExistingUser });
       if (!data.isExistingUser) {
         setShowRegisterBanner(true);
         setError("");
@@ -63,6 +65,7 @@ export default function LoginPage() {
 
   const loginMutation = trpc.smsAuth.login.useMutation({
     onSuccess: () => {
+      track("Login - Success");
       const returnTo = getReturnTo() || "/";
       window.location.href = returnTo;
     },

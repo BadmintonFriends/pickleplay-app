@@ -1,10 +1,13 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AppLayout from "./components/AppLayout";
+import { useEffect, useRef } from "react";
+import { useAuth } from "./_core/hooks/useAuth";
+import { track, identify, reset, getPageName } from "./lib/mixpanel";
 import HomePage from "./pages/HomePage";
 import TournamentPage from "./pages/TournamentPage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
@@ -29,6 +32,29 @@ import MyPage from "./pages/MyPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import RegistrationCompletePage from "./pages/RegistrationCompletePage";
+
+function PageTracker() {
+  const [location] = useLocation();
+  const { user, loading } = useAuth();
+  const prevUserIdRef = useRef<number | null | undefined>(undefined);
+
+  useEffect(() => {
+    track("Page Viewed", { page: getPageName(location), path: location });
+  }, [location]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (user) {
+      identify(user.id, { name: user.name, phone: user.phone, role: user.role });
+    } else if (prevUserIdRef.current != null) {
+      // 로그인 상태에서 비로그인으로 전환된 경우(로그아웃)에만 reset
+      reset();
+    }
+    prevUserIdRef.current = user?.id ?? null;
+  }, [user?.id, loading]);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -84,6 +110,7 @@ function App() {
       <ThemeProvider defaultTheme="dark" switchable>
         <TooltipProvider>
           <Toaster />
+          <PageTracker />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
