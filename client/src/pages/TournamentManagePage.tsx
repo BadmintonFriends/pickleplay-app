@@ -150,6 +150,7 @@ export default function TournamentManagePage() {
 
   // ─── Organizer Management ───
   const [showOrganizerModal, setShowOrganizerModal] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
   const [orgSearching, setOrgSearching] = useState(false);
 
@@ -1112,6 +1113,29 @@ export default function TournamentManagePage() {
             </div>
 
             {/* 관리자 추가 모달 */}
+            <Dialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle className="text-sm">대진 재생성</DialogTitle>
+                </DialogHeader>
+                <p className="text-xs text-muted-foreground">기존 대진 데이터가 모두 삭제되고 다시 생성됩니다. 계속하시겠습니까?</p>
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    onClick={() => setShowRegenerateConfirm(false)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-line-strong hover:bg-ink-3 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={() => { setShowRegenerateConfirm(false); tournamentId && regenerateMutation.mutate({ tournamentId }); }}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-destructive text-white hover:opacity-90 transition-opacity"
+                  >
+                    재생성
+                  </button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={showOrganizerModal} onOpenChange={setShowOrganizerModal}>
               <DialogContent className="max-w-sm">
                 <DialogHeader>
@@ -1435,15 +1459,15 @@ export default function TournamentManagePage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => tournamentId && generateMutation.mutate({ tournamentId })}
-                  disabled={generateMutation.isPending || !["closed", "bracket_published", "in_progress"].includes(tournament?.status ?? "")}
+                  disabled={generateMutation.isPending || !["closed", "bracket_published"].includes(tournament?.status ?? "")}
                   className="flex items-center gap-1.5 bg-primary text-white text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                 >
                   {generateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <GitBranch className="w-3 h-3" />}
                   대진 생성
                 </button>
                 <button
-                  onClick={() => tournamentId && regenerateMutation.mutate({ tournamentId })}
-                  disabled={regenerateMutation.isPending || !["closed", "bracket_published", "in_progress"].includes(tournament?.status ?? "")}
+                  onClick={() => setShowRegenerateConfirm(true)}
+                  disabled={regenerateMutation.isPending || !["closed", "bracket_published"].includes(tournament?.status ?? "")}
                   className="flex items-center gap-1.5 bg-card border border-line-strong text-foreground text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-ink-3 transition-colors disabled:opacity-50"
                 >
                   {regenerateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
