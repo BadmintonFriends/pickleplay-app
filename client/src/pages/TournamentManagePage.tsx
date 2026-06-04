@@ -1856,56 +1856,6 @@ export default function TournamentManagePage() {
 
             {/* 관리자 추가 모달 */}
             <Dialog
-              open={showRegenerateConfirm}
-              onOpenChange={setShowRegenerateConfirm}
-            >
-              <DialogContent className="max-w-sm">
-                <DialogHeader>
-                  <DialogTitle className="text-sm">대진 재생성</DialogTitle>
-                </DialogHeader>
-                <p className="text-xs text-muted-foreground">
-                  기존 대진 데이터가 모두 삭제되고 다시 생성됩니다.
-                  계속하시겠습니까?
-                </p>
-                <div className="flex gap-2 justify-end pt-2">
-                  <button
-                    onClick={() => setShowRegenerateConfirm(false)}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-line-strong hover:bg-ink-3 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowRegenerateConfirm(false);
-                      tournamentId &&
-                        regenerateMutation.mutate({ tournamentId });
-                    }}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-destructive text-white hover:opacity-90 transition-opacity"
-                  >
-                    재생성
-                  </button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={showInProgressAlert} onOpenChange={setShowInProgressAlert}>
-              <DialogContent className="max-w-sm">
-                <DialogHeader>
-                  <DialogTitle className="text-sm">대진 생성 불가</DialogTitle>
-                </DialogHeader>
-                <p className="text-xs text-muted-foreground">대회 진행중에는 대진을 생성할 수 없습니다.</p>
-                <div className="flex justify-end pt-2">
-                  <button
-                    onClick={() => setShowInProgressAlert(false)}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity"
-                  >
-                    확인
-                  </button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog
               open={showOrganizerModal}
               onOpenChange={setShowOrganizerModal}
             >
@@ -4705,6 +4655,54 @@ export default function TournamentManagePage() {
               updatePlayerInfoMutation.isPending
                 ? "저장 중..."
                 : "변경 저장"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 대진 재생성 확인 다이얼로그 */}
+      <Dialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">대진 재생성</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            기존 대진 데이터가 모두 삭제되고 다시 생성됩니다.
+            계속하시겠습니까?
+          </p>
+          <div className="flex gap-2 justify-end pt-2">
+            <button
+              onClick={() => setShowRegenerateConfirm(false)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-line-strong hover:bg-ink-3 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={() => {
+                setShowRegenerateConfirm(false);
+                tournamentId && regenerateMutation.mutate({ tournamentId });
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg bg-destructive text-white hover:opacity-90 transition-opacity"
+            >
+              재생성
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 대진 생성 불가 안내 다이얼로그 */}
+      <Dialog open={showInProgressAlert} onOpenChange={setShowInProgressAlert}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">대진 생성 불가</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">대회 진행중에는 대진을 생성할 수 없습니다.</p>
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => setShowInProgressAlert(false)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity"
+            >
+              확인
             </button>
           </div>
         </DialogContent>
