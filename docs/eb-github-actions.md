@@ -35,6 +35,20 @@ EB_ENVIRONMENT_DEV=pickleplay-dev
 EB_ENVIRONMENT_PROD=Pickleplay-prod-env
 ```
 
+Configure frontend build-time values in the `development` and `production`
+GitHub environments. These values are passed as Docker build arguments because
+Vite embeds `VITE_*` variables when `pnpm build` runs:
+
+```text
+VITE_FRONTEND_FORGE_API_URL
+VITE_FRONTEND_FORGE_API_KEY
+VITE_MIXPANEL_TOKEN_DEV
+VITE_MIXPANEL_TOKEN_PROD
+```
+
+The deployment workflows set `VITE_APP_ENV` directly to `development` or
+`production`.
+
 ## Runtime Environment Variables
 
 Configure runtime values in Elastic Beanstalk environment properties or via

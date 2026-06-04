@@ -65,6 +65,12 @@ jobs:
           file: Dockerfile
           push: true
           tags: "${{ steps.set-variables.outputs.image_uri }}"
+          build-args: |
+            VITE_FRONTEND_FORGE_API_KEY=${{ secrets.VITE_FRONTEND_FORGE_API_KEY }}
+            VITE_FRONTEND_FORGE_API_URL=${{ vars.VITE_FRONTEND_FORGE_API_URL }}
+            VITE_APP_ENV=development
+            VITE_MIXPANEL_TOKEN_DEV=${{ secrets.VITE_MIXPANEL_TOKEN_DEV }}
+            VITE_MIXPANEL_TOKEN_PROD=${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
 
       - name: Apply database migrations
         env:

@@ -1,6 +1,6 @@
 import mixpanel from "mixpanel-browser";
 
-const token = import.meta.env.PROD
+const token = import.meta.env.VITE_APP_ENV === "production"
   ? import.meta.env.VITE_MIXPANEL_TOKEN_PROD
   : import.meta.env.VITE_MIXPANEL_TOKEN_DEV;
 
