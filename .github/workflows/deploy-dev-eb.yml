@@ -72,11 +72,6 @@ jobs:
             VITE_MIXPANEL_TOKEN_DEV=${{ secrets.VITE_MIXPANEL_TOKEN_DEV }}
             VITE_MIXPANEL_TOKEN_PROD=${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
 
-      - name: Apply database migrations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_DEV || secrets.DATABASE_URL }}
-        run: pnpm db:migrate
-
       - name: Update docker-compose
         uses: mikefarah/yq@master
         with:
