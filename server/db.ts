@@ -30,6 +30,7 @@ export async function getDb() {
       const pool = mysql.createPool({
         uri: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
+        timezone: '+09:00',
       });
       _db = drizzle(pool);
     } catch (error) {
