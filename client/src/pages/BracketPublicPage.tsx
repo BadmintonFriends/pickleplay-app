@@ -455,8 +455,8 @@ function GroupTable({
               <div key={m.id} className="bg-ink-3 rounded-xl px-3 py-2.5">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                   <span className="font-bold">
-                    {m.courtNumber != null ? `${m.courtNumber}코트` : "-"}
-                    {m.courtGameNum != null ? ` ${m.courtGameNum}번게임` : ""}
+                    {m.courtGameNum != null ? `${m.courtGameNum}번게임` : "-"}
+                    {m.courtNumber != null ? ` ${m.courtNumber}코트` : ""}
                   </span>
                   <span>{m.timeStr ?? "-"}</span>
                   {isCompleted && (
