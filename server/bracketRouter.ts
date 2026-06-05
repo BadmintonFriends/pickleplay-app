@@ -1334,24 +1334,31 @@ export const bracketRouter = router({
       const courtGameNumMap = buildCourtGameNumMap(allTournamentMatches);
 
       const regIds = [...new Set(matches.flatMap(m => [m.team1Id, m.team2Id]).filter((id): id is number => id !== null))];
-      const teamNameMap = new Map<number, string>();
+      const teamLabelMap = new Map<number, { teamName: string; playerNames: string }>();
       for (const regId of regIds) {
         const ps = await db.getPlayersByRegistration(regId);
-        if (ps.length === 0) { teamNameMap.set(regId, `팀#${regId}`); continue; }
+        if (ps.length === 0) { teamLabelMap.set(regId, { teamName: `팀#${regId}`, playerNames: "" }); continue; }
         const uniqueAffs = [...new Set(ps.map(p => (p.affiliation ?? "").trim()).filter(Boolean))];
-        teamNameMap.set(regId, uniqueAffs.length > 0 ? uniqueAffs.join(" & ") : ps.map(p => p.name).join(", "));
+        teamLabelMap.set(regId, {
+          teamName: uniqueAffs.length > 0 ? uniqueAffs.join(" & ") : ps.map(p => p.name).join(", "),
+          playerNames: ps.map(p => p.name).join(", "),
+        });
       }
       return matches.map((m, idx) => {
         const dt = m.scheduledAt ? new Date(m.scheduledAt) : null;
         const isCompleted = m.status === "completed" && m.team1Score !== null && m.team2Score !== null;
         const team1Wins = isCompleted && m.team1Score! > m.team2Score!;
         const team2Wins = isCompleted && m.team2Score! > m.team1Score!;
+        const t1 = m.team1Id ? (teamLabelMap.get(m.team1Id) ?? { teamName: `팀#${m.team1Id}`, playerNames: "" }) : null;
+        const t2 = m.team2Id ? (teamLabelMap.get(m.team2Id) ?? { teamName: `팀#${m.team2Id}`, playerNames: "" }) : null;
         return {
           ...m,
           // 해당 코트의 당일 n번째 게임 (코트 배정 없으면 조 내 순서로 fallback)
           matchNum: courtGameNumMap.get(m.id) ?? idx + 1,
-          team1Name: m.team1Id ? (teamNameMap.get(m.team1Id) ?? `팀#${m.team1Id}`) : "미정",
-          team2Name: m.team2Id ? (teamNameMap.get(m.team2Id) ?? `팀#${m.team2Id}`) : "미정",
+          team1Name: t1 ? t1.teamName : "미정",
+          team1Players: t1 ? t1.playerNames : "",
+          team2Name: t2 ? t2.teamName : "미정",
+          team2Players: t2 ? t2.playerNames : "",
           team1Result: team1Wins ? "승" : isCompleted ? "패" : null,
           team2Result: team2Wins ? "승" : isCompleted ? "패" : null,
           timeStr: dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : null,

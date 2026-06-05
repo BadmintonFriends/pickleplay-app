@@ -3555,12 +3555,15 @@ export default function TournamentManagePage() {
                                               </div>
                                               {/* 팀 */}
                                               <div className="flex items-center gap-1.5 text-[10px]">
-                                                <span className="flex-1 truncate font-bold">
-                                                  {m.team1Name}
-                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="font-bold truncate">{m.team1Name}</div>
+                                                  {m.team1Players && (
+                                                    <div className="text-[9px] text-muted-foreground truncate">{m.team1Players}</div>
+                                                  )}
+                                                </div>
                                                 {m.team1Result && (
                                                   <span
-                                                    className={`text-[9px] font-bold px-1 rounded ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                                                    className={`text-[9px] font-bold px-1 rounded shrink-0 ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
                                                   >
                                                     {m.team1Result}
                                                   </span>
@@ -3570,14 +3573,17 @@ export default function TournamentManagePage() {
                                                 </span>
                                                 {m.team2Result && (
                                                   <span
-                                                    className={`text-[9px] font-bold px-1 rounded ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                                                    className={`text-[9px] font-bold px-1 rounded shrink-0 ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
                                                   >
                                                     {m.team2Result}
                                                   </span>
                                                 )}
-                                                <span className="flex-1 truncate font-bold text-right">
-                                                  {m.team2Name}
-                                                </span>
+                                                <div className="flex-1 min-w-0 text-right">
+                                                  <div className="font-bold truncate">{m.team2Name}</div>
+                                                  {m.team2Players && (
+                                                    <div className="text-[9px] text-muted-foreground truncate">{m.team2Players}</div>
+                                                  )}
+                                                </div>
                                               </div>
                                             </Reorder.Item>
                                           );
