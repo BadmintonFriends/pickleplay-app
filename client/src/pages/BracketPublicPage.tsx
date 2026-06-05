@@ -226,6 +226,7 @@ type GroupData = {
   teams: {
     registrationId: number;
     teamName: string;
+    playerNames: string;
     wins: number;
     losses: number;
     ptsFor: number;
@@ -238,7 +239,9 @@ type GroupData = {
     courtGameNum: number | null;
     timeStr: string | null;
     team1Name: string;
+    team1Players: string;
     team2Name: string;
+    team2Players: string;
     team1Score: number | null;
     team2Score: number | null;
     team1Result: string | null;
@@ -266,8 +269,9 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
             <tr className="bg-ink-3/40">
               <th className="text-left px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong sticky left-0 bg-ink-3/80 min-w-[72px]">팀</th>
               {teams.map(t => (
-                <th key={t.registrationId} className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[56px]">
-                  <span className="truncate block max-w-[56px] mx-auto">{t.teamName}</span>
+                <th key={t.registrationId} className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[64px]">
+                  <span className="truncate block max-w-[64px] mx-auto">{t.teamName}</span>
+                  {t.playerNames && <span className="truncate block max-w-[64px] mx-auto text-[9px] font-normal">{t.playerNames}</span>}
                 </th>
               ))}
               <th className="px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center whitespace-nowrap">경기 승패</th>
@@ -280,8 +284,9 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
               const ptsNet = row.ptsFor - row.ptsAgainst;
               return (
                 <tr key={row.registrationId} className={`border-t border-line-strong ${ri % 2 === 1 ? "bg-ink-3/20" : ""}`}>
-                  <td className="px-3 py-2.5 font-bold text-foreground border-r border-line-strong sticky left-0 bg-background truncate max-w-[90px]">
-                    {row.teamName}
+                  <td className="px-3 py-2.5 font-bold text-foreground border-r border-line-strong sticky left-0 bg-background max-w-[90px]">
+                    <div className="truncate">{row.teamName}</div>
+                    {row.playerNames && <div className="truncate text-[9px] font-normal text-muted-foreground">{row.playerNames}</div>}
                   </td>
                   {teams.map(col => {
                     const isSelf = row.registrationId === col.registrationId;
@@ -356,8 +361,11 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
                     <span className="ml-auto font-mono font-bold text-foreground text-sm">{m.team1Score} : {m.team2Score}</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className={`flex-1 truncate font-bold ${m.team1Result === "승" ? "text-primary" : ""}`}>{m.team1Name}</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-bold truncate ${m.team1Result === "승" ? "text-primary" : ""}`}>{m.team1Name}</div>
+                    {m.team1Players && <div className="text-xs truncate">{m.team1Players}</div>}
+                  </div>
                   {m.team1Result && (
                     <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                       {m.team1Result}
@@ -369,7 +377,10 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
                       {m.team2Result}
                     </span>
                   )}
-                  <span className={`flex-1 truncate font-bold text-right ${m.team2Result === "승" ? "text-primary" : ""}`}>{m.team2Name}</span>
+                  <div className="flex-1 min-w-0 text-right">
+                    <div className={`text-sm font-bold truncate ${m.team2Result === "승" ? "text-primary" : ""}`}>{m.team2Name}</div>
+                    {m.team2Players && <div className="text-xs truncate">{m.team2Players}</div>}
+                  </div>
                 </div>
               </div>
             );
@@ -391,7 +402,9 @@ type MainMatch = {
   courtGameNum: number | null;
   timeStr: string | null;
   team1Label: string;
+  team1Players: string;
   team2Label: string;
+  team2Players: string;
   team1Score: number | null;
   team2Score: number | null;
   team1Result: string | null;
@@ -434,10 +447,13 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
       </div>
 
       <div className="px-4 py-4 flex items-center gap-3">
-        <div className="flex-1 flex flex-col items-center gap-1.5">
+        <div className="flex-1 flex flex-col items-center gap-1">
           <p className={`text-sm font-bold text-center leading-tight ${m.team1Result === "승" ? "text-primary" : "text-foreground"}`}>
             {m.team1Label}
           </p>
+          {m.team1Players && (
+            <p className="text-xs text-center leading-tight text-foreground">{m.team1Players}</p>
+          )}
           {m.team1Result && (
             <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
               m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
@@ -463,10 +479,13 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
           )}
         </div>
 
-        <div className="flex-1 flex flex-col items-center gap-1.5">
+        <div className="flex-1 flex flex-col items-center gap-1">
           <p className={`text-sm font-bold text-center leading-tight ${m.team2Result === "승" ? "text-primary" : "text-foreground"}`}>
             {m.team2Label}
           </p>
+          {m.team2Players && (
+            <p className="text-xs text-center leading-tight text-foreground">{m.team2Players}</p>
+          )}
           {m.team2Result && (
             <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
               m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"

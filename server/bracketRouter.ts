@@ -1659,14 +1659,16 @@ export const bracketRouter = router({
       const allMatches = await bdb.getBracketMatches(input.tournamentId);
       const events = await db.getEventsByTournament(input.tournamentId);
 
-      // 팀명(소속명) 조회
+      // 팀명(소속명) + 선수명 조회
       const regIds = [...new Set(allGroupTeams.map(t => t.registrationId))];
       const teamNameMap = new Map<number, string>();
+      const teamPlayersMap = new Map<number, string>();
       for (const regId of regIds) {
         const ps = await db.getPlayersByRegistration(regId);
-        if (ps.length === 0) { teamNameMap.set(regId, `팀#${regId}`); continue; }
+        if (ps.length === 0) { teamNameMap.set(regId, `팀#${regId}`); teamPlayersMap.set(regId, ""); continue; }
         const uniqueAffs = [...new Set(ps.map(p => (p.affiliation ?? "").trim()).filter(Boolean))];
         teamNameMap.set(regId, uniqueAffs.length > 0 ? uniqueAffs.join(" & ") : ps.map(p => p.name).join(", "));
+        teamPlayersMap.set(regId, ps.map(p => p.name).join(", "));
       }
 
       // 날짜 목록
@@ -1721,6 +1723,7 @@ export const bracketRouter = router({
             return {
               registrationId: t.registrationId,
               teamName: teamNameMap.get(t.registrationId) ?? `팀#${t.registrationId}`,
+              playerNames: teamPlayersMap.get(t.registrationId) ?? "",
               ...stats,
               finalRank: t.finalRank,
             };
@@ -1744,7 +1747,9 @@ export const bracketRouter = router({
               timeStr: dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : null,
               team1Id: m.team1Id, team2Id: m.team2Id,
               team1Name: m.team1Id ? (teamNameMap.get(m.team1Id) ?? "미정") : "미정",
+              team1Players: m.team1Id ? (teamPlayersMap.get(m.team1Id) ?? "") : "",
               team2Name: m.team2Id ? (teamNameMap.get(m.team2Id) ?? "미정") : "미정",
+              team2Players: m.team2Id ? (teamPlayersMap.get(m.team2Id) ?? "") : "",
               team1Score: m.team1Score, team2Score: m.team2Score,
               team1Result: isCompleted ? (m.team1Score! > m.team2Score! ? "승" : "패") : null,
               team2Result: isCompleted ? (m.team2Score! > m.team1Score! ? "승" : "패") : null,
@@ -1803,6 +1808,8 @@ export const bracketRouter = router({
               courtGameNum: isBye ? null : (courtGameNumMap.get(m.id) ?? null),
               timeStr: dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : null,
               team1Label: mainTeamLabel(m, 1), team2Label: mainTeamLabel(m, 2),
+              team1Players: m.team1Id ? (teamPlayersMap.get(m.team1Id) ?? "") : "",
+              team2Players: m.team2Id ? (teamPlayersMap.get(m.team2Id) ?? "") : "",
               team1Score: m.team1Score, team2Score: m.team2Score,
               team1Result: isCompleted ? (m.team1Score! > m.team2Score! ? "승" : "패") : null,
               team2Result: isCompleted ? (m.team2Score! > m.team1Score! ? "승" : "패") : null,
