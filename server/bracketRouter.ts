@@ -721,6 +721,108 @@ export async function generateBracketExcel(tournamentId: number): Promise<{ buff
   };
 }
 
+// ─── Reschedule Logic (조 변경 후 기존 그룹 구조 유지하며 코트/시간 재배정) ────
+
+async function runRescheduleMatches(tournamentId: number): Promise<void> {
+  const allSettings = await bdb.getBracketSettings(tournamentId);
+  if (allSettings.length === 0) return;
+
+  const courtSettingsList = await bdb.getBracketCourtSettings(tournamentId);
+  const courtMap = new Map(courtSettingsList.map(cs => [cs.matchDate ?? "", cs]));
+
+  const dateGroups = new Map<string, SchedulableMatch[]>();
+  const eventQualEndSlot = new Map<string, number>(); // `${date}_${eventId}` → last qual slotIndex
+
+  for (const settings of allSettings.sort((a, b) => a.eventOrder - b.eventOrder)) {
+    const eventId = settings.tournamentEventId;
+    const matchDate = settings.matchDate ?? "";
+    if (!matchDate) continue;
+
+    const allMatches = await bdb.getBracketMatches(tournamentId, eventId);
+    const qualMatches = allMatches.filter(m => m.phase === "qualifying" && !m.isBye);
+
+    // 미완료 예선 경기의 코트/시간/slotOrder 초기화
+    for (const m of qualMatches.filter(m => m.status !== "completed")) {
+      await bdb.updateBracketMatch(m.id, { courtNumber: null, slotOrder: null });
+    }
+
+    // allSchedulable 빌드 (미완료 경기만)
+    for (const m of qualMatches.filter(m => m.status !== "completed")) {
+      const t1Phones = m.team1Id
+        ? (await db.getPlayersByRegistration(m.team1Id)).map((p: any) => p.phone.replace(/\D/g, ""))
+        : [];
+      const t2Phones = m.team2Id
+        ? (await db.getPlayersByRegistration(m.team2Id)).map((p: any) => p.phone.replace(/\D/g, ""))
+        : [];
+      if (!dateGroups.has(matchDate)) dateGroups.set(matchDate, []);
+      dateGroups.get(matchDate)!.push({
+        matchId: m.id,
+        eventOrder: settings.eventOrder,
+        team1Phones: t1Phones,
+        team2Phones: t2Phones,
+      });
+    }
+  }
+
+  for (const [date, qualSchedulable] of dateGroups) {
+    const cs = courtMap.get(date);
+    if (!cs) continue;
+
+    const { results: qualResults } = computeSchedule(qualSchedulable, cs, date);
+    const occupiedSlotCourts = new Set<string>();
+
+    for (const sr of qualResults) {
+      occupiedSlotCourts.add(`${sr.slotIndex}_${sr.courtNumber}`);
+      await bdb.updateBracketMatch(sr.matchId, { courtNumber: sr.courtNumber, scheduledAt: sr.scheduledAt });
+      const qm = qualSchedulable.find(m => m.matchId === sr.matchId)!;
+      const evDate = `${date}_${(allSettings.find(s => s.eventOrder === qm.eventOrder)?.tournamentEventId ?? 0)}`;
+      const prev = eventQualEndSlot.get(evDate) ?? -1;
+      eventQualEndSlot.set(evDate, Math.max(prev, sr.slotIndex));
+    }
+
+    // 본선 경기 재스케줄링
+    const allMainItems: { matchId: number; eventId: number; eventOrder: number; roundNumber: number }[] = [];
+    for (const settings of allSettings.filter(s => (s.matchDate ?? "") === date).sort((a, b) => a.eventOrder - b.eventOrder)) {
+      const eventId = settings.tournamentEventId;
+      const mains = (await bdb.getBracketMatches(tournamentId, eventId))
+        .filter(m => m.phase === "main" && !m.isBye && m.status !== "completed");
+      for (const m of mains) {
+        await bdb.updateBracketMatch(m.id, { courtNumber: null, slotOrder: null });
+        allMainItems.push({ matchId: m.id, eventId, eventOrder: settings.eventOrder, roundNumber: m.roundNumber });
+      }
+    }
+
+    if (allMainItems.length === 0) continue;
+
+    const allRoundLevels = [...new Set(allMainItems.map(m => m.roundNumber))].sort((a, b) => a - b);
+    const eventRoundEndSlot = new Map<string, number>();
+
+    for (const round of allRoundLevels) {
+      const roundItems = allMainItems.filter(m => m.roundNumber === round);
+      const prevRoundLevel = allRoundLevels[allRoundLevels.indexOf(round) - 1];
+
+      const roundSchedulable: SchedulableMatch[] = roundItems.map(item => {
+        const evDate = `${date}_${item.eventId}`;
+        const minSlot = prevRoundLevel === undefined
+          ? (eventQualEndSlot.get(evDate) ?? -1) + 1
+          : (eventRoundEndSlot.get(`${item.eventId}_${prevRoundLevel}`) ?? -1) + 1;
+        return { matchId: item.matchId, eventOrder: item.eventOrder, team1Phones: [], team2Phones: [], minSlot };
+      });
+
+      const startSlot = Math.min(...roundSchedulable.map(m => m.minSlot ?? 0));
+      const { results: roundResults } = computeSchedule(roundSchedulable, cs, date, startSlot, occupiedSlotCourts);
+
+      for (const sr of roundResults) {
+        occupiedSlotCourts.add(`${sr.slotIndex}_${sr.courtNumber}`);
+        const item = roundItems.find(r => r.matchId === sr.matchId)!;
+        const key = `${item.eventId}_${round}`;
+        eventRoundEndSlot.set(key, Math.max(eventRoundEndSlot.get(key) ?? 0, sr.slotIndex));
+        await bdb.updateBracketMatch(sr.matchId, { courtNumber: sr.courtNumber, scheduledAt: sr.scheduledAt });
+      }
+    }
+  }
+}
+
 // ─── Generate Logic (shared by generate & regenerate) ────
 
 async function runGenerateBracket(tournamentId: number): Promise<{ success: boolean }> {
@@ -1210,6 +1312,11 @@ export const bracketRouter = router({
       if (!group) throw new TRPCError({ code: "NOT_FOUND" });
       await verifyBracketAccess(ctx.user!, group.tournamentId);
       const matches = await bdb.getBracketMatchesByGroupId(input.groupId);
+
+      // 해당 날짜·코트 기준 게임 번호 계산 (전체 대회 경기 기반)
+      const allTournamentMatches = await bdb.getBracketMatches(group.tournamentId);
+      const courtGameNumMap = buildCourtGameNumMap(allTournamentMatches);
+
       const regIds = [...new Set(matches.flatMap(m => [m.team1Id, m.team2Id]).filter((id): id is number => id !== null))];
       const teamNameMap = new Map<number, string>();
       for (const regId of regIds) {
@@ -1225,7 +1332,8 @@ export const bracketRouter = router({
         const team2Wins = isCompleted && m.team2Score! > m.team1Score!;
         return {
           ...m,
-          matchNum: idx + 1,
+          // 해당 코트의 당일 n번째 게임 (코트 배정 없으면 조 내 순서로 fallback)
+          matchNum: courtGameNumMap.get(m.id) ?? idx + 1,
           team1Name: m.team1Id ? (teamNameMap.get(m.team1Id) ?? `팀#${m.team1Id}`) : "미정",
           team2Name: m.team2Id ? (teamNameMap.get(m.team2Id) ?? `팀#${m.team2Id}`) : "미정",
           team1Result: team1Wins ? "승" : isCompleted ? "패" : null,
@@ -1332,12 +1440,6 @@ export const bracketRouter = router({
       const { eq } = await import("drizzle-orm");
       await db2.update(bgt).set({ groupId: input.toGroupId, finalRank: null }).where(eq(bgt.id, target.id));
 
-      // 예선 경기 데이터 동기화: 영향받은 두 조의 경기 삭제 후 재생성
-      await bdb.deleteBracketMatchesByGroupId(input.fromGroupId);
-      await bdb.deleteBracketMatchesByGroupId(input.toGroupId);
-      await recreateQualifyingMatchesForGroup(input.fromGroupId, fromGroup.tournamentId, fromGroup.tournamentEventId);
-      await recreateQualifyingMatchesForGroup(input.toGroupId, toGroup.tournamentId, toGroup.tournamentEventId);
-
       return { success: true };
     }),
 
@@ -1373,14 +1475,146 @@ export const bracketRouter = router({
       await db2.update(bgt).set({ groupId: g2, finalRank: null }).where(eq(bgt.id, rows[0].id));
       await db2.update(bgt).set({ groupId: g1, finalRank: null }).where(eq(bgt.id, rows2[0].id));
 
-      // 예선 경기 데이터 동기화: 영향받은 두 조의 경기 삭제 후 재생성
-      if (g1 !== g2) {
-        await bdb.deleteBracketMatchesByGroupId(g1);
-        await bdb.deleteBracketMatchesByGroupId(g2);
-        await recreateQualifyingMatchesForGroup(g1, group1.tournamentId, group1.tournamentEventId);
-        await recreateQualifyingMatchesForGroup(g2, group2.tournamentId, group2.tournamentEventId);
+      return { success: true };
+    }),
+
+  regenerateMatchesFromGroups: protectedProcedure
+    .input(z.object({ tournamentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await verifyBracketAccess(ctx.user!, input.tournamentId);
+
+      // 현재 조 구성을 유지하면서 예선 경기만 삭제 후 재생성
+      const groups = await bdb.getBracketGroups(input.tournamentId);
+      for (const group of groups) {
+        await bdb.deleteBracketMatchesByGroupId(group.id);
+        await recreateQualifyingMatchesForGroup(group.id, group.tournamentId, group.tournamentEventId);
       }
 
+      // 전체 코트/시간 재배정 (예선 + 본선)
+      await runRescheduleMatches(input.tournamentId);
+
+      return { success: true };
+    }),
+
+  reorderGroupMatches: protectedProcedure
+    .input(z.object({
+      groupId: z.number(),
+      orderedMatchIds: z.array(z.number()).min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const group = await bdb.getBracketGroupById(input.groupId);
+      if (!group) throw new TRPCError({ code: "NOT_FOUND", message: "조를 찾을 수 없습니다" });
+      await verifyBracketAccess(ctx.user!, group.tournamentId);
+
+      const matches = await bdb.getBracketMatchesByGroupId(input.groupId);
+      const hasCompleted = matches.some(m => m.status === "completed");
+      if (hasCompleted) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "완료된 경기가 있으면 순서를 변경할 수 없습니다" });
+      }
+
+      const groupMatchIds = new Set(matches.map(m => m.id));
+      for (const id of input.orderedMatchIds) {
+        if (!groupMatchIds.has(id)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "다른 조의 경기 ID가 포함되어 있습니다" });
+        }
+      }
+
+      // 현재 matchNumber 순서로 정렬해 각 위치의 스케줄 정보 추출
+      const sortedByNumber = [...matches].sort((a, b) => a.matchNumber - b.matchNumber);
+      const slots = sortedByNumber.map(m => ({
+        courtNumber: m.courtNumber,
+        scheduledAt: m.scheduledAt,
+        slotOrder: m.slotOrder,
+      }));
+
+      // ── 선수 시간 충돌 검사 ──────────────────────────────
+      const hasScheduling = slots.some(s => s.scheduledAt);
+      if (hasScheduling) {
+        // 재정렬 후 각 경기의 선수 전화번호 미리 수집
+        const matchPhones = new Map<number, Set<string>>();
+        for (const m of matches) {
+          const phones = new Set<string>();
+          for (const regId of [m.team1Id, m.team2Id].filter((v): v is number => v != null)) {
+            const ps = await db.getPlayersByRegistration(regId);
+            for (const p of ps) if (p.phone) phones.add(p.phone.replace(/\D/g, ""));
+          }
+          matchPhones.set(m.id, phones);
+        }
+
+        // Phase 1: 조 내 충돌 — 재정렬 결과 같은 시간대에 배정된 경기끼리 선수 겹침 확인
+        // (예: A팀 경기 두 개가 모두 09:00에 배정되는 경우)
+        const timeToNewMatchIds = new Map<number, number[]>();
+        for (let i = 0; i < input.orderedMatchIds.length; i++) {
+          const t = slots[i].scheduledAt;
+          if (!t) continue;
+          const key = new Date(t).getTime();
+          if (!timeToNewMatchIds.has(key)) timeToNewMatchIds.set(key, []);
+          timeToNewMatchIds.get(key)!.push(input.orderedMatchIds[i]);
+        }
+
+        for (const [timeMs, sameTimeIds] of timeToNewMatchIds) {
+          if (sameTimeIds.length < 2) continue;
+          for (let a = 0; a < sameTimeIds.length; a++) {
+            for (let b = a + 1; b < sameTimeIds.length; b++) {
+              const phonesA = matchPhones.get(sameTimeIds[a]) ?? new Set();
+              const phonesB = matchPhones.get(sameTimeIds[b]) ?? new Set();
+              for (const p of phonesA) {
+                if (phonesB.has(p)) {
+                  const d = new Date(timeMs);
+                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                  throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `동일 선수가 ${timeStr}에 두 경기에 동시 배정됩니다. 순서 변경이 불가합니다`,
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        // Phase 2: 조 외부 충돌 — 이동한 경기의 선수가 외부 경기와 시간 겹침 확인
+        const allTournamentMatches = await bdb.getBracketMatches(group.tournamentId);
+        const reorderSet = new Set(input.orderedMatchIds);
+        const externalMatches = allTournamentMatches.filter(m => !reorderSet.has(m.id) && m.scheduledAt);
+
+        for (let i = 0; i < input.orderedMatchIds.length; i++) {
+          const targetScheduledAt = slots[i].scheduledAt;
+          if (!targetScheduledAt) continue;
+          // 같은 위치 그대로면 이동 없음 → 외부 충돌 없음
+          if (sortedByNumber[i].id === input.orderedMatchIds[i]) continue;
+
+          const phones = matchPhones.get(input.orderedMatchIds[i]) ?? new Set();
+          if (phones.size === 0) continue;
+
+          const targetTime = new Date(targetScheduledAt).getTime();
+          for (const ext of externalMatches) {
+            if (new Date(ext.scheduledAt!).getTime() !== targetTime) continue;
+            for (const regId of [ext.team1Id, ext.team2Id].filter((v): v is number => v != null)) {
+              const ps = await db.getPlayersByRegistration(regId);
+              for (const p of ps) {
+                if (p.phone && phones.has(p.phone.replace(/\D/g, ""))) {
+                  const d = new Date(targetScheduledAt);
+                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                  throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `동일 선수가 ${timeStr}에 이미 다른 경기가 배정되어 있어 순서 변경이 불가합니다`,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 새 순서의 각 경기에 기존 위치의 스케줄 정보(코트, 시간, 슬롯)를 그대로 이전
+      for (let i = 0; i < input.orderedMatchIds.length; i++) {
+        await bdb.updateBracketMatch(input.orderedMatchIds[i], {
+          matchNumber: i + 1,
+          courtNumber: slots[i].courtNumber,
+          scheduledAt: slots[i].scheduledAt ?? undefined,
+          slotOrder: slots[i].slotOrder,
+        });
+      }
       return { success: true };
     }),
 

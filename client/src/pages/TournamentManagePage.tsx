@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { motion } from "framer-motion";
+import { motion, Reorder } from "framer-motion";
 import {
   AlertCircle,
   ChevronDown,
@@ -455,6 +455,12 @@ export default function TournamentManagePage() {
   const [targetCourt, setTargetCourt] = useState<string>("");
   const [targetPos, setTargetPos] = useState<string>("");
   const [swapTargetId, setSwapTargetId] = useState<number | null>(null);
+  // 팀 조 이동
+  const [moveTeamState, setMoveTeamState] = useState<{ regId: number; fromGroupId: number } | null>(null);
+  // 예선 경기 순서 변경 (로컬 순서 상태)
+  const [localMatchOrder, setLocalMatchOrder] = useState<number[]>([]);
+  // 조 구성 변경 여부 (경기 재생성 필요 표시)
+  const [hasGroupChanges, setHasGroupChanges] = useState(false);
 
   const {
     data: publicBracket,
@@ -496,10 +502,36 @@ export default function TournamentManagePage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
-  const { data: groupMatchesData } = trpc.bracket.getGroupMatches.useQuery(
+  const { data: groupMatchesData, refetch: refetchGroupMatches } = trpc.bracket.getGroupMatches.useQuery(
     { groupId: schedGroupId! },
     { enabled: !!schedGroupId }
   );
+  const moveTeamMutation = trpc.bracket.moveTeam.useMutation({
+    onSuccess: () => {
+      toast.success("팀 조가 변경되었습니다. '저장 및 경기 재생성' 버튼을 눌러 경기를 재생성하세요.");
+      setMoveTeamState(null);
+      setHasGroupChanges(true);
+      refetchGroups();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const reorderMatchesMutation = trpc.bracket.reorderGroupMatches.useMutation({
+    onSuccess: () => {
+      toast.success("경기 순서가 저장되었습니다");
+      refetchGroupMatches();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+  const regenerateMatchesMutation = trpc.bracket.regenerateMatchesFromGroups.useMutation({
+    onSuccess: () => {
+      toast.success("경기가 재생성되었습니다. 코트/시간이 재배정되었습니다.");
+      setHasGroupChanges(false);
+      refetchGroups();
+      refetchGroupMatches();
+      refetchSchedule();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   // settingsForm 초기화: bracketSettings 또는 tournament events 기반
   useEffect(() => {
@@ -672,6 +704,13 @@ export default function TournamentManagePage() {
   useEffect(() => {
     if (tournament?.refereePin) setRefereePinInput(tournament.refereePin);
   }, [tournament?.refereePin]);
+
+  // 그룹 경기 데이터 변경 시 로컬 순서 초기화
+  useEffect(() => {
+    if (groupMatchesData) {
+      setLocalMatchOrder((groupMatchesData as any[]).map((m: any) => m.id));
+    }
+  }, [groupMatchesData]);
 
   // ─── Handlers ───
   const handleInfoSubmit = () => {
@@ -1125,6 +1164,14 @@ export default function TournamentManagePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* 경기 재생성 중 오버레이 */}
+      {regenerateMatchesMutation.isPending && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center gap-4 pointer-events-auto">
+          <Loader2 className="w-10 h-10 animate-spin text-white" />
+          <p className="text-white font-bold text-base">경기 재생성 중...</p>
+          <p className="text-white/60 text-xs">완료될 때까지 다른 작업을 진행하지 마세요</p>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-ink text-white px-4 py-3 flex items-center gap-3">
         <button
@@ -3272,9 +3319,23 @@ export default function TournamentManagePage() {
                 <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
                   {/* 날짜 선택 */}
                   <div>
-                    <h3 className="text-xs font-bold text-foreground mb-2">
-                      날짜 선택
-                    </h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-bold text-foreground">
+                        날짜 선택
+                      </h3>
+                      {hasGroupChanges && (
+                        <button
+                          disabled={regenerateMatchesMutation.isPending}
+                          onClick={() =>
+                            regenerateMatchesMutation.mutate({ tournamentId: tournamentId! })
+                          }
+                          className="text-[9px] px-2.5 py-1 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600 disabled:opacity-50 flex items-center gap-1 shrink-0"
+                        >
+                          <RefreshCw className="w-2.5 h-2.5" />
+                          {regenerateMatchesMutation.isPending ? "재생성 중..." : "저장 및 경기 재생성"}
+                        </button>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {tournamentDates.map(d => (
                         <button
@@ -3379,16 +3440,56 @@ export default function TournamentManagePage() {
                               <div className="px-3 pb-2 space-y-0.5">
                                 {(group.teams ?? []).map(
                                   (t: any, i: number) => (
-                                    <div
-                                      key={i}
-                                      className="text-[10px] flex justify-between"
-                                    >
-                                      <span className="text-foreground">
-                                        {t.teamName ?? `팀 ${t.registrationId}`}
-                                      </span>
-                                      <span className="text-muted-foreground">
-                                        {t.wins ?? 0}승 {t.losses ?? 0}패
-                                      </span>
+                                    <div key={i} className="text-[10px]">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-foreground">
+                                          {t.teamName ?? `팀 ${t.registrationId}`}
+                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-muted-foreground">
+                                            {t.wins ?? 0}승 {t.losses ?? 0}패
+                                          </span>
+                                          <button
+                                            onClick={() =>
+                                              setMoveTeamState(
+                                                moveTeamState?.regId === t.registrationId
+                                                  ? null
+                                                  : { regId: t.registrationId, fromGroupId: group.id }
+                                              )
+                                            }
+                                            className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+                                              moveTeamState?.regId === t.registrationId
+                                                ? "bg-primary/10 border-primary text-primary"
+                                                : "border-line-strong text-muted-foreground hover:text-primary"
+                                            }`}
+                                          >
+                                            이동
+                                          </button>
+                                        </div>
+                                      </div>
+                                      {/* 조 선택 UI */}
+                                      {moveTeamState?.regId === t.registrationId && (
+                                        <div className="mt-1 flex flex-wrap gap-1 pl-1">
+                                          {((bracketGroups as any[]) ?? [])
+                                            .filter((g: any) => g.id !== group.id)
+                                            .map((g: any) => (
+                                              <button
+                                                key={g.id}
+                                                disabled={moveTeamMutation.isPending}
+                                                onClick={() =>
+                                                  moveTeamMutation.mutate({
+                                                    registrationId: t.registrationId,
+                                                    fromGroupId: group.id,
+                                                    toGroupId: g.id,
+                                                  })
+                                                }
+                                                className="text-[9px] px-2 py-0.5 rounded bg-primary/10 border border-primary text-primary hover:bg-primary/20 disabled:opacity-50"
+                                              >
+                                                {g.groupNumber}조로 이동
+                                              </button>
+                                            ))}
+                                        </div>
+                                      )}
                                     </div>
                                   )
                                 )}
@@ -3401,55 +3502,87 @@ export default function TournamentManagePage() {
                                       경기 없음
                                     </p>
                                   ) : (
-                                    <div className="space-y-1.5 pt-2">
-                                      {matches.map((m: any) => (
-                                        <div
-                                          key={m.id}
-                                          className="bg-ink-3 rounded-lg px-2.5 py-2 space-y-1"
+                                    <div className="pt-2">
+                                      {/* 순서 저장 버튼 */}
+                                      <div className="flex justify-end mb-1.5">
+                                        <button
+                                          disabled={reorderMatchesMutation.isPending || matches.some((m: any) => m.status === "completed")}
+                                          onClick={() =>
+                                            reorderMatchesMutation.mutate({
+                                              groupId: schedGroupId!,
+                                              orderedMatchIds: localMatchOrder,
+                                            })
+                                          }
+                                          className="text-[9px] px-2 py-1 rounded bg-primary text-primary-foreground font-bold disabled:opacity-40"
+                                          title={matches.some((m: any) => m.status === "completed") ? "완료된 경기가 있어 순서 변경 불가" : ""}
                                         >
-                                          {/* 경기 메타 */}
-                                          <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
-                                            <span className="font-bold">
-                                              {m.courtNumber != null
-                                                ? `${m.courtNumber}코트`
-                                                : "-"}{" "}
-                                              {m.matchNum}번게임
-                                            </span>
-                                            <span>{m.timeStr ?? "-"}</span>
-                                            {m.status === "completed" && (
-                                              <span className="ml-auto font-mono font-bold text-foreground">
-                                                {m.team1Score} : {m.team2Score}
-                                              </span>
-                                            )}
-                                          </div>
-                                          {/* 팀 */}
-                                          <div className="flex items-center gap-1.5 text-[10px]">
-                                            <span className="flex-1 truncate font-bold">
-                                              {m.team1Name}
-                                            </span>
-                                            {m.team1Result && (
-                                              <span
-                                                className={`text-[9px] font-bold px-1 rounded ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
-                                              >
-                                                {m.team1Result}
-                                              </span>
-                                            )}
-                                            <span className="text-muted-foreground shrink-0">
-                                              vs
-                                            </span>
-                                            {m.team2Result && (
-                                              <span
-                                                className={`text-[9px] font-bold px-1 rounded ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
-                                              >
-                                                {m.team2Result}
-                                              </span>
-                                            )}
-                                            <span className="flex-1 truncate font-bold text-right">
-                                              {m.team2Name}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ))}
+                                          {reorderMatchesMutation.isPending ? "저장 중..." : "순서 저장"}
+                                        </button>
+                                      </div>
+                                      <Reorder.Group
+                                        axis="y"
+                                        values={localMatchOrder}
+                                        onReorder={setLocalMatchOrder}
+                                        className="space-y-1.5"
+                                      >
+                                        {localMatchOrder.map((matchId: number) => {
+                                          const m = (matches as any[]).find((x: any) => x.id === matchId);
+                                          if (!m) return null;
+                                          return (
+                                            <Reorder.Item
+                                              key={matchId}
+                                              value={matchId}
+                                              className={`bg-ink-3 rounded-lg px-2.5 py-2 space-y-1 ${m.status !== "completed" ? "cursor-grab active:cursor-grabbing" : ""}`}
+                                              drag={m.status !== "completed"}
+                                            >
+                                              {/* 경기 메타 */}
+                                              <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+                                                {m.status !== "completed" && (
+                                                  <GripVertical className="w-3 h-3 shrink-0 text-muted-foreground/40" />
+                                                )}
+                                                <span className="font-bold">
+                                                  {m.courtNumber != null
+                                                    ? `${m.courtNumber}코트`
+                                                    : "-"}{" "}
+                                                  {m.matchNum}번게임
+                                                </span>
+                                                <span>{m.timeStr ?? "-"}</span>
+                                                {m.status === "completed" && (
+                                                  <span className="font-mono font-bold text-foreground">
+                                                    {m.team1Score} : {m.team2Score}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              {/* 팀 */}
+                                              <div className="flex items-center gap-1.5 text-[10px]">
+                                                <span className="flex-1 truncate font-bold">
+                                                  {m.team1Name}
+                                                </span>
+                                                {m.team1Result && (
+                                                  <span
+                                                    className={`text-[9px] font-bold px-1 rounded ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                                                  >
+                                                    {m.team1Result}
+                                                  </span>
+                                                )}
+                                                <span className="text-muted-foreground shrink-0">
+                                                  vs
+                                                </span>
+                                                {m.team2Result && (
+                                                  <span
+                                                    className={`text-[9px] font-bold px-1 rounded ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                                                  >
+                                                    {m.team2Result}
+                                                  </span>
+                                                )}
+                                                <span className="flex-1 truncate font-bold text-right">
+                                                  {m.team2Name}
+                                                </span>
+                                              </div>
+                                            </Reorder.Item>
+                                          );
+                                        })}
+                                      </Reorder.Group>
                                     </div>
                                   )}
                                 </div>
