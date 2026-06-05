@@ -1731,11 +1731,11 @@ export const bracketRouter = router({
 
         const matches = grpMatches
           .sort((a, b) => {
-            // 코트별 경기 순번 기준으로 정렬
+            // 게임번호 → 코트번호 순으로 정렬
             const aNum = courtGameNumMap.get(a.id) ?? 9999;
             const bNum = courtGameNumMap.get(b.id) ?? 9999;
-            if (a.courtNumber !== b.courtNumber) return (a.courtNumber ?? 0) - (b.courtNumber ?? 0);
-            return aNum - bNum;
+            if (aNum !== bNum) return aNum - bNum;
+            return (a.courtNumber ?? 0) - (b.courtNumber ?? 0);
           })
           .map((m) => {
             const isCompleted = m.status === "completed" && m.team1Score !== null && m.team2Score !== null;
