@@ -24,26 +24,42 @@ function buildCourtGameNumMap(
   const map = new Map<number, number>();
   const candidates = matches.filter(m => m.courtNumber != null && !m.isBye);
   const hasSlotOrder = candidates.some(m => m.slotOrder != null);
+
+  // 날짜(YYYY-MM-DD) + 코트번호 조합을 키로 사용해 날짜별로 게임번호를 1번부터 시작
+  const dateStr = (d: Date | null) => {
+    if (!d) return "unknown";
+    const dt = new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  };
+
   if (hasSlotOrder) {
     const sorted = candidates.filter(m => m.slotOrder != null).sort((a, b) => {
+      const dateA = dateStr(a.scheduledAt);
+      const dateB = dateStr(b.scheduledAt);
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
       if (a.courtNumber !== b.courtNumber) return a.courtNumber! - b.courtNumber!;
       return a.slotOrder! - b.slotOrder!;
     });
-    const counter = new Map<number, number>();
+    const counter = new Map<string, number>();
     for (const m of sorted) {
-      const n = (counter.get(m.courtNumber!) ?? 0) + 1;
-      counter.set(m.courtNumber!, n);
+      const key = `${dateStr(m.scheduledAt)}_${m.courtNumber}`;
+      const n = (counter.get(key) ?? 0) + 1;
+      counter.set(key, n);
       map.set(m.id, n);
     }
   } else {
     const sorted = candidates.filter(m => m.scheduledAt != null).sort((a, b) => {
+      const dateA = dateStr(a.scheduledAt);
+      const dateB = dateStr(b.scheduledAt);
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
       if (a.courtNumber !== b.courtNumber) return a.courtNumber! - b.courtNumber!;
       return new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime();
     });
-    const counter = new Map<number, number>();
+    const counter = new Map<string, number>();
     for (const m of sorted) {
-      const n = (counter.get(m.courtNumber!) ?? 0) + 1;
-      counter.set(m.courtNumber!, n);
+      const key = `${dateStr(m.scheduledAt)}_${m.courtNumber}`;
+      const n = (counter.get(key) ?? 0) + 1;
+      counter.set(key, n);
       map.set(m.id, n);
     }
   }
