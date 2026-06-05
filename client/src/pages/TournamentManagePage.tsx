@@ -3558,7 +3558,7 @@ export default function TournamentManagePage() {
                                                 <div className="flex-1 min-w-0">
                                                   <div className="font-bold truncate">{m.team1Name}</div>
                                                   {m.team1Players && (
-                                                    <div className="text-[9px] text-muted-foreground truncate">{m.team1Players}</div>
+                                                    <div className="text-[9px] truncate">{m.team1Players}</div>
                                                   )}
                                                 </div>
                                                 {m.team1Result && (
@@ -3581,7 +3581,7 @@ export default function TournamentManagePage() {
                                                 <div className="flex-1 min-w-0 text-right">
                                                   <div className="font-bold truncate">{m.team2Name}</div>
                                                   {m.team2Players && (
-                                                    <div className="text-[9px] text-muted-foreground truncate">{m.team2Players}</div>
+                                                    <div className="text-[9px] truncate">{m.team2Players}</div>
                                                   )}
                                                 </div>
                                               </div>
