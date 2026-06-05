@@ -2468,12 +2468,7 @@ export default function TournamentManagePage() {
                     </button>
                     <button
                       onClick={() => setShowRegenerateConfirm(true)}
-                      disabled={
-                        regenerateMutation.isPending ||
-                        !["closed", "bracket_published"].includes(
-                          tournament?.status ?? ""
-                        )
-                      }
+                      disabled={regenerateMutation.isPending}
                       className="flex items-center gap-1.5 bg-card border border-line-strong text-foreground text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-ink-3 transition-colors disabled:opacity-50"
                     >
                       {regenerateMutation.isPending ? (
