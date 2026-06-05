@@ -321,19 +321,9 @@ function GroupTable({
                 팀
               </th>
               {teams.map(t => (
-<<<<<<< Updated upstream
                 <th key={t.registrationId} className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[64px]">
                   <span className="truncate block max-w-[64px] mx-auto">{t.teamName}</span>
                   {t.playerNames && <span className="truncate block max-w-[64px] mx-auto text-[9px] font-normal">{t.playerNames}</span>}
-=======
-                <th
-                  key={t.registrationId}
-                  className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[56px]"
-                >
-                  <span className="truncate block max-w-[56px] mx-auto">
-                    {t.teamName}
-                  </span>
->>>>>>> Stashed changes
                 </th>
               ))}
               <th className="px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center whitespace-nowrap">
@@ -351,19 +341,10 @@ function GroupTable({
             {teams.map((row, ri) => {
               const ptsNet = row.ptsFor - row.ptsAgainst;
               return (
-<<<<<<< Updated upstream
                 <tr key={row.registrationId} className={`border-t border-line-strong ${ri % 2 === 1 ? "bg-ink-3/20" : ""}`}>
                   <td className="px-3 py-2.5 font-bold text-foreground border-r border-line-strong sticky left-0 bg-background max-w-[90px]">
                     <div className="truncate">{row.teamName}</div>
                     {row.playerNames && <div className="truncate text-[9px] font-normal text-muted-foreground">{row.playerNames}</div>}
-=======
-                <tr
-                  key={row.registrationId}
-                  className={`border-t border-line-strong ${ri % 2 === 1 ? "bg-ink-3/20" : ""}`}
-                >
-                  <td className="px-3 py-2.5 font-bold text-foreground border-r border-line-strong sticky left-0 bg-background truncate max-w-[90px]">
-                    {row.teamName}
->>>>>>> Stashed changes
                   </td>
                   {teams.map(col => {
                     const isSelf = row.registrationId === col.registrationId;
@@ -465,20 +446,11 @@ function GroupTable({
                     </span>
                   )}
                 </div>
-<<<<<<< Updated upstream
                 <div className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-bold truncate ${m.team1Result === "승" ? "text-primary" : ""}`}>{m.team1Name}</div>
                     {m.team1Players && <div className="text-xs truncate">{m.team1Players}</div>}
                   </div>
-=======
-                <div className="flex items-center gap-2 text-sm">
-                  <span
-                    className={`flex-1 truncate font-bold ${m.team1Result === "승" ? "text-primary" : ""}`}
-                  >
-                    {m.team1Name}
-                  </span>
->>>>>>> Stashed changes
                   {m.team1Result && (
                     <span
                       className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
@@ -496,18 +468,10 @@ function GroupTable({
                       {m.team2Result}
                     </span>
                   )}
-<<<<<<< Updated upstream
                   <div className="flex-1 min-w-0 text-right">
                     <div className={`text-sm font-bold truncate ${m.team2Result === "승" ? "text-primary" : ""}`}>{m.team2Name}</div>
                     {m.team2Players && <div className="text-xs truncate">{m.team2Players}</div>}
                   </div>
-=======
-                  <span
-                    className={`flex-1 truncate font-bold text-right ${m.team2Result === "승" ? "text-primary" : ""}`}
-                  >
-                    {m.team2Name}
-                  </span>
->>>>>>> Stashed changes
                 </div>
               </div>
             );
@@ -569,8 +533,8 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
     <div className="bg-card rounded-2xl border border-line-strong overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2.5 bg-ink-3/50 border-b border-line-strong">
         <span className="text-xs font-bold text-muted-foreground">
-          {m.courtNumber != null ? `${m.courtNumber}코트` : "-"}
-          {m.courtGameNum != null ? ` ${m.courtGameNum}번게임` : ""}
+          {m.courtGameNum != null ? `${m.courtGameNum}번게임` : "-"}
+          {m.courtNumber != null ? ` ${m.courtNumber}코트` : ""}
         </span>
         {m.timeStr && (
           <span className="text-xs text-muted-foreground">{m.timeStr}</span>
@@ -587,15 +551,8 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
       </div>
 
       <div className="px-4 py-4 flex items-center gap-3">
-<<<<<<< Updated upstream
         <div className="flex-1 flex flex-col items-center gap-1">
           <p className={`text-sm font-bold text-center leading-tight ${m.team1Result === "승" ? "text-primary" : "text-foreground"}`}>
-=======
-        <div className="flex-1 flex flex-col items-center gap-1.5">
-          <p
-            className={`text-sm font-bold text-center leading-tight ${m.team1Result === "승" ? "text-primary" : "text-foreground"}`}
-          >
->>>>>>> Stashed changes
             {m.team1Label}
           </p>
           {m.team1Players && (
@@ -636,15 +593,8 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
           )}
         </div>
 
-<<<<<<< Updated upstream
         <div className="flex-1 flex flex-col items-center gap-1">
           <p className={`text-sm font-bold text-center leading-tight ${m.team2Result === "승" ? "text-primary" : "text-foreground"}`}>
-=======
-        <div className="flex-1 flex flex-col items-center gap-1.5">
-          <p
-            className={`text-sm font-bold text-center leading-tight ${m.team2Result === "승" ? "text-primary" : "text-foreground"}`}
-          >
->>>>>>> Stashed changes
             {m.team2Label}
           </p>
           {m.team2Players && (
