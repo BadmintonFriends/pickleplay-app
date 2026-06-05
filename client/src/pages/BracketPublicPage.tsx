@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { useRoute, useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
 import { track } from "@/lib/mixpanel";
+import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation, useRoute } from "wouter";
 
 export default function BracketPublicPage() {
   const [, params] = useRoute("/tournaments/:id/bracket");
@@ -11,16 +11,22 @@ export default function BracketPublicPage() {
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-  const [selectedView, setSelectedView] = useState<number | "main" | null>(null); // groupId or "main"
+  const [selectedView, setSelectedView] = useState<number | "main" | null>(
+    null
+  ); // groupId or "main"
 
-  const { data, isLoading, error, refetch } = trpc.bracket.getPublicBracket.useQuery(
-    { tournamentId: tournamentId! },
-    { enabled: !!tournamentId }
-  );
+  const { data, isLoading, error, refetch } =
+    trpc.bracket.getPublicBracket.useQuery(
+      { tournamentId: tournamentId! },
+      { enabled: !!tournamentId }
+    );
 
   useEffect(() => {
     if (data) {
-      track("Bracket - View", { tournament_id: tournamentId, tournament_name: data.tournamentName });
+      track("Bracket - View", {
+        tournament_id: tournamentId,
+        tournament_name: data.tournamentName,
+      });
     }
   }, [data?.tournamentName]);
 
@@ -40,9 +46,16 @@ export default function BracketPublicPage() {
   if (error) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
-        <p className="text-sm font-bold text-foreground">대진표를 불러올 수 없습니다</p>
+        <p className="text-sm font-bold text-foreground">
+          대진표를 불러올 수 없습니다
+        </p>
         <p className="text-xs text-muted-foreground">{error.message}</p>
-        <button onClick={handleBack} className="text-sm text-primary font-bold mt-2 py-2 px-4">돌아가기</button>
+        <button
+          onClick={handleBack}
+          className="text-sm text-primary font-bold mt-2 py-2 px-4"
+        >
+          돌아가기
+        </button>
       </div>
     );
   }
@@ -58,12 +71,14 @@ export default function BracketPublicPage() {
   const eventMain = mainByEvent.find(m => m.eventId === selectedEventId);
   const hasMain = (eventMain?.matches?.length ?? 0) > 0;
 
-  const selectedGroup = typeof selectedView === "number"
-    ? eventGroups.find(g => g.id === selectedView) ?? null
-    : null;
+  const selectedGroup =
+    typeof selectedView === "number"
+      ? (eventGroups.find(g => g.id === selectedView) ?? null)
+      : null;
 
   // 라운드별로 묶기
-  const mainRounds: { roundName: string; matches: typeof eventMain.matches }[] = [];
+  const mainRounds: { roundName: string; matches: typeof eventMain.matches }[] =
+    [];
   if (eventMain && selectedView === "main") {
     const seen = new Map<string, typeof eventMain.matches>();
     for (const m of eventMain.matches) {
@@ -88,9 +103,14 @@ export default function BracketPublicPage() {
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] text-muted-foreground">대진표</p>
-            <h1 className="text-base font-extrabold text-foreground leading-tight truncate">{tournamentName}</h1>
+            <h1 className="text-base font-extrabold text-foreground leading-tight truncate">
+              {tournamentName}
+            </h1>
           </div>
-          <button onClick={() => refetch()} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-ink-3 transition-colors shrink-0">
+          <button
+            onClick={() => refetch()}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-ink-3 transition-colors shrink-0"
+          >
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
@@ -99,12 +119,18 @@ export default function BracketPublicPage() {
       <div className="max-w-[480px] mx-auto px-4 pt-5 pb-12 space-y-5">
         {/* 날짜 선택 */}
         <div className="space-y-2">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">날짜 선택</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+            날짜 선택
+          </p>
           <div className="flex gap-2 flex-wrap">
             {dates.map(d => (
               <button
                 key={d}
-                onClick={() => { setSelectedDate(d); setSelectedEventId(null); setSelectedView(null); }}
+                onClick={() => {
+                  setSelectedDate(d);
+                  setSelectedEventId(null);
+                  setSelectedView(null);
+                }}
                 className={`text-sm font-bold px-4 py-2.5 rounded-xl border transition-colors ${
                   selectedDate === d
                     ? "bg-primary text-primary-foreground border-primary"
@@ -120,15 +146,22 @@ export default function BracketPublicPage() {
         {/* 종목 선택 */}
         {selectedDate && (
           <div className="space-y-2">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">종목 선택</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+              종목 선택
+            </p>
             {dateEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">해당 날짜에 종목 없음</p>
+              <p className="text-sm text-muted-foreground">
+                해당 날짜에 종목 없음
+              </p>
             ) : (
               <div className="flex gap-2 flex-wrap">
                 {dateEvents.map(e => (
                   <button
                     key={e.id}
-                    onClick={() => { setSelectedEventId(e.id); setSelectedView(null); }}
+                    onClick={() => {
+                      setSelectedEventId(e.id);
+                      setSelectedView(null);
+                    }}
                     className={`text-sm font-bold px-4 py-2.5 rounded-xl border transition-colors ${
                       selectedEventId === e.id
                         ? "bg-primary text-primary-foreground border-primary"
@@ -146,7 +179,9 @@ export default function BracketPublicPage() {
         {/* 조 / 본선 선택 */}
         {selectedEventId && (
           <div className="space-y-2">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">조 / 본선 선택</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+              조 / 본선 선택
+            </p>
             {eventGroups.length === 0 && !hasMain ? (
               <p className="text-sm text-muted-foreground">대진 데이터 없음</p>
             ) : (
@@ -183,20 +218,27 @@ export default function BracketPublicPage() {
 
         {/* 선택된 조 — 조별리그 표 */}
         {selectedGroup && (
-          <GroupTable group={selectedGroup} isSingleGroup={eventGroups.length === 1} />
+          <GroupTable
+            group={selectedGroup}
+            isSingleGroup={eventGroups.length === 1}
+          />
         )}
 
         {/* 본선 대진표 */}
         {selectedView === "main" && (
           <div className="space-y-5">
             {mainRounds.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">본선 경기 없음</p>
+              <p className="text-sm text-muted-foreground text-center py-10">
+                본선 경기 없음
+              </p>
             ) : (
               mainRounds.map(({ roundName, matches }) => (
                 <div key={roundName} className="space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="h-px flex-1 bg-line-strong" />
-                    <span className="text-sm font-bold text-primary px-3 py-1 bg-primary/10 rounded-full">{roundName}</span>
+                    <span className="text-sm font-bold text-primary px-3 py-1 bg-primary/10 rounded-full">
+                      {roundName}
+                    </span>
                     <div className="h-px flex-1 bg-line-strong" />
                   </div>
                   {matches.map(m => (
@@ -251,14 +293,22 @@ type GroupData = {
   pairGrid: Record<string, { s1: number; s2: number } | null>;
 };
 
-function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?: boolean }) {
+function GroupTable({
+  group,
+  isSingleGroup,
+}: {
+  group: GroupData;
+  isSingleGroup?: boolean;
+}) {
   const teams = group.teams;
 
   return (
     <div className="bg-card rounded-2xl border border-line-strong overflow-hidden">
       {/* 조 헤더 */}
       <div className="px-4 py-3 bg-ink-3 border-b border-line-strong flex items-center justify-between">
-        <span className="text-base font-bold text-foreground">{isSingleGroup ? "풀리그" : `${group.groupNumber}조`}</span>
+        <span className="text-base font-bold text-foreground">
+          {isSingleGroup ? "풀리그" : `${group.groupNumber}조`}
+        </span>
         <span className="text-xs text-muted-foreground">{teams.length}팀</span>
       </div>
 
@@ -267,33 +317,65 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
         <table className="w-full text-[11px] border-collapse min-w-max">
           <thead>
             <tr className="bg-ink-3/40">
-              <th className="text-left px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong sticky left-0 bg-ink-3/80 min-w-[72px]">팀</th>
+              <th className="text-left px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong sticky left-0 bg-ink-3/80 min-w-[72px]">
+                팀
+              </th>
               {teams.map(t => (
+<<<<<<< Updated upstream
                 <th key={t.registrationId} className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[64px]">
                   <span className="truncate block max-w-[64px] mx-auto">{t.teamName}</span>
                   {t.playerNames && <span className="truncate block max-w-[64px] mx-auto text-[9px] font-normal">{t.playerNames}</span>}
+=======
+                <th
+                  key={t.registrationId}
+                  className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[56px]"
+                >
+                  <span className="truncate block max-w-[56px] mx-auto">
+                    {t.teamName}
+                  </span>
+>>>>>>> Stashed changes
                 </th>
               ))}
-              <th className="px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center whitespace-nowrap">경기 승패</th>
-              <th className="px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center whitespace-nowrap">득실</th>
-              <th className="px-3 py-2.5 font-bold text-muted-foreground text-center">순위</th>
+              <th className="px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center whitespace-nowrap">
+                경기 승패
+              </th>
+              <th className="px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center whitespace-nowrap">
+                득실
+              </th>
+              <th className="px-3 py-2.5 font-bold text-muted-foreground text-center">
+                순위
+              </th>
             </tr>
           </thead>
           <tbody>
             {teams.map((row, ri) => {
               const ptsNet = row.ptsFor - row.ptsAgainst;
               return (
+<<<<<<< Updated upstream
                 <tr key={row.registrationId} className={`border-t border-line-strong ${ri % 2 === 1 ? "bg-ink-3/20" : ""}`}>
                   <td className="px-3 py-2.5 font-bold text-foreground border-r border-line-strong sticky left-0 bg-background max-w-[90px]">
                     <div className="truncate">{row.teamName}</div>
                     {row.playerNames && <div className="truncate text-[9px] font-normal text-muted-foreground">{row.playerNames}</div>}
+=======
+                <tr
+                  key={row.registrationId}
+                  className={`border-t border-line-strong ${ri % 2 === 1 ? "bg-ink-3/20" : ""}`}
+                >
+                  <td className="px-3 py-2.5 font-bold text-foreground border-r border-line-strong sticky left-0 bg-background truncate max-w-[90px]">
+                    {row.teamName}
+>>>>>>> Stashed changes
                   </td>
                   {teams.map(col => {
                     const isSelf = row.registrationId === col.registrationId;
                     if (isSelf) {
                       return (
-                        <td key={col.registrationId} className="px-2 py-2.5 border-r border-line-strong text-center bg-ink-3/40">
-                          <span className="text-muted-foreground font-bold">X</span>
+                        <td
+                          key={col.registrationId}
+                          className="px-2 py-2.5 border-r border-line-strong text-center bg-ink-3/40"
+                        >
+                          <span className="text-muted-foreground font-bold">
+                            X
+                          </span>
                         </td>
                       );
                     }
@@ -301,17 +383,31 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
                     const cell = group.pairGrid[key];
                     if (!cell) {
                       return (
-                        <td key={col.registrationId} className="px-2 py-2.5 border-r border-line-strong text-center text-muted-foreground">
+                        <td
+                          key={col.registrationId}
+                          className="px-2 py-2.5 border-r border-line-strong text-center text-muted-foreground"
+                        >
                           -
                         </td>
                       );
                     }
                     const rowWon = cell.s1 > cell.s2;
                     return (
-                      <td key={col.registrationId} className="px-2 py-2.5 border-r border-line-strong text-center font-mono">
-                        <span className={`font-bold ${rowWon ? "text-primary" : "text-muted-foreground"}`}>{cell.s1}</span>
+                      <td
+                        key={col.registrationId}
+                        className="px-2 py-2.5 border-r border-line-strong text-center font-mono"
+                      >
+                        <span
+                          className={`font-bold ${rowWon ? "text-primary" : "text-muted-foreground"}`}
+                        >
+                          {cell.s1}
+                        </span>
                         <span className="text-muted-foreground">:</span>
-                        <span className={`font-bold ${!rowWon ? "text-primary" : "text-muted-foreground"}`}>{cell.s2}</span>
+                        <span
+                          className={`font-bold ${!rowWon ? "text-primary" : "text-muted-foreground"}`}
+                        >
+                          {cell.s2}
+                        </span>
                       </td>
                     );
                   })}
@@ -319,17 +415,23 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
                     {row.wins}승 {row.losses}패
                   </td>
                   <td className="px-3 py-2.5 border-r border-line-strong text-center whitespace-nowrap">
-                    <span className={`font-bold text-xs ${ptsNet > 0 ? "text-primary" : ptsNet < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                    <span
+                      className={`font-bold text-xs ${ptsNet > 0 ? "text-primary" : ptsNet < 0 ? "text-destructive" : "text-muted-foreground"}`}
+                    >
                       {ptsNet > 0 ? `+${ptsNet}` : ptsNet === 0 ? "0" : ptsNet}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-center font-bold">
                     {row.finalRank ? (
-                      <span className={
-                        row.finalRank === 1 ? "text-yellow-500" :
-                        row.finalRank === 2 ? "text-gray-400" :
-                        "text-foreground"
-                      }>
+                      <span
+                        className={
+                          row.finalRank === 1
+                            ? "text-yellow-500"
+                            : row.finalRank === 2
+                              ? "text-gray-400"
+                              : "text-foreground"
+                        }
+                      >
                         {row.finalRank}위
                       </span>
                     ) : (
@@ -358,29 +460,54 @@ function GroupTable({ group, isSingleGroup }: { group: GroupData; isSingleGroup?
                   </span>
                   <span>{m.timeStr ?? "-"}</span>
                   {isCompleted && (
-                    <span className="ml-auto font-mono font-bold text-foreground text-sm">{m.team1Score} : {m.team2Score}</span>
+                    <span className="ml-auto font-mono font-bold text-foreground text-sm">
+                      {m.team1Score} : {m.team2Score}
+                    </span>
                   )}
                 </div>
+<<<<<<< Updated upstream
                 <div className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-bold truncate ${m.team1Result === "승" ? "text-primary" : ""}`}>{m.team1Name}</div>
                     {m.team1Players && <div className="text-xs truncate">{m.team1Players}</div>}
                   </div>
+=======
+                <div className="flex items-center gap-2 text-sm">
+                  <span
+                    className={`flex-1 truncate font-bold ${m.team1Result === "승" ? "text-primary" : ""}`}
+                  >
+                    {m.team1Name}
+                  </span>
+>>>>>>> Stashed changes
                   {m.team1Result && (
-                    <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    <span
+                      className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                    >
                       {m.team1Result}
                     </span>
                   )}
-                  <span className="text-muted-foreground shrink-0 text-xs">vs</span>
+                  <span className="text-muted-foreground shrink-0 text-xs">
+                    vs
+                  </span>
                   {m.team2Result && (
-                    <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    <span
+                      className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                    >
                       {m.team2Result}
                     </span>
                   )}
+<<<<<<< Updated upstream
                   <div className="flex-1 min-w-0 text-right">
                     <div className={`text-sm font-bold truncate ${m.team2Result === "승" ? "text-primary" : ""}`}>{m.team2Name}</div>
                     {m.team2Players && <div className="text-xs truncate">{m.team2Players}</div>}
                   </div>
+=======
+                  <span
+                    className={`flex-1 truncate font-bold text-right ${m.team2Result === "승" ? "text-primary" : ""}`}
+                  >
+                    {m.team2Name}
+                  </span>
+>>>>>>> Stashed changes
                 </div>
               </div>
             );
@@ -417,15 +544,22 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
 
   // 부전승
   if (m.isBye) {
-    const advancingLabel = m.team1Label !== "부전승" ? m.team1Label : m.team2Label;
+    const advancingLabel =
+      m.team1Label !== "부전승" ? m.team1Label : m.team2Label;
     return (
       <div className="bg-card rounded-2xl border border-dashed border-line-strong overflow-hidden">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">자동 진출</span>
-            <span className="text-sm font-bold text-foreground">{advancingLabel}</span>
+            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">
+              자동 진출
+            </span>
+            <span className="text-sm font-bold text-foreground">
+              {advancingLabel}
+            </span>
           </div>
-          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-muted text-muted-foreground">부전승</span>
+          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
+            부전승
+          </span>
         </div>
       </div>
     );
@@ -438,26 +572,43 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
           {m.courtNumber != null ? `${m.courtNumber}코트` : "-"}
           {m.courtGameNum != null ? ` ${m.courtGameNum}번게임` : ""}
         </span>
-        {m.timeStr && <span className="text-xs text-muted-foreground">{m.timeStr}</span>}
-        <span className={`ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full ${
-          isCompleted ? "bg-green-500/15 text-green-600" : "bg-muted text-muted-foreground"
-        }`}>
+        {m.timeStr && (
+          <span className="text-xs text-muted-foreground">{m.timeStr}</span>
+        )}
+        <span
+          className={`ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full ${
+            isCompleted
+              ? "bg-green-500/15 text-green-600"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
           {isCompleted ? "종료" : "예정"}
         </span>
       </div>
 
       <div className="px-4 py-4 flex items-center gap-3">
+<<<<<<< Updated upstream
         <div className="flex-1 flex flex-col items-center gap-1">
           <p className={`text-sm font-bold text-center leading-tight ${m.team1Result === "승" ? "text-primary" : "text-foreground"}`}>
+=======
+        <div className="flex-1 flex flex-col items-center gap-1.5">
+          <p
+            className={`text-sm font-bold text-center leading-tight ${m.team1Result === "승" ? "text-primary" : "text-foreground"}`}
+          >
+>>>>>>> Stashed changes
             {m.team1Label}
           </p>
           {m.team1Players && (
             <p className="text-xs text-center leading-tight text-foreground">{m.team1Players}</p>
           )}
           {m.team1Result && (
-            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-              m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
-            }`}>
+            <span
+              className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                m.team1Result === "승"
+                  ? "bg-primary/15 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
               {m.team1Result}
             </span>
           )}
@@ -466,30 +617,47 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
         <div className="shrink-0 flex items-center justify-center gap-2 min-w-[72px]">
           {isCompleted ? (
             <>
-              <span className={`text-2xl font-black ${(m.team1Score ?? 0) > (m.team2Score ?? 0) ? "text-primary" : "text-muted-foreground"}`}>
+              <span
+                className={`text-2xl font-black ${(m.team1Score ?? 0) > (m.team2Score ?? 0) ? "text-primary" : "text-muted-foreground"}`}
+              >
                 {m.team1Score}
               </span>
               <span className="text-muted-foreground">:</span>
-              <span className={`text-2xl font-black ${(m.team2Score ?? 0) > (m.team1Score ?? 0) ? "text-primary" : "text-muted-foreground"}`}>
+              <span
+                className={`text-2xl font-black ${(m.team2Score ?? 0) > (m.team1Score ?? 0) ? "text-primary" : "text-muted-foreground"}`}
+              >
                 {m.team2Score}
               </span>
             </>
           ) : (
-            <span className="text-xl font-black text-muted-foreground/30">vs</span>
+            <span className="text-xl font-black text-muted-foreground/30">
+              vs
+            </span>
           )}
         </div>
 
+<<<<<<< Updated upstream
         <div className="flex-1 flex flex-col items-center gap-1">
           <p className={`text-sm font-bold text-center leading-tight ${m.team2Result === "승" ? "text-primary" : "text-foreground"}`}>
+=======
+        <div className="flex-1 flex flex-col items-center gap-1.5">
+          <p
+            className={`text-sm font-bold text-center leading-tight ${m.team2Result === "승" ? "text-primary" : "text-foreground"}`}
+          >
+>>>>>>> Stashed changes
             {m.team2Label}
           </p>
           {m.team2Players && (
             <p className="text-xs text-center leading-tight text-foreground">{m.team2Players}</p>
           )}
           {m.team2Result && (
-            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-              m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
-            }`}>
+            <span
+              className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                m.team2Result === "승"
+                  ? "bg-primary/15 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
               {m.team2Result}
             </span>
           )}

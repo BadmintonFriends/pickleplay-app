@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import * as bdb from "./bracketDb";
 import { computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
+import { formatKstDate, formatKstTime } from "./_core/kstDate";
 import { createRequire } from "module";
 const XLSX: typeof import("xlsx") = createRequire(import.meta.url)("xlsx-js-style");
 
@@ -28,8 +29,7 @@ function buildCourtGameNumMap(
   // 날짜(YYYY-MM-DD) + 코트번호 조합을 키로 사용해 날짜별로 게임번호를 1번부터 시작
   const dateStr = (d: Date | null) => {
     if (!d) return "unknown";
-    const dt = new Date(d);
-    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    return formatKstDate(d) ?? "unknown";
   };
 
   if (hasSlotOrder) {
@@ -1738,13 +1738,12 @@ export const bracketRouter = router({
             return aNum - bNum;
           })
           .map((m) => {
-            const dt = m.scheduledAt ? new Date(m.scheduledAt) : null;
             const isCompleted = m.status === "completed" && m.team1Score !== null && m.team2Score !== null;
             return {
               id: m.id,
               courtNumber: m.courtNumber,
               courtGameNum: courtGameNumMap.get(m.id) ?? null,
-              timeStr: dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : null,
+              timeStr: formatKstTime(m.scheduledAt),
               team1Id: m.team1Id, team2Id: m.team2Id,
               team1Name: m.team1Id ? (teamNameMap.get(m.team1Id) ?? "미정") : "미정",
               team1Players: m.team1Id ? (teamPlayersMap.get(m.team1Id) ?? "") : "",
@@ -1797,7 +1796,6 @@ export const bracketRouter = router({
           .filter(m => m.tournamentEventId === e.id)
           .sort((a, b) => a.roundNumber - b.roundNumber || a.matchNumber - b.matchNumber);
         const evMatches = sorted.map(m => {
-            const dt = m.scheduledAt ? new Date(m.scheduledAt) : null;
             const isCompleted = m.status === "completed" && m.team1Score !== null && m.team2Score !== null;
             const isBye = m.isBye ?? false;
             return {
@@ -1806,7 +1804,7 @@ export const bracketRouter = router({
               isBye,
               courtNumber: m.courtNumber,
               courtGameNum: isBye ? null : (courtGameNumMap.get(m.id) ?? null),
-              timeStr: dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : null,
+              timeStr: formatKstTime(m.scheduledAt),
               team1Label: mainTeamLabel(m, 1), team2Label: mainTeamLabel(m, 2),
               team1Players: m.team1Id ? (teamPlayersMap.get(m.team1Id) ?? "") : "",
               team2Players: m.team2Id ? (teamPlayersMap.get(m.team2Id) ?? "") : "",
