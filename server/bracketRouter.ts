@@ -1820,11 +1820,11 @@ export const bracketRouter = router({
       return { dates, events: eventList, groups, mainByEvent, tournamentName: tournament.name };
     }),
 
-  // ── 심판 PIN 확인 (public) ────────────────────────────
+  // ── 심판 PIN 확인 (login required) ────────────────────────────
 
-  // ── 심판 경기 상세 조회 (public) ─────────────────────────
+  // ── 심판 경기 상세 조회 (login + PIN required) ─────────────────────────
 
-  getRefereeMatchDetail: publicProcedure
+  getRefereeMatchDetail: protectedProcedure
     .input(z.object({ matchId: z.number(), pin: z.string() }))
     .query(async ({ input }) => {
       const match = await bdb.getBracketMatchById(input.matchId);
@@ -1897,9 +1897,9 @@ export const bracketRouter = router({
       };
     }),
 
-  // ── 심판 점수 입력 (public, PIN 검증) ────────────────────
+  // ── 심판 점수 입력 (login + PIN required) ────────────────────
 
-  refereeUpdateMatchResult: publicProcedure
+  refereeUpdateMatchResult: protectedProcedure
     .input(z.object({
       matchId: z.number(),
       pin: z.string(),
@@ -2090,7 +2090,7 @@ export const bracketRouter = router({
       return { success: true };
     }),
 
-  checkRefereePin: publicProcedure
+  checkRefereePin: protectedProcedure
     .input(z.object({ tournamentId: z.number(), pin: z.string() }))
     .mutation(async ({ input }) => {
       const tournament = await db.getTournamentById(input.tournamentId);
@@ -2259,15 +2259,17 @@ export const bracketRouter = router({
       return { success: true };
     }),
 
-  // ── 심판 화면: 코트별 게임 목록 (public) ─────────────────
+  // ── 심판 화면: 코트별 게임 목록 (login + PIN required) ─────────────────
 
-  getRefereeData: publicProcedure
-    .input(z.object({ tournamentId: z.number() }))
+  getRefereeData: protectedProcedure
+    .input(z.object({ tournamentId: z.number(), pin: z.string() }))
     .query(async ({ input }) => {
       const tournament = await db.getTournamentById(input.tournamentId);
       if (!tournament) throw new TRPCError({ code: "NOT_FOUND" });
       if (tournament.status !== "in_progress")
         throw new TRPCError({ code: "FORBIDDEN", message: "대회 진행중 상태가 아닙니다" });
+      if (!tournament.refereePin || tournament.refereePin !== input.pin)
+        throw new TRPCError({ code: "FORBIDDEN", message: "PIN이 올바르지 않습니다" });
 
       const allMatches = await bdb.getBracketMatches(input.tournamentId);
       const allGroups = await bdb.getBracketGroups(input.tournamentId);

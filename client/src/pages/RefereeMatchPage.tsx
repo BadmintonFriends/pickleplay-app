@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +23,9 @@ export default function RefereeMatchPage() {
   const dateParam = new URLSearchParams(search).get("date") ?? "";
   const tournamentId = params?.id ? parseInt(params.id) : null;
   const matchId = params?.matchId ? parseInt(params.matchId) : null;
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const refereeAuthed = tournamentId ? sessionStorage.getItem(`referee_${tournamentId}`) : null;
+  const pin = tournamentId ? (sessionStorage.getItem(`referee_pin_${tournamentId}`) ?? "") : "";
 
   const [score1, setScore1] = useState<string>("");
   const [score2, setScore2] = useState<string>("");
@@ -29,16 +33,18 @@ export default function RefereeMatchPage() {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
-    if (!tournamentId) return;
-    if (!sessionStorage.getItem(`referee_${tournamentId}`))
+    if (authLoading || !tournamentId) return;
+    if (!isAuthenticated) {
+      navigate(`/login?returnTo=${encodeURIComponent(`/tournament/${tournamentId}/referee/match/${matchId}?date=${dateParam}`)}`);
+      return;
+    }
+    if (!refereeAuthed || !pin)
       navigate(`/tournament/${tournamentId}/referee/login`);
-  }, [tournamentId]);
-
-  const pin = tournamentId ? (sessionStorage.getItem(`referee_pin_${tournamentId}`) ?? "") : "";
+  }, [authLoading, dateParam, isAuthenticated, matchId, navigate, pin, refereeAuthed, tournamentId]);
 
   const { data: match, isLoading, refetch } = trpc.bracket.getRefereeMatchDetail.useQuery(
     { matchId: matchId!, pin },
-    { enabled: !!matchId && !!pin }
+    { enabled: !!matchId && isAuthenticated && !!refereeAuthed && !!pin }
   );
 
   const updateResult = trpc.bracket.refereeUpdateMatchResult.useMutation({
@@ -105,11 +111,13 @@ export default function RefereeMatchPage() {
     else navigate(`/tournament/${tournamentId}/referee`);
   };
 
-  if (isLoading) return (
+  if (authLoading || isLoading) return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-background">
       <Loader2 className="w-6 h-6 animate-spin text-primary" />
     </div>
   );
+
+  if (!isAuthenticated || !refereeAuthed || !pin) return null;
 
   if (!match) return null;
 

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Delete } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { ArrowLeft, Delete, Loader2 } from "lucide-react";
 
 const KEYPAD = [
   ["1", "2", "3"],
@@ -14,10 +15,16 @@ export default function RefereeLoginPage() {
   const [, params] = useRoute("/tournament/:id/referee/login");
   const [, navigate] = useLocation();
   const tournamentId = params?.id ? parseInt(params.id) : null;
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const [pin, setPin] = useState<string>("");
   const [shake, setShake] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
+
+  useEffect(() => {
+    if (authLoading || isAuthenticated || !tournamentId) return;
+    navigate(`/login?returnTo=${encodeURIComponent(`/tournament/${tournamentId}/referee/login`)}`);
+  }, [authLoading, isAuthenticated, navigate, tournamentId]);
 
   const checkPin = trpc.bracket.checkRefereePin.useMutation({
     onSuccess: () => {
@@ -57,6 +64,16 @@ export default function RefereeLoginPage() {
     if (tournamentId) navigate(`/tournament/${tournamentId}`);
     else navigate("/tournament");
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">

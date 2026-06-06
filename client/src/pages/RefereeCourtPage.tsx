@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 
 export default function RefereeCourtPage() {
@@ -10,23 +11,32 @@ export default function RefereeCourtPage() {
   const tournamentId = params?.id ? parseInt(params.id) : null;
   const courtNumber = params?.court ? parseInt(params.court) : null;
   const date = new URLSearchParams(search).get("date") ?? "";
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const refereeAuthed = tournamentId ? sessionStorage.getItem(`referee_${tournamentId}`) : null;
+  const pin = tournamentId ? (sessionStorage.getItem(`referee_pin_${tournamentId}`) ?? "") : "";
 
   useEffect(() => {
-    if (!tournamentId) return;
-    if (!sessionStorage.getItem(`referee_${tournamentId}`))
+    if (authLoading || !tournamentId) return;
+    if (!isAuthenticated) {
+      navigate(`/login?returnTo=${encodeURIComponent(`/tournament/${tournamentId}/referee/court/${courtNumber}?date=${date}`)}`);
+      return;
+    }
+    if (!refereeAuthed || !pin)
       navigate(`/tournament/${tournamentId}/referee/login`);
-  }, [tournamentId]);
+  }, [authLoading, courtNumber, date, isAuthenticated, navigate, pin, refereeAuthed, tournamentId]);
 
   const { data, isLoading, refetch } = trpc.bracket.getRefereeData.useQuery(
-    { tournamentId: tournamentId! },
-    { enabled: !!tournamentId }
+    { tournamentId: tournamentId!, pin },
+    { enabled: !!tournamentId && isAuthenticated && !!refereeAuthed && !!pin }
   );
 
-  if (isLoading) return (
+  if (authLoading || isLoading) return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-background">
       <Loader2 className="w-6 h-6 animate-spin text-primary" />
     </div>
   );
+
+  if (!isAuthenticated || !refereeAuthed || !pin) return null;
 
   if (!data) return null;
 
