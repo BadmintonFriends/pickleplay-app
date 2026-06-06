@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO users (openId, name, phone, role, loginMethod) VALUES \n('phone_01028613130', '민윤홍', '01028613130', 'super_admin', 'phone'),\n('phone_01051580739', '김인규', '01051580739', 'super_admin', 'phone');\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ZY2ZWM4ebkftov.590f81a18743 --database QZUsZsvEpqV3TZCzpUyULD --execute INSERT INTO users (openId, name, phone, role, loginMethod) VALUES \n('phone_01028613130', '민윤홍', '01028613130', 'super_admin', 'phone'),\n('phone_01051580739', '김인규', '01051580739', 'super_admin', 'phone');\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 7536
-}

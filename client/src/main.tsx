@@ -1,13 +1,3 @@
-// 모든 방문자를 피클플레이.com으로 리디렉션
-// 피클플레이.com (또는 punycode xn-- 변환된 도메인)에서 접속한 경우에만 리디렉션 하지 않음
-if (typeof window !== "undefined") {
-  const hostname = window.location.hostname;
-  const isPicklePlayDomain = hostname.includes("피클플레이.com") || hostname.includes("xn--2i0bx5fh0g3jf.com");
-  if (!isPicklePlayDomain) {
-    window.location.replace("https://피클플레이.com/");
-  }
-}
-
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { initMixpanel } from "./lib/mixpanel";
