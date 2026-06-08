@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import * as bdb from "./bracketDb";
 import { calculateQualifyingGroupSizes, computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
-import { formatKstDate, formatKstTime } from "./_core/kstDate";
+import { createKstDate, formatStoredDate, formatStoredTime } from "./_core/kstDate";
 import { createRequire } from "module";
 const XLSX: typeof import("xlsx") = createRequire(import.meta.url)("xlsx-js-style");
 
@@ -29,7 +29,7 @@ function buildCourtGameNumMap(
   // 날짜(YYYY-MM-DD) + 코트번호 조합을 키로 사용해 날짜별로 게임번호를 1번부터 시작
   const dateStr = (d: Date | null) => {
     if (!d) return "unknown";
-    return formatKstDate(d) ?? "unknown";
+    return formatStoredDate(d) ?? "unknown";
   };
 
   if (hasSlotOrder) {
@@ -412,7 +412,7 @@ function computeSchedule(
         results.push({
           matchId: match.matchId,
           courtNumber: freeCourts[courtIdx++],
-          scheduledAt: new Date(year, month - 1, day, Math.floor(totalMins / 60), totalMins % 60),
+          scheduledAt: createKstDate(year, month, day, Math.floor(totalMins / 60), totalMins % 60),
           slotIndex,
         });
       } else {
@@ -544,8 +544,7 @@ export async function generateBracketExcel(tournamentId: number): Promise<{ buff
   // 날짜별 그룹핑
   const dateMsMap = new Map<string, typeof scheduledMatches>();
   for (const m of scheduledMatches) {
-    const dt = new Date(m.scheduledAt!);
-    const d = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const d = formatStoredDate(m.scheduledAt!) ?? "unknown";
     if (!dateMsMap.has(d)) dateMsMap.set(d, []);
     dateMsMap.get(d)!.push(m);
   }
@@ -562,7 +561,7 @@ export async function generateBracketExcel(tournamentId: number): Promise<{ buff
       const ms = dt.getTime();
       if (!seenTimes.has(ms)) {
         seenTimes.add(ms);
-        const ts = `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+        const ts = formatStoredTime(dt) ?? "-";
         timeEntries.push([ms, ts]);
       }
     }
@@ -671,8 +670,7 @@ export async function generateBracketExcel(tournamentId: number): Promise<{ buff
     for (const grp of evGroups) {
       const grpMatches = qualMatches.filter(m => m.groupId === grp.id).sort((a, b) => a.matchNumber - b.matchNumber);
       grpMatches.forEach((m, idx) => {
-        const dt = m.scheduledAt ? new Date(m.scheduledAt) : null;
-        const timeStr = dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : "-";
+        const timeStr = formatStoredTime(m.scheduledAt) ?? "-";
         qualRows.push([`${grp.groupNumber}조`, idx + 1, matchLabel(m, 1), matchLabel(m, 2), timeStr, m.courtNumber ?? "-"]);
       });
     }
@@ -705,8 +703,7 @@ export async function generateBracketExcel(tournamentId: number): Promise<{ buff
       mainRows.push([`【${evName} 본선 - ${rName}】`]);
       mainRows.push(["경기번호", "팀1", "팀2", "시작시간", "코트"]);
       for (const m of roundMatches) {
-        const dt = m.scheduledAt ? new Date(m.scheduledAt) : null;
-        const timeStr = dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : "-";
+        const timeStr = formatStoredTime(m.scheduledAt) ?? "-";
         const matchNum = m.matchNumber === 0 ? "-" : m.matchNumber;
         mainRows.push([matchNum, matchLabel(m, 1), matchLabel(m, 2), timeStr, m.courtNumber ?? "-"]);
       }
@@ -1294,12 +1291,11 @@ export const bracketRouter = router({
       const eventMap = new Map(events.map(e => [e.id, e]));
 
       return scheduled.map(m => {
-        const dt = m.scheduledAt ? new Date(m.scheduledAt) : null;
         const ev = eventMap.get(m.tournamentEventId);
         return {
           ...m,
-          dateStr: dt ? dt.toISOString().slice(0, 10) : null,
-          timeStr: dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : null,
+          dateStr: formatStoredDate(m.scheduledAt),
+          timeStr: formatStoredTime(m.scheduledAt),
           eventName: ev ? `${ev.eventType} ${ev.skillLevel}` : `종목#${m.tournamentEventId}`,
           team1Name: m.team1Id ? (teamNameMap.get(m.team1Id) ?? `팀#${m.team1Id}`) : "미정",
           team2Name: m.team2Id ? (teamNameMap.get(m.team2Id) ?? `팀#${m.team2Id}`) : "미정",
@@ -1332,7 +1328,6 @@ export const bracketRouter = router({
         });
       }
       return matches.map((m, idx) => {
-        const dt = m.scheduledAt ? new Date(m.scheduledAt) : null;
         const isCompleted = m.status === "completed" && m.team1Score !== null && m.team2Score !== null;
         const team1Wins = isCompleted && m.team1Score! > m.team2Score!;
         const team2Wins = isCompleted && m.team2Score! > m.team1Score!;
@@ -1348,7 +1343,7 @@ export const bracketRouter = router({
           team2Players: t2 ? t2.playerNames : "",
           team1Result: team1Wins ? "승" : isCompleted ? "패" : null,
           team2Result: team2Wins ? "승" : isCompleted ? "패" : null,
-          timeStr: dt ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : null,
+          timeStr: formatStoredTime(m.scheduledAt),
         };
       });
     }),
@@ -1570,8 +1565,7 @@ export const bracketRouter = router({
               const phonesB = matchPhones.get(sameTimeIds[b]) ?? new Set();
               for (const p of phonesA) {
                 if (phonesB.has(p)) {
-                  const d = new Date(timeMs);
-                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                  const timeStr = formatStoredTime(timeMs) ?? "-";
                   throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: `동일 선수가 ${timeStr}에 두 경기에 동시 배정됩니다. 순서 변경이 불가합니다`,
@@ -1603,8 +1597,7 @@ export const bracketRouter = router({
               const ps = await db.getPlayersByRegistration(regId);
               for (const p of ps) {
                 if (p.phone && phones.has(p.phone.replace(/\D/g, ""))) {
-                  const d = new Date(targetScheduledAt);
-                  const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                  const timeStr = formatStoredTime(targetScheduledAt) ?? "-";
                   throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: `동일 선수가 ${timeStr}에 이미 다른 경기가 배정되어 있어 순서 변경이 불가합니다`,
@@ -1759,7 +1752,7 @@ export const bracketRouter = router({
               id: m.id,
               courtNumber: m.courtNumber,
               courtGameNum: courtGameNumMap.get(m.id) ?? null,
-              timeStr: formatKstTime(m.scheduledAt),
+              timeStr: formatStoredTime(m.scheduledAt),
               team1Id: m.team1Id, team2Id: m.team2Id,
               team1Name: m.team1Id ? (teamNameMap.get(m.team1Id) ?? "미정") : "미정",
               team1Players: m.team1Id ? (teamPlayersMap.get(m.team1Id) ?? "") : "",
@@ -1819,7 +1812,7 @@ export const bracketRouter = router({
               isBye,
               courtNumber: m.courtNumber,
               courtGameNum: isBye ? null : (courtGameNumMap.get(m.id) ?? null),
-              timeStr: formatKstTime(m.scheduledAt),
+              timeStr: formatStoredTime(m.scheduledAt),
               team1Label: mainTeamLabel(m, 1), team2Label: mainTeamLabel(m, 2),
               team1Players: m.team1Id ? (teamPlayersMap.get(m.team1Id) ?? "") : "",
               team2Players: m.team2Id ? (teamPlayersMap.get(m.team2Id) ?? "") : "",
@@ -1891,14 +1884,13 @@ export const bracketRouter = router({
       const deuceEnabled = evSettings?.deuceEnabled ?? false;
       const maxScore = evSettings?.deuceMaxScore ?? 25;
 
-      const dt = match.scheduledAt ? new Date(match.scheduledAt) : null;
       return {
         id: match.id,
         tournamentId: match.tournamentId,
         phase: match.phase,
         evLabel: ev ? `${ev.eventType} ${ev.skillLevel}` : "종목",
         courtNumber: match.courtNumber,
-        timeStr: dt ? `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}` : null,
+        timeStr: formatStoredTime(match.scheduledAt),
         status: match.status,
         team1Id: match.team1Id, team2Id: match.team2Id,
         team1SourceLabel: sourceLabel(1), team2SourceLabel: sourceLabel(2),
@@ -2128,9 +2120,7 @@ export const bracketRouter = router({
       await verifyBracketAccess(ctx.user!, match.tournamentId);
 
       // 경기 날짜 추출 (scheduledAt 기준)
-      const matchDateStr = match.scheduledAt
-        ? (() => { const d = new Date(match.scheduledAt); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` })()
-        : null;
+      const matchDateStr = formatStoredDate(match.scheduledAt);
 
       // 코트 번호 유효성 검증
       const allCourtSettings = await bdb.getBracketCourtSettings(match.tournamentId);
@@ -2140,9 +2130,7 @@ export const bracketRouter = router({
       }
 
       const toDateStr = (scheduledAt: Date | string | null) => {
-        if (!scheduledAt) return null;
-        const d = new Date(scheduledAt);
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        return formatStoredDate(scheduledAt);
       };
 
       const allMatches = await bdb.getBracketMatches(match.tournamentId);
@@ -2222,7 +2210,7 @@ export const bracketRouter = router({
             .sort((a, b) => a.slotOrder! - b.slotOrder!);
           for (const m of courtMatches) {
             const totalMins = startH * 60 + startM + (m.slotOrder! - 1) * estMin;
-            const newAt = new Date(yr, mo - 1, dy, Math.floor(totalMins / 60), totalMins % 60);
+            const newAt = createKstDate(yr, mo, dy, Math.floor(totalMins / 60), totalMins % 60);
             await bdb.updateBracketMatch(m.id, { scheduledAt: newAt });
           }
         }
@@ -2326,16 +2314,15 @@ export const bracketRouter = router({
       const courts = [...new Set(scheduledWithTime.map(m => m.courtNumber!))].sort((a, b) => a - b);
       const dateSet = new Set<string>();
       for (const m of scheduledWithTime) {
-        const dt = new Date(m.scheduledAt!);
-        dateSet.add(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`);
+        const date = formatStoredDate(m.scheduledAt!);
+        if (date) dateSet.add(date);
       }
       const dates = [...dateSet].sort();
 
       // 전체 경기 목록
       const matches = scheduledWithTime.map(m => {
-        const dt = new Date(m.scheduledAt!);
-        const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
-        const timeStr = `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
+        const dateStr = formatStoredDate(m.scheduledAt!);
+        const timeStr = formatStoredTime(m.scheduledAt!);
         const ev = eventMap.get(m.tournamentEventId);
         const evLabel = ev ? `${ev.eventType} ${ev.skillLevel}` : `종목#${m.tournamentEventId}`;
         const isCompleted = m.status === "completed" && m.team1Score !== null && m.team2Score !== null;
