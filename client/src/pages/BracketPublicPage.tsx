@@ -12,6 +12,7 @@ type ActualBracketSettings = {
   mainScore: number | null;
   deuceEnabled: boolean | null;
   deuceMaxScore: number | null;
+  advanceCount: number | null;
   teamCount: number | null;
   mainAdvanceTeamCount: number | null;
 };
@@ -38,6 +39,12 @@ function formatScoreLabel(settings: ActualBracketSettings) {
   const main =
     settings.mainScore != null ? `본선 ${settings.mainScore}점` : null;
   return [qualifying, main].filter(Boolean).join(" · ") || "점수 미설정";
+}
+
+function formatAdvanceRankLabel(settings: ActualBracketSettings) {
+  return settings.advanceCount != null && settings.advanceCount > 0
+    ? `본선 진출 ${settings.advanceCount}위까지`
+    : null;
 }
 
 function formatEventLabel(event: {
@@ -300,6 +307,11 @@ export default function BracketPublicPage() {
                     본선 {selectedEvent.actualSettings.mainAdvanceTeamCount}팀
                   </span>
                 )}
+              {formatAdvanceRankLabel(selectedEvent.actualSettings) && (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                  {formatAdvanceRankLabel(selectedEvent.actualSettings)}
+                </span>
+              )}
             </div>
           </div>
         )}

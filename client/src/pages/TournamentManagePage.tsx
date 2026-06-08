@@ -90,6 +90,7 @@ type ActualBracketSettingsSummary = {
   mainScore: number | null;
   deuceEnabled: boolean | null;
   deuceMaxScore: number | null;
+  advanceCount: number | null;
   teamCount: number | null;
   mainAdvanceTeamCount: number | null;
   hasUnsavedDifference: boolean;
@@ -116,6 +117,12 @@ function formatAdminDeuceLabel(summary: ActualBracketSettingsSummary) {
   return summary.deuceMaxScore != null
     ? `듀스 최대 ${summary.deuceMaxScore}점`
     : "듀스 있음";
+}
+
+function formatAdminAdvanceRankLabel(summary: ActualBracketSettingsSummary) {
+  return summary.advanceCount != null && summary.advanceCount > 0
+    ? `본선 진출 ${summary.advanceCount}위까지`
+    : null;
 }
 
 function formatAdminEventLabel(label: string, teamCount?: number | null) {
@@ -1220,6 +1227,7 @@ export default function TournamentManagePage() {
         mainScore: saved.mainScore ?? null,
         deuceEnabled: saved.deuceEnabled ?? null,
         deuceMaxScore: saved.deuceMaxScore ?? null,
+        advanceCount: saved.advanceCount ?? current?.advanceCount ?? null,
         teamCount: hasGeneratedTeams ? teamCount : null,
         mainAdvanceTeamCount: hasGeneratedTeams
           ? eventGroups.length *
@@ -2723,6 +2731,11 @@ export default function TournamentManagePage() {
                                     본선 {summary.mainAdvanceTeamCount}팀
                                   </span>
                                 )}
+                              {formatAdminAdvanceRankLabel(summary) && (
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-card text-foreground border border-line-strong">
+                                  {formatAdminAdvanceRankLabel(summary)}
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -3720,6 +3733,15 @@ export default function TournamentManagePage() {
                               {`본선 ${selectedActualBracketSettings.mainAdvanceTeamCount}팀`}
                             </span>
                           )}
+                        {formatAdminAdvanceRankLabel(
+                          selectedActualBracketSettings
+                        ) && (
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                            {formatAdminAdvanceRankLabel(
+                              selectedActualBracketSettings
+                            )}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

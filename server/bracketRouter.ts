@@ -1684,6 +1684,7 @@ export const bracketRouter = router({
           mainScore: settings?.mainScore ?? null,
           deuceEnabled: settings?.deuceEnabled ?? null,
           deuceMaxScore: settings?.deuceMaxScore ?? null,
+          advanceCount: settings?.advanceCount ?? null,
           teamCount: hasGeneratedTeams ? teamCount : null,
           mainAdvanceTeamCount: hasGeneratedTeams && settings
             ? eventGroups.length * (settings.advanceCount ?? 1)
