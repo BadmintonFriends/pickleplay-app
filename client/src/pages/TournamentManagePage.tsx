@@ -80,6 +80,50 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   cancelled: { label: "취소", color: "bg-red-100 text-red-700" },
 };
 
+type ActualBracketSettingsSummary = {
+  eventId: number;
+  label: string;
+  matchDate: string | null;
+  courtCount: number | null;
+  courtNumbers: number[];
+  qualifyingScore: number | null;
+  mainScore: number | null;
+  deuceEnabled: boolean | null;
+  deuceMaxScore: number | null;
+  teamCount: number | null;
+  mainAdvanceTeamCount: number | null;
+  hasUnsavedDifference: boolean;
+};
+
+function formatAdminCourtLabel(summary: ActualBracketSettingsSummary) {
+  if (summary.courtCount == null) return "코트 미배정";
+  if (summary.courtNumbers.length === 0) return `${summary.courtCount}코트`;
+  return `${summary.courtCount}코트 (${summary.courtNumbers.join(", ")}번)`;
+}
+
+function formatAdminScoreLabel(summary: ActualBracketSettingsSummary) {
+  const qualifying =
+    summary.qualifyingScore != null
+      ? `예선 ${summary.qualifyingScore}점`
+      : null;
+  const main = summary.mainScore != null ? `본선 ${summary.mainScore}점` : null;
+  return [qualifying, main].filter(Boolean).join(" · ") || "점수 미설정";
+}
+
+function formatAdminDeuceLabel(summary: ActualBracketSettingsSummary) {
+  if (summary.deuceEnabled == null) return "듀스 미설정";
+  if (!summary.deuceEnabled) return "듀스 없음";
+  return summary.deuceMaxScore != null
+    ? `듀스 최대 ${summary.deuceMaxScore}점`
+    : "듀스 있음";
+}
+
+function formatAdminEventLabel(label: string, teamCount?: number | null) {
+  return teamCount != null && teamCount > 0
+    ? `${label} [${teamCount}팀]`
+    : label;
+}
+
 type ManageTab =
   | "registrations"
   | "info"
@@ -327,6 +371,12 @@ export default function TournamentManagePage() {
   const [expandedSettingsId, setExpandedSettingsId] = useState<number | null>(
     null
   );
+  const [actualBracketSettingsOpen, setActualBracketSettingsOpen] =
+    useState(true);
+  const [
+    selectedActualBracketSettingsOpen,
+    setSelectedActualBracketSettingsOpen,
+  ] = useState(true);
 
   const tournamentDates = useMemo(() => {
     if (!tournament?.startDate || !tournament?.endDate) return [];
@@ -353,6 +403,11 @@ export default function TournamentManagePage() {
       { tournamentId: tournamentId! },
       { enabled: !!tournamentId && activeTab === "bracket" }
     );
+  const { data: allBracketGroups, refetch: refetchAllBracketGroups } =
+    trpc.bracket.getGroups.useQuery(
+      { tournamentId: tournamentId! },
+      { enabled: !!tournamentId && activeTab === "bracket" }
+    );
   const { data: bracketGroups, refetch: refetchGroups } =
     trpc.bracket.getGroups.useQuery(
       { tournamentId: tournamentId!, tournamentEventId: bracketEventId ?? 0 },
@@ -375,6 +430,7 @@ export default function TournamentManagePage() {
     onSuccess: () => {
       toast.success("대진이 생성되었습니다!");
       refetchBracketSettings();
+      refetchAllBracketGroups();
       refetchGroups();
       refetchSchedule();
     },
@@ -383,6 +439,7 @@ export default function TournamentManagePage() {
   const regenerateMutation = trpc.bracket.regenerate.useMutation({
     onSuccess: () => {
       toast.success("대진이 재생성되었습니다!");
+      refetchAllBracketGroups();
       refetchGroups();
       refetchSchedule();
       refetchMainBracket();
@@ -456,7 +513,10 @@ export default function TournamentManagePage() {
   const [targetPos, setTargetPos] = useState<string>("");
   const [swapTargetId, setSwapTargetId] = useState<number | null>(null);
   // 팀 조 이동
-  const [moveTeamState, setMoveTeamState] = useState<{ regId: number; fromGroupId: number } | null>(null);
+  const [moveTeamState, setMoveTeamState] = useState<{
+    regId: number;
+    fromGroupId: number;
+  } | null>(null);
   // 예선 경기 순서 변경 (로컬 순서 상태)
   const [localMatchOrder, setLocalMatchOrder] = useState<number[]>([]);
   // 조 구성 변경 여부 (경기 재생성 필요 표시)
@@ -502,15 +562,19 @@ export default function TournamentManagePage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
-  const { data: groupMatchesData, refetch: refetchGroupMatches } = trpc.bracket.getGroupMatches.useQuery(
-    { groupId: schedGroupId! },
-    { enabled: !!schedGroupId }
-  );
+  const { data: groupMatchesData, refetch: refetchGroupMatches } =
+    trpc.bracket.getGroupMatches.useQuery(
+      { groupId: schedGroupId! },
+      { enabled: !!schedGroupId }
+    );
   const moveTeamMutation = trpc.bracket.moveTeam.useMutation({
     onSuccess: () => {
-      toast.success("팀 조가 변경되었습니다. '저장 및 경기 재생성' 버튼을 눌러 경기를 재생성하세요.");
+      toast.success(
+        "팀 조가 변경되었습니다. '저장 및 경기 재생성' 버튼을 눌러 경기를 재생성하세요."
+      );
       setMoveTeamState(null);
       setHasGroupChanges(true);
+      refetchAllBracketGroups();
       refetchGroups();
     },
     onError: (err: any) => toast.error(err.message),
@@ -522,16 +586,18 @@ export default function TournamentManagePage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
-  const regenerateMatchesMutation = trpc.bracket.regenerateMatchesFromGroups.useMutation({
-    onSuccess: () => {
-      toast.success("경기가 재생성되었습니다. 코트/시간이 재배정되었습니다.");
-      setHasGroupChanges(false);
-      refetchGroups();
-      refetchGroupMatches();
-      refetchSchedule();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
+  const regenerateMatchesMutation =
+    trpc.bracket.regenerateMatchesFromGroups.useMutation({
+      onSuccess: () => {
+        toast.success("경기가 재생성되었습니다. 코트/시간이 재배정되었습니다.");
+        setHasGroupChanges(false);
+        refetchAllBracketGroups();
+        refetchGroups();
+        refetchGroupMatches();
+        refetchSchedule();
+      },
+      onError: (err: any) => toast.error(err.message),
+    });
 
   // settingsForm 초기화: bracketSettings 또는 tournament events 기반
   useEffect(() => {
@@ -1086,6 +1152,100 @@ export default function TournamentManagePage() {
     });
   }, [regData, eventFilter, statusFilter, searchQuery]);
 
+  const actualBracketSettingsSummaries = useMemo(() => {
+    const savedSettings = ((bracketSettings as any[]) ?? []).sort(
+      (a: any, b: any) => (a.eventOrder ?? 0) - (b.eventOrder ?? 0)
+    );
+    const generatedGroups = (allBracketGroups as any[]) ?? [];
+    const savedCourtSettings = (courtSettingsData as any[]) ?? [];
+    const scheduledMatches = (bracketSchedule as any[]) ?? [];
+    const tournamentEvents = (tournament?.events as any[]) ?? [];
+
+    return savedSettings.map((saved: any): ActualBracketSettingsSummary => {
+      const event = tournamentEvents.find(
+        (e: any) => e.id === saved.tournamentEventId
+      );
+      const current = settingsForm.find(
+        s => s.tournamentEventId === saved.tournamentEventId
+      );
+      const matchDate = saved.matchDate ?? current?.matchDate ?? null;
+      const courtNumbers = [
+        ...new Set(
+          scheduledMatches
+            .filter(
+              (m: any) =>
+                m.tournamentEventId === saved.tournamentEventId &&
+                m.courtNumber != null
+            )
+            .map((m: any) => Number(m.courtNumber))
+        ),
+      ].sort((a, b) => a - b);
+      const savedCourtCount =
+        savedCourtSettings.find((cs: any) => cs.matchDate === matchDate)
+          ?.courtCount ?? null;
+      const actualCourtCount =
+        courtNumbers.length > 0 ? courtNumbers.length : savedCourtCount;
+      const currentCourtCount =
+        courtForm.find(cf => cf.matchDate === matchDate)?.courtCount ?? null;
+      const eventGroups = generatedGroups.filter(
+        (g: any) => g.tournamentEventId === saved.tournamentEventId
+      );
+      const teamCount = eventGroups.reduce(
+        (sum: number, group: any) =>
+          sum + ((group.teams as any[]) ?? []).length,
+        0
+      );
+      const hasGeneratedTeams = eventGroups.length > 0 && teamCount > 0;
+
+      const scoreDiff =
+        !!current &&
+        (current.qualifyingScore !== saved.qualifyingScore ||
+          current.mainScore !== saved.mainScore ||
+          current.deuceEnabled !== saved.deuceEnabled ||
+          current.deuceMaxScore !== saved.deuceMaxScore);
+      const courtDiff =
+        currentCourtCount != null &&
+        actualCourtCount != null &&
+        Number(currentCourtCount) !== actualCourtCount;
+
+      return {
+        eventId: saved.tournamentEventId,
+        label: event
+          ? `${event.eventType} ${event.skillLevel}`
+          : `종목 ${saved.tournamentEventId}`,
+        matchDate,
+        courtCount: actualCourtCount,
+        courtNumbers,
+        qualifyingScore: saved.qualifyingScore ?? null,
+        mainScore: saved.mainScore ?? null,
+        deuceEnabled: saved.deuceEnabled ?? null,
+        deuceMaxScore: saved.deuceMaxScore ?? null,
+        teamCount: hasGeneratedTeams ? teamCount : null,
+        mainAdvanceTeamCount: hasGeneratedTeams
+          ? eventGroups.length *
+            (saved.advanceCount ?? current?.advanceCount ?? 1)
+          : null,
+        hasUnsavedDifference: scoreDiff || courtDiff,
+      };
+    });
+  }, [
+    allBracketGroups,
+    bracketSettings,
+    bracketSchedule,
+    courtForm,
+    courtSettingsData,
+    settingsForm,
+    tournament?.events,
+  ]);
+
+  const selectedActualBracketSettings = useMemo(
+    () =>
+      actualBracketSettingsSummaries.find(
+        summary => summary.eventId === bracketEventId
+      ) ?? null,
+    [actualBracketSettingsSummaries, bracketEventId]
+  );
+
   // ─── Guard States ───
   if (authLoading || tournamentLoading) {
     return (
@@ -1169,7 +1329,9 @@ export default function TournamentManagePage() {
         <div className="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center gap-4 pointer-events-auto">
           <Loader2 className="w-10 h-10 animate-spin text-white" />
           <p className="text-white font-bold text-base">경기 재생성 중...</p>
-          <p className="text-white/60 text-xs">완료될 때까지 다른 작업을 진행하지 마세요</p>
+          <p className="text-white/60 text-xs">
+            완료될 때까지 다른 작업을 진행하지 마세요
+          </p>
         </div>
       )}
       {/* Header */}
@@ -2455,7 +2617,11 @@ export default function TournamentManagePage() {
                       }}
                       disabled={
                         generateMutation.isPending ||
-                        !["closed", "bracket_published", "in_progress"].includes(tournament?.status ?? "")
+                        ![
+                          "closed",
+                          "bracket_published",
+                          "in_progress",
+                        ].includes(tournament?.status ?? "")
                       }
                       className="flex items-center gap-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-optic-deep transition-colors disabled:opacity-50"
                     >
@@ -2488,6 +2654,82 @@ export default function TournamentManagePage() {
                     </a>
                   </div>
                 </div>
+
+                {actualBracketSettingsSummaries.length > 0 && (
+                  <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => setActualBracketSettingsOpen(v => !v)}
+                      className="w-full flex items-center justify-between gap-3 text-left"
+                    >
+                      <div>
+                        <h3 className="text-xs font-bold text-foreground">
+                          실제 대진 적용값
+                        </h3>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          생성된 대진 기준
+                        </p>
+                      </div>
+                      {actualBracketSettingsOpen ? (
+                        <ChevronUp className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      )}
+                    </button>
+                    {actualBracketSettingsOpen && (
+                      <div className="space-y-2">
+                        {actualBracketSettingsSummaries.map(summary => (
+                          <div
+                            key={summary.eventId}
+                            className="rounded-lg border border-line-strong bg-ink-3 px-3 py-2 space-y-1.5"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-foreground">
+                                {formatAdminEventLabel(
+                                  summary.label,
+                                  summary.teamCount
+                                )}
+                              </span>
+                              {summary.matchDate && (
+                                <span className="text-[9px] text-muted-foreground">
+                                  {summary.matchDate}
+                                </span>
+                              )}
+                              {summary.hasUnsavedDifference && (
+                                <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                                  현재 입력값과 다름
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-card text-foreground border border-line-strong">
+                                {formatAdminCourtLabel(summary)}
+                              </span>
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-card text-foreground border border-line-strong">
+                                {formatAdminScoreLabel(summary)}
+                              </span>
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-card text-foreground border border-line-strong">
+                                {formatAdminDeuceLabel(summary)}
+                              </span>
+                              {summary.teamCount != null &&
+                                summary.teamCount > 0 && (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-card text-foreground border border-line-strong">
+                                    {summary.teamCount}팀
+                                  </span>
+                                )}
+                              {summary.mainAdvanceTeamCount != null &&
+                                summary.mainAdvanceTeamCount > 0 && (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-card text-foreground border border-line-strong">
+                                    본선 {summary.mainAdvanceTeamCount}팀
+                                  </span>
+                                )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* 코트 설정 */}
                 <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
@@ -3030,6 +3272,10 @@ export default function TournamentManagePage() {
                         const event = (tournament?.events as any[])?.find(
                           (e: any) => e.id === s.tournamentEventId
                         );
+                        const actualSummary =
+                          actualBracketSettingsSummaries.find(
+                            summary => summary.eventId === s.tournamentEventId
+                          );
                         const isExpanded =
                           expandedSettingsId === s.tournamentEventId;
                         return (
@@ -3113,9 +3359,12 @@ export default function TournamentManagePage() {
                                   )
                                 }
                               >
-                                {event
-                                  ? `${event.eventType} ${event.skillLevel}`
-                                  : `이벤트 ${s.tournamentEventId}`}
+                                {formatAdminEventLabel(
+                                  event
+                                    ? `${event.eventType} ${event.skillLevel}`
+                                    : `이벤트 ${s.tournamentEventId}`,
+                                  actualSummary?.teamCount
+                                )}
                               </button>
                               <span className="text-[9px] text-muted-foreground shrink-0">
                                 #{localIdx + 1}
@@ -3322,12 +3571,16 @@ export default function TournamentManagePage() {
                         <button
                           disabled={regenerateMatchesMutation.isPending}
                           onClick={() =>
-                            regenerateMatchesMutation.mutate({ tournamentId: tournamentId! })
+                            regenerateMatchesMutation.mutate({
+                              tournamentId: tournamentId!,
+                            })
                           }
                           className="text-[9px] px-2.5 py-1 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600 disabled:opacity-50 flex items-center gap-1 shrink-0"
                         >
                           <RefreshCw className="w-2.5 h-2.5" />
-                          {regenerateMatchesMutation.isPending ? "재생성 중..." : "저장 및 경기 재생성"}
+                          {regenerateMatchesMutation.isPending
+                            ? "재생성 중..."
+                            : "저장 및 경기 재생성"}
                         </button>
                       )}
                     </div>
@@ -3372,28 +3625,105 @@ export default function TournamentManagePage() {
                             </p>
                           ) : (
                             <div className="flex flex-wrap gap-2">
-                              {dateEvents.map((e: any) => (
-                                <button
-                                  key={e.id}
-                                  onClick={() => {
-                                    setBracketEventId(e.id);
-                                    setSchedGroupId(null);
-                                  }}
-                                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
-                                    bracketEventId === e.id
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
-                                  }`}
-                                >
-                                  {e.eventType} {e.skillLevel}
-                                </button>
-                              ))}
+                              {dateEvents.map((e: any) =>
+                                (() => {
+                                  const actualSummary =
+                                    actualBracketSettingsSummaries.find(
+                                      summary => summary.eventId === e.id
+                                    );
+                                  return (
+                                    <button
+                                      key={e.id}
+                                      onClick={() => {
+                                        setBracketEventId(e.id);
+                                        setSchedGroupId(null);
+                                      }}
+                                      className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                                        bracketEventId === e.id
+                                          ? "bg-primary text-primary-foreground border-primary"
+                                          : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
+                                      }`}
+                                    >
+                                      {formatAdminEventLabel(
+                                        `${e.eventType} ${e.skillLevel}`,
+                                        actualSummary?.teamCount
+                                      )}
+                                    </button>
+                                  );
+                                })()
+                              )}
                             </div>
                           )}
                         </div>
                       );
                     })()}
                 </div>
+
+                {selectedActualBracketSettings && (
+                  <div className="bg-card rounded-xl p-4 border border-line-strong space-y-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedActualBracketSettingsOpen(v => !v)
+                      }
+                      className="w-full flex items-center justify-between gap-3 text-left"
+                    >
+                      <div className="min-w-0">
+                        <h3 className="text-xs font-bold text-foreground">
+                          실제 대진 적용값
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                          {formatAdminEventLabel(
+                            selectedActualBracketSettings.label,
+                            selectedActualBracketSettings.teamCount
+                          )}
+                          {selectedActualBracketSettings.matchDate
+                            ? ` · ${selectedActualBracketSettings.matchDate}`
+                            : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {selectedActualBracketSettings.hasUnsavedDifference && (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                            현재 입력값과 다름
+                          </span>
+                        )}
+                        {selectedActualBracketSettingsOpen ? (
+                          <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </button>
+                    {selectedActualBracketSettingsOpen && (
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                          {formatAdminCourtLabel(selectedActualBracketSettings)}
+                        </span>
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                          {formatAdminScoreLabel(selectedActualBracketSettings)}
+                        </span>
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                          {formatAdminDeuceLabel(selectedActualBracketSettings)}
+                        </span>
+                        {selectedActualBracketSettings.teamCount != null &&
+                          selectedActualBracketSettings.teamCount > 0 && (
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                              {selectedActualBracketSettings.teamCount}팀
+                            </span>
+                          )}
+                        {selectedActualBracketSettings.mainAdvanceTeamCount !=
+                          null &&
+                          selectedActualBracketSettings.mainAdvanceTeamCount >
+                            0 && (
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                              {`본선 ${selectedActualBracketSettings.mainAdvanceTeamCount}팀`}
+                            </span>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* 조편성 + 예선 경기 */}
                 {bracketEventId && (
@@ -3438,7 +3768,8 @@ export default function TournamentManagePage() {
                                     <div key={i} className="text-[10px]">
                                       <div className="flex justify-between items-center">
                                         <span className="text-foreground">
-                                          {t.teamName ?? `팀 ${t.registrationId}`}
+                                          {t.teamName ??
+                                            `팀 ${t.registrationId}`}
                                         </span>
                                         <div className="flex items-center gap-1.5">
                                           <span className="text-muted-foreground">
@@ -3447,13 +3778,18 @@ export default function TournamentManagePage() {
                                           <button
                                             onClick={() =>
                                               setMoveTeamState(
-                                                moveTeamState?.regId === t.registrationId
+                                                moveTeamState?.regId ===
+                                                  t.registrationId
                                                   ? null
-                                                  : { regId: t.registrationId, fromGroupId: group.id }
+                                                  : {
+                                                      regId: t.registrationId,
+                                                      fromGroupId: group.id,
+                                                    }
                                               )
                                             }
                                             className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
-                                              moveTeamState?.regId === t.registrationId
+                                              moveTeamState?.regId ===
+                                              t.registrationId
                                                 ? "bg-primary/10 border-primary text-primary"
                                                 : "border-line-strong text-muted-foreground hover:text-primary"
                                             }`}
@@ -3463,17 +3799,23 @@ export default function TournamentManagePage() {
                                         </div>
                                       </div>
                                       {/* 조 선택 UI */}
-                                      {moveTeamState?.regId === t.registrationId && (
+                                      {moveTeamState?.regId ===
+                                        t.registrationId && (
                                         <div className="mt-1 flex flex-wrap gap-1 pl-1">
                                           {((bracketGroups as any[]) ?? [])
-                                            .filter((g: any) => g.id !== group.id)
+                                            .filter(
+                                              (g: any) => g.id !== group.id
+                                            )
                                             .map((g: any) => (
                                               <button
                                                 key={g.id}
-                                                disabled={moveTeamMutation.isPending}
+                                                disabled={
+                                                  moveTeamMutation.isPending
+                                                }
                                                 onClick={() =>
                                                   moveTeamMutation.mutate({
-                                                    registrationId: t.registrationId,
+                                                    registrationId:
+                                                      t.registrationId,
                                                     fromGroupId: group.id,
                                                     toGroupId: g.id,
                                                   })
@@ -3501,7 +3843,13 @@ export default function TournamentManagePage() {
                                       {/* 순서 저장 버튼 */}
                                       <div className="flex justify-end mb-1.5">
                                         <button
-                                          disabled={reorderMatchesMutation.isPending || matches.some((m: any) => m.status === "completed")}
+                                          disabled={
+                                            reorderMatchesMutation.isPending ||
+                                            matches.some(
+                                              (m: any) =>
+                                                m.status === "completed"
+                                            )
+                                          }
                                           onClick={() =>
                                             reorderMatchesMutation.mutate({
                                               groupId: schedGroupId!,
@@ -3509,9 +3857,18 @@ export default function TournamentManagePage() {
                                             })
                                           }
                                           className="text-[9px] px-2 py-1 rounded bg-primary text-primary-foreground font-bold disabled:opacity-40"
-                                          title={matches.some((m: any) => m.status === "completed") ? "완료된 경기가 있어 순서 변경 불가" : ""}
+                                          title={
+                                            matches.some(
+                                              (m: any) =>
+                                                m.status === "completed"
+                                            )
+                                              ? "완료된 경기가 있어 순서 변경 불가"
+                                              : ""
+                                          }
                                         >
-                                          {reorderMatchesMutation.isPending ? "저장 중..." : "순서 저장"}
+                                          {reorderMatchesMutation.isPending
+                                            ? "저장 중..."
+                                            : "순서 저장"}
                                         </button>
                                       </div>
                                       <Reorder.Group
@@ -3520,69 +3877,84 @@ export default function TournamentManagePage() {
                                         onReorder={setLocalMatchOrder}
                                         className="space-y-1.5"
                                       >
-                                        {localMatchOrder.map((matchId: number) => {
-                                          const m = (matches as any[]).find((x: any) => x.id === matchId);
-                                          if (!m) return null;
-                                          return (
-                                            <Reorder.Item
-                                              key={matchId}
-                                              value={matchId}
-                                              className={`bg-ink-3 rounded-lg px-2.5 py-2 space-y-1 ${m.status !== "completed" ? "cursor-grab active:cursor-grabbing" : ""}`}
-                                              drag={m.status !== "completed"}
-                                            >
-                                              {/* 경기 메타 */}
-                                              <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
-                                                {m.status !== "completed" && (
-                                                  <GripVertical className="w-3 h-3 shrink-0 text-muted-foreground/40" />
-                                                )}
-                                                <span className="font-bold">
-                                                  {m.courtNumber != null
-                                                    ? `${m.courtNumber}코트`
-                                                    : "-"}{" "}
-                                                  {m.matchNum}번게임
-                                                </span>
-                                                <span>{m.timeStr ?? "-"}</span>
-                                                {m.status === "completed" && (
-                                                  <span className="font-mono font-bold text-foreground">
-                                                    {m.team1Score} : {m.team2Score}
+                                        {localMatchOrder.map(
+                                          (matchId: number) => {
+                                            const m = (matches as any[]).find(
+                                              (x: any) => x.id === matchId
+                                            );
+                                            if (!m) return null;
+                                            return (
+                                              <Reorder.Item
+                                                key={matchId}
+                                                value={matchId}
+                                                className={`bg-ink-3 rounded-lg px-2.5 py-2 space-y-1 ${m.status !== "completed" ? "cursor-grab active:cursor-grabbing" : ""}`}
+                                                drag={m.status !== "completed"}
+                                              >
+                                                {/* 경기 메타 */}
+                                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+                                                  {m.status !== "completed" && (
+                                                    <GripVertical className="w-3 h-3 shrink-0 text-muted-foreground/40" />
+                                                  )}
+                                                  <span className="font-bold">
+                                                    {m.courtNumber != null
+                                                      ? `${m.courtNumber}코트`
+                                                      : "-"}{" "}
+                                                    {m.matchNum}번게임
                                                   </span>
-                                                )}
-                                              </div>
-                                              {/* 팀 */}
-                                              <div className="flex items-center gap-1.5 text-[10px]">
-                                                <div className="flex-1 min-w-0">
-                                                  <div className="font-bold truncate">{m.team1Name}</div>
-                                                  {m.team1Players && (
-                                                    <div className="text-[9px] truncate">{m.team1Players}</div>
+                                                  <span>
+                                                    {m.timeStr ?? "-"}
+                                                  </span>
+                                                  {m.status === "completed" && (
+                                                    <span className="font-mono font-bold text-foreground">
+                                                      {m.team1Score} :{" "}
+                                                      {m.team2Score}
+                                                    </span>
                                                   )}
                                                 </div>
-                                                {m.team1Result && (
-                                                  <span
-                                                    className={`text-[9px] font-bold px-1 rounded shrink-0 ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
-                                                  >
-                                                    {m.team1Result}
-                                                  </span>
-                                                )}
-                                                <span className="text-muted-foreground shrink-0">
-                                                  vs
-                                                </span>
-                                                {m.team2Result && (
-                                                  <span
-                                                    className={`text-[9px] font-bold px-1 rounded shrink-0 ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
-                                                  >
-                                                    {m.team2Result}
-                                                  </span>
-                                                )}
-                                                <div className="flex-1 min-w-0 text-right">
-                                                  <div className="font-bold truncate">{m.team2Name}</div>
-                                                  {m.team2Players && (
-                                                    <div className="text-[9px] truncate">{m.team2Players}</div>
+                                                {/* 팀 */}
+                                                <div className="flex items-center gap-1.5 text-[10px]">
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="font-bold truncate">
+                                                      {m.team1Name}
+                                                    </div>
+                                                    {m.team1Players && (
+                                                      <div className="text-[9px] truncate">
+                                                        {m.team1Players}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  {m.team1Result && (
+                                                    <span
+                                                      className={`text-[9px] font-bold px-1 rounded shrink-0 ${m.team1Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                                                    >
+                                                      {m.team1Result}
+                                                    </span>
                                                   )}
+                                                  <span className="text-muted-foreground shrink-0">
+                                                    vs
+                                                  </span>
+                                                  {m.team2Result && (
+                                                    <span
+                                                      className={`text-[9px] font-bold px-1 rounded shrink-0 ${m.team2Result === "승" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
+                                                    >
+                                                      {m.team2Result}
+                                                    </span>
+                                                  )}
+                                                  <div className="flex-1 min-w-0 text-right">
+                                                    <div className="font-bold truncate">
+                                                      {m.team2Name}
+                                                    </div>
+                                                    {m.team2Players && (
+                                                      <div className="text-[9px] truncate">
+                                                        {m.team2Players}
+                                                      </div>
+                                                    )}
+                                                  </div>
                                                 </div>
-                                              </div>
-                                            </Reorder.Item>
-                                          );
-                                        })}
+                                              </Reorder.Item>
+                                            );
+                                          }
+                                        )}
                                       </Reorder.Group>
                                     </div>
                                   )}
@@ -3972,7 +4344,10 @@ export default function TournamentManagePage() {
                               }}
                               className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors ${onsiteEventId === e.id ? "bg-primary text-primary-foreground border-primary" : "bg-card border-line-strong text-foreground hover:border-primary"}`}
                             >
-                              {e.label}
+                              {formatAdminEventLabel(
+                                e.label,
+                                e.actualSettings?.teamCount
+                              )}
                             </button>
                           ))}
                         </div>
@@ -4795,14 +5170,16 @@ export default function TournamentManagePage() {
       </Dialog>
 
       {/* 대진 재생성 확인 다이얼로그 */}
-      <Dialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
+      <Dialog
+        open={showRegenerateConfirm}
+        onOpenChange={setShowRegenerateConfirm}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-sm">대진 재생성</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
-            기존 대진 데이터가 모두 삭제되고 다시 생성됩니다.
-            계속하시겠습니까?
+            기존 대진 데이터가 모두 삭제되고 다시 생성됩니다. 계속하시겠습니까?
           </p>
           <div className="flex gap-2 justify-end pt-2">
             <button
@@ -4830,7 +5207,9 @@ export default function TournamentManagePage() {
           <DialogHeader>
             <DialogTitle className="text-sm">대진 생성 불가</DialogTitle>
           </DialogHeader>
-          <p className="text-xs text-muted-foreground">대회 진행중에는 대진을 생성할 수 없습니다.</p>
+          <p className="text-xs text-muted-foreground">
+            대회 진행중에는 대진을 생성할 수 없습니다.
+          </p>
           <div className="flex justify-end pt-2">
             <button
               onClick={() => setShowInProgressAlert(false)}

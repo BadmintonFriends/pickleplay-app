@@ -1664,11 +1664,39 @@ export const bracketRouter = router({
       // 코트별 경기 순번 계산 (slotOrder 우선, 없으면 scheduledAt)
       const courtGameNumMap = buildCourtGameNumMap(allMatches);
 
+      const settingsMap = new Map(allSettings.map(s => [s.tournamentEventId, s]));
+
+      function actualSettingsForEvent(eventId: number) {
+        const settings = settingsMap.get(eventId);
+        const eventGroups = allGroups.filter(g => g.tournamentEventId === eventId);
+        const eventGroupIds = new Set(eventGroups.map(g => g.id));
+        const teamCount = allGroupTeams.filter(t => eventGroupIds.has(t.groupId)).length;
+        const courtNumbers = [...new Set(allMatches
+          .filter(m => m.tournamentEventId === eventId && !m.isBye && m.courtNumber != null)
+          .map(m => m.courtNumber!))].sort((a, b) => a - b);
+        const hasGeneratedTeams = eventGroups.length > 0 && teamCount > 0;
+
+        return {
+          matchDate: settings?.matchDate ?? null,
+          courtCount: courtNumbers.length > 0 ? courtNumbers.length : null,
+          courtNumbers,
+          qualifyingScore: settings?.qualifyingScore ?? null,
+          mainScore: settings?.mainScore ?? null,
+          deuceEnabled: settings?.deuceEnabled ?? null,
+          deuceMaxScore: settings?.deuceMaxScore ?? null,
+          teamCount: hasGeneratedTeams ? teamCount : null,
+          mainAdvanceTeamCount: hasGeneratedTeams && settings
+            ? eventGroups.length * (settings.advanceCount ?? 1)
+            : null,
+        };
+      }
+
       // 종목 정보
       const eventList = events.map(e => ({
         id: e.id,
         label: `${e.eventType} ${e.skillLevel}`,
-        matchDate: allSettings.find(s => s.tournamentEventId === e.id)?.matchDate ?? null,
+        matchDate: settingsMap.get(e.id)?.matchDate ?? null,
+        actualSettings: actualSettingsForEvent(e.id),
       }));
 
       // 조별 데이터 (예선 조별리그 표 포함)
@@ -1748,7 +1776,6 @@ export const bracketRouter = router({
 
       // 본선 데이터 (이벤트별)
       const mainMatches = allMatches.filter(m => m.phase === "main");
-      const settingsMap = new Map(allSettings.map(s => [s.tournamentEventId, s]));
       const groupsMap = new Map(allGroups.map(g => [g.id, g]));
 
       function mainTeamLabel(m: typeof mainMatches[0], pos: 1 | 2): string {

@@ -4,6 +4,52 @@ import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
+type ActualBracketSettings = {
+  matchDate: string | null;
+  courtCount: number | null;
+  courtNumbers: number[];
+  qualifyingScore: number | null;
+  mainScore: number | null;
+  deuceEnabled: boolean | null;
+  deuceMaxScore: number | null;
+  teamCount: number | null;
+  mainAdvanceTeamCount: number | null;
+};
+
+function formatCourtLabel(settings: ActualBracketSettings) {
+  if (settings.courtCount == null) return "코트 미배정";
+  if (settings.courtNumbers.length === 0) return `${settings.courtCount}코트`;
+  return `${settings.courtCount}코트 (${settings.courtNumbers.join(", ")}번)`;
+}
+
+function formatDeuceLabel(settings: ActualBracketSettings) {
+  if (settings.deuceEnabled == null) return "듀스 미설정";
+  if (!settings.deuceEnabled) return "듀스 없음";
+  return settings.deuceMaxScore != null
+    ? `듀스 최대 ${settings.deuceMaxScore}점`
+    : "듀스 있음";
+}
+
+function formatScoreLabel(settings: ActualBracketSettings) {
+  const qualifying =
+    settings.qualifyingScore != null
+      ? `예선 ${settings.qualifyingScore}점`
+      : null;
+  const main =
+    settings.mainScore != null ? `본선 ${settings.mainScore}점` : null;
+  return [qualifying, main].filter(Boolean).join(" · ") || "점수 미설정";
+}
+
+function formatEventLabel(event: {
+  label: string;
+  actualSettings?: ActualBracketSettings | null;
+}) {
+  const teamCount = event.actualSettings?.teamCount;
+  return teamCount != null && teamCount > 0
+    ? `${event.label} [${teamCount}팀]`
+    : event.label;
+}
+
 export default function BracketPublicPage() {
   const [, params] = useRoute("/tournaments/:id/bracket");
   const [, navigate] = useLocation();
@@ -65,6 +111,7 @@ export default function BracketPublicPage() {
   const { dates, events, groups, mainByEvent, tournamentName } = data;
 
   const dateEvents = events.filter(e => e.matchDate === selectedDate);
+  const selectedEvent = events.find(e => e.id === selectedEventId) ?? null;
   const eventGroups = groups
     .filter(g => g.tournamentEventId === selectedEventId)
     .sort((a, b) => a.groupNumber - b.groupNumber);
@@ -76,11 +123,12 @@ export default function BracketPublicPage() {
       ? (eventGroups.find(g => g.id === selectedView) ?? null)
       : null;
 
+  type MainEventMatches = (typeof mainByEvent)[number]["matches"];
+
   // 라운드별로 묶기
-  const mainRounds: { roundName: string; matches: typeof eventMain.matches }[] =
-    [];
+  const mainRounds: { roundName: string; matches: MainEventMatches }[] = [];
   if (eventMain && selectedView === "main") {
-    const seen = new Map<string, typeof eventMain.matches>();
+    const seen = new Map<string, MainEventMatches>();
     for (const m of eventMain.matches) {
       if (!seen.has(m.roundName)) seen.set(m.roundName, []);
       seen.get(m.roundName)!.push(m);
@@ -168,7 +216,7 @@ export default function BracketPublicPage() {
                         : "bg-card border-line-strong text-foreground hover:border-primary"
                     }`}
                   >
-                    {e.label}
+                    {formatEventLabel(e)}
                   </button>
                 ))}
               </div>
@@ -213,6 +261,46 @@ export default function BracketPublicPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {selectedEvent?.actualSettings && (
+          <div className="bg-card rounded-2xl border border-line-strong px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-bold text-muted-foreground">
+                경기 방식
+              </p>
+              {selectedEvent.actualSettings.matchDate && (
+                <span className="text-[10px] font-bold text-muted-foreground">
+                  {selectedEvent.actualSettings.matchDate
+                    .slice(5)
+                    .replace("-", "/")}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                {formatCourtLabel(selectedEvent.actualSettings)}
+              </span>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                {formatScoreLabel(selectedEvent.actualSettings)}
+              </span>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                {formatDeuceLabel(selectedEvent.actualSettings)}
+              </span>
+              {selectedEvent.actualSettings.teamCount != null &&
+                selectedEvent.actualSettings.teamCount > 0 && (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                    {selectedEvent.actualSettings.teamCount}팀
+                  </span>
+                )}
+              {selectedEvent.actualSettings.mainAdvanceTeamCount != null &&
+                selectedEvent.actualSettings.mainAdvanceTeamCount > 0 && (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-ink-3 text-foreground">
+                    본선 {selectedEvent.actualSettings.mainAdvanceTeamCount}팀
+                  </span>
+                )}
+            </div>
           </div>
         )}
 
@@ -321,9 +409,18 @@ function GroupTable({
                 팀
               </th>
               {teams.map(t => (
-                <th key={t.registrationId} className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[64px]">
-                  <span className="truncate block max-w-[64px] mx-auto">{t.teamName}</span>
-                  {t.playerNames && <span className="truncate block max-w-[64px] mx-auto text-[9px] font-normal">{t.playerNames}</span>}
+                <th
+                  key={t.registrationId}
+                  className="px-2 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center min-w-[64px]"
+                >
+                  <span className="truncate block max-w-[64px] mx-auto">
+                    {t.teamName}
+                  </span>
+                  {t.playerNames && (
+                    <span className="truncate block max-w-[64px] mx-auto text-[9px] font-normal">
+                      {t.playerNames}
+                    </span>
+                  )}
                 </th>
               ))}
               <th className="px-3 py-2.5 font-bold text-muted-foreground border-r border-line-strong text-center whitespace-nowrap">
@@ -341,10 +438,17 @@ function GroupTable({
             {teams.map((row, ri) => {
               const ptsNet = row.ptsFor - row.ptsAgainst;
               return (
-                <tr key={row.registrationId} className={`border-t border-line-strong ${ri % 2 === 1 ? "bg-ink-3/20" : ""}`}>
+                <tr
+                  key={row.registrationId}
+                  className={`border-t border-line-strong ${ri % 2 === 1 ? "bg-ink-3/20" : ""}`}
+                >
                   <td className="px-3 py-2.5 font-bold text-foreground border-r border-line-strong sticky left-0 bg-background max-w-[90px]">
                     <div className="truncate">{row.teamName}</div>
-                    {row.playerNames && <div className="truncate text-[9px] font-normal text-muted-foreground">{row.playerNames}</div>}
+                    {row.playerNames && (
+                      <div className="truncate text-[9px] font-normal text-muted-foreground">
+                        {row.playerNames}
+                      </div>
+                    )}
                   </td>
                   {teams.map(col => {
                     const isSelf = row.registrationId === col.registrationId;
@@ -448,8 +552,14 @@ function GroupTable({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-bold truncate ${m.team1Result === "승" ? "text-primary" : ""}`}>{m.team1Name}</div>
-                    {m.team1Players && <div className="text-xs truncate">{m.team1Players}</div>}
+                    <div
+                      className={`text-sm font-bold truncate ${m.team1Result === "승" ? "text-primary" : ""}`}
+                    >
+                      {m.team1Name}
+                    </div>
+                    {m.team1Players && (
+                      <div className="text-xs truncate">{m.team1Players}</div>
+                    )}
                   </div>
                   {m.team1Result && (
                     <span
@@ -469,8 +579,14 @@ function GroupTable({
                     </span>
                   )}
                   <div className="flex-1 min-w-0 text-right">
-                    <div className={`text-sm font-bold truncate ${m.team2Result === "승" ? "text-primary" : ""}`}>{m.team2Name}</div>
-                    {m.team2Players && <div className="text-xs truncate">{m.team2Players}</div>}
+                    <div
+                      className={`text-sm font-bold truncate ${m.team2Result === "승" ? "text-primary" : ""}`}
+                    >
+                      {m.team2Name}
+                    </div>
+                    {m.team2Players && (
+                      <div className="text-xs truncate">{m.team2Players}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -552,11 +668,15 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
 
       <div className="px-4 py-4 flex items-center gap-3">
         <div className="flex-1 flex flex-col items-center gap-1">
-          <p className={`text-sm font-bold text-center leading-tight ${m.team1Result === "승" ? "text-primary" : "text-foreground"}`}>
+          <p
+            className={`text-sm font-bold text-center leading-tight ${m.team1Result === "승" ? "text-primary" : "text-foreground"}`}
+          >
             {m.team1Label}
           </p>
           {m.team1Players && (
-            <p className="text-xs text-center leading-tight text-foreground">{m.team1Players}</p>
+            <p className="text-xs text-center leading-tight text-foreground">
+              {m.team1Players}
+            </p>
           )}
           {m.team1Result && (
             <span
@@ -594,11 +714,15 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
         </div>
 
         <div className="flex-1 flex flex-col items-center gap-1">
-          <p className={`text-sm font-bold text-center leading-tight ${m.team2Result === "승" ? "text-primary" : "text-foreground"}`}>
+          <p
+            className={`text-sm font-bold text-center leading-tight ${m.team2Result === "승" ? "text-primary" : "text-foreground"}`}
+          >
             {m.team2Label}
           </p>
           {m.team2Players && (
-            <p className="text-xs text-center leading-tight text-foreground">{m.team2Players}</p>
+            <p className="text-xs text-center leading-tight text-foreground">
+              {m.team2Players}
+            </p>
           )}
           {m.team2Result && (
             <span
