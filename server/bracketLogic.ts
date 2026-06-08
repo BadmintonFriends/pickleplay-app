@@ -50,6 +50,22 @@ export interface MatchUpdatePlan {
   patch: MatchPatch;
 }
 
+export function calculateQualifyingGroupSizes(teamCount: number): { numGroups: number; groupSizes: number[] } {
+  if (teamCount <= 0) return { numGroups: 0, groupSizes: [] };
+  if (teamCount <= 5) return { numGroups: 1, groupSizes: [teamCount] };
+
+  const numGroups = Math.ceil(teamCount / 4);
+  const groupSizes = Array(numGroups).fill(3) as number[];
+  let remaining = teamCount - numGroups * 3;
+
+  for (let i = 0; i < numGroups && remaining > 0; i++) {
+    groupSizes[i]++;
+    remaining--;
+  }
+
+  return { numGroups, groupSizes };
+}
+
 export function isGroupComplete(
   matches: Pick<StandingMatch, "status">[]
 ): boolean {

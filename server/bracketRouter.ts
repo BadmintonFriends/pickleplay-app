@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import * as bdb from "./bracketDb";
-import { computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
+import { calculateQualifyingGroupSizes, computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
 import { formatKstDate, formatKstTime } from "./_core/kstDate";
 import { createRequire } from "module";
 const XLSX: typeof import("xlsx") = createRequire(import.meta.url)("xlsx-js-style");
@@ -80,19 +80,6 @@ function nextPowerOf2(n: number): number {
   let p = 1;
   while (p < n) p *= 2;
   return p;
-}
-
-/** 조 크기 계산: 기본 3팀, 나머지 팀은 1조→2조 순으로 배정 */
-function calculateGroupSizes(teamCount: number): { numGroups: number; groupSizes: number[] } {
-  if (teamCount <= 0) return { numGroups: 0, groupSizes: [] };
-  if (teamCount <= 3) return { numGroups: 1, groupSizes: [teamCount] };
-  if (teamCount === 4) return { numGroups: 1, groupSizes: [4] };
-  if (teamCount === 5) return { numGroups: 2, groupSizes: [3, 2] };
-  const numGroups = Math.floor(teamCount / 3);
-  const remainder = teamCount % 3;
-  const groupSizes = Array(numGroups).fill(3) as number[];
-  for (let i = 0; i < remainder; i++) groupSizes[i] = 4;
-  return { numGroups, groupSizes };
 }
 
 /** 조별 경기 페어 생성 (라운드 로빈) */
@@ -870,7 +857,7 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
       teamPlayerMap.set(reg.id, ps.map(p => ({ phone: p.phone.replace(/\D/g, ""), birthDate: p.birthDate, affiliation: p.affiliation })));
     }
 
-    const { numGroups, groupSizes } = calculateGroupSizes(eligible.length);
+    const { numGroups, groupSizes } = calculateQualifyingGroupSizes(eligible.length);
     const teamsForAssign = eligible.map(r => ({
       registrationId: r.id,
       affiliations: [...new Set((teamPlayerMap.get(r.id) ?? []).map(p => p.affiliation).filter(Boolean))],

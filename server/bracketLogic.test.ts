@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateQualifyingGroupSizes,
   computeStandings,
   isEffectivelyCompleted,
   isGroupComplete,
@@ -21,6 +22,35 @@ const baseMainMatch = (
   nextMatchId: null,
   nextMatchPosition: null,
   ...overrides,
+});
+
+describe("qualifying group size logic", () => {
+  it("상황: 4팀을 우선하되 2팀 조가 생기면 만들지 않는다", () => {
+    expect(calculateQualifyingGroupSizes(4)).toEqual({
+      numGroups: 1,
+      groupSizes: [4],
+    });
+    expect(calculateQualifyingGroupSizes(5)).toEqual({
+      numGroups: 1,
+      groupSizes: [5],
+    });
+    expect(calculateQualifyingGroupSizes(6)).toEqual({
+      numGroups: 2,
+      groupSizes: [3, 3],
+    });
+    expect(calculateQualifyingGroupSizes(7)).toEqual({
+      numGroups: 2,
+      groupSizes: [4, 3],
+    });
+  });
+
+  it("상황: 8팀 이상은 3팀 또는 4팀 조만 사용해서 최대한 4팀 조로 묶는다", () => {
+    expect(calculateQualifyingGroupSizes(8).groupSizes).toEqual([4, 4]);
+    expect(calculateQualifyingGroupSizes(9).groupSizes).toEqual([3, 3, 3]);
+    expect(calculateQualifyingGroupSizes(10).groupSizes).toEqual([4, 3, 3]);
+    expect(calculateQualifyingGroupSizes(11).groupSizes).toEqual([4, 4, 3]);
+    expect(calculateQualifyingGroupSizes(12).groupSizes).toEqual([4, 4, 4]);
+  });
 });
 
 describe("bracket advancement logic", () => {
