@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildBracketSlots,
   calculateQualifyingGroupSizes,
   computeStandings,
   isEffectivelyCompleted,
@@ -54,6 +55,37 @@ describe("qualifying group size logic", () => {
 });
 
 describe("bracket advancement logic", () => {
+  const firstRoundByeTeams = (numGroups: number) =>
+    buildBracketSlots(numGroups, 2, false)
+      .filter(slot => slot.roundNumber === 1 && slot.isBye)
+      .map(slot => ({ team: slot.seed1, opponent: slot.seed2 }));
+
+  it("상황: 3개 조에서 각 조 2위까지 본선에 오르면 부전승 2개는 조 1위에게 우선 배정한다", () => {
+    const byeTeams = firstRoundByeTeams(3);
+
+    expect(byeTeams).toHaveLength(2);
+    expect(byeTeams.every(({ team, opponent }) =>
+      team?.type === "team" && team.rank === 1 && opponent?.type === "bye"
+    )).toBe(true);
+  });
+
+  it("상황: 조 1위보다 부전승이 많으면 모든 조 1위에게 먼저 배정하고 남은 부전승만 조 2위에게 배정한다", () => {
+    const byeTeams = firstRoundByeTeams(5);
+    const teamSeeds = byeTeams.map(({ team }) => team);
+
+    expect(byeTeams).toHaveLength(6);
+    expect(byeTeams.every(({ opponent }) => opponent?.type === "bye")).toBe(true);
+    expect(teamSeeds.filter(seed => seed?.type === "team" && seed.rank === 1)).toHaveLength(5);
+    expect(teamSeeds.filter(seed => seed?.type === "team" && seed.rank === 2)).toHaveLength(1);
+  });
+
+  it("상황: 본선 진출 팀 수가 2의 거듭제곱이면 기존처럼 부전승 경기를 만들지 않는다", () => {
+    const firstRoundSlots = buildBracketSlots(4, 2, false).filter(slot => slot.roundNumber === 1);
+
+    expect(firstRoundSlots).toHaveLength(4);
+    expect(firstRoundSlots.some(slot => slot.isBye)).toBe(false);
+  });
+
   it("상황: 조별 예선 경기가 하나라도 미완료이면 본선 진출 계산을 시작하지 않는다", () => {
     expect(
       isGroupComplete([{ status: "completed" }, { status: "scheduled" }])

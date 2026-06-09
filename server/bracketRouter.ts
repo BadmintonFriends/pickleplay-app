@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import * as bdb from "./bracketDb";
-import { calculateQualifyingGroupSizes, computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement } from "./bracketLogic";
+import { buildBracketSlots as buildBracketSlotsCore, calculateQualifyingGroupSizes, computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement, type BracketSeed } from "./bracketLogic";
 import { createKstDate, formatStoredDate, formatStoredTime } from "./_core/kstDate";
 import { createRequire } from "module";
 const XLSX: typeof import("xlsx") = createRequire(import.meta.url)("xlsx-js-style");
@@ -141,186 +141,6 @@ function assignTeamsToGroups(
   return groups;
 }
 
-/** 표준 토너먼트 브라켓 시드 순서 반환 (1-indexed) */
-function getStandardBracketOrder(n: number): number[] {
-  if (n === 1) return [1];
-  const result: number[] = [];
-  const half = getStandardBracketOrder(n / 2);
-  for (const pos of half) {
-    result.push(pos);
-    result.push(n + 1 - pos);
-  }
-  return result;
-}
-
-type Seed = { type: "team"; groupNumber: number; rank: number } | { type: "bye" };
-
-interface BracketSlot {
-  roundNumber: number;
-  matchNumber: number;
-  seed1: Seed | null;
-  seed2: Seed | null;
-  nextMatchIndex: number | null;
-  nextMatchPosition: 1 | 2 | null;
-  loserNextMatchIndex: number | null;
-  loserNextMatchPosition: 1 | 2 | null;
-  isBye: boolean;
-}
-
-/** 본선 대진 슬롯 구조 생성 */
-function buildBracketSlots(numGroups: number, advanceCount: number, hasThirdPlace: boolean): BracketSlot[] {
-  // 시드 목록 생성
-  const seeds: Seed[] = [];
-  for (let g = 1; g <= numGroups; g++) seeds.push({ type: "team", groupNumber: g, rank: 1 });
-  if (advanceCount === 2) {
-    for (let g = 1; g <= numGroups; g++) seeds.push({ type: "team", groupNumber: g, rank: 2 });
-  }
-  const totalTeams = seeds.length;
-  const bracketSize = nextPowerOf2(totalTeams);
-  const numByes = bracketSize - totalTeams;
-  for (let b = 0; b < numByes; b++) seeds.push({ type: "bye" });
-
-  // 브라켓 순서로 시드 배치
-  const order = getStandardBracketOrder(bracketSize);
-  const orderedSeeds = order.map(pos => seeds[pos - 1]);
-
-  const totalRounds = Math.log2(bracketSize);
-  const slots: BracketSlot[] = [];
-
-  // 진출 팀이 1팀 이하면 본선 대진 불가
-  if (totalRounds < 1) return slots;
-
-  // 모든 라운드 슬롯 생성
-  for (let round = 1; round <= totalRounds; round++) {
-    const count = bracketSize / Math.pow(2, round);
-    for (let m = 0; m < count; m++) {
-      slots.push({
-        roundNumber: round,
-        matchNumber: m + 1,
-        seed1: null,
-        seed2: null,
-        nextMatchIndex: null,
-        nextMatchPosition: null,
-        loserNextMatchIndex: null,
-        loserNextMatchPosition: null,
-        isBye: false,
-      });
-    }
-  }
-
-  // 1라운드 시드 배치
-  for (let i = 0; i < bracketSize / 2; i++) {
-    slots[i].seed1 = orderedSeeds[i * 2];
-    slots[i].seed2 = orderedSeeds[i * 2 + 1];
-    if (slots[i].seed1?.type === "bye" || slots[i].seed2?.type === "bye") {
-      slots[i].isBye = true;
-    }
-  }
-
-  // 라운드 간 nextMatchIndex 연결
-  let roundOffset = 0;
-  for (let round = 1; round < totalRounds; round++) {
-    const count = bracketSize / Math.pow(2, round);
-    const nextOffset = roundOffset + count;
-    for (let m = 0; m < count; m++) {
-      slots[roundOffset + m].nextMatchIndex = nextOffset + Math.floor(m / 2);
-      slots[roundOffset + m].nextMatchPosition = (m % 2 + 1) as 1 | 2;
-    }
-    // 준결승(penultimate round)의 패자를 3·4위전에 연결
-    if (hasThirdPlace && round === totalRounds - 1) {
-      const thirdPlaceIndex = slots.length; // 아직 추가 전
-      for (let m = 0; m < count; m++) {
-        slots[roundOffset + m].loserNextMatchIndex = thirdPlaceIndex;
-        slots[roundOffset + m].loserNextMatchPosition = (m + 1) as 1 | 2;
-      }
-    }
-    roundOffset += count;
-  }
-
-  // 3·4위전 슬롯 추가 (준결승이 있어야 의미있음: totalRounds >= 2)
-  if (hasThirdPlace && totalRounds >= 2) {
-    slots.push({
-      roundNumber: totalRounds,
-      matchNumber: 0, // 0 = 3·4위전 식별자
-      seed1: null,
-      seed2: null,
-      nextMatchIndex: null,
-      nextMatchPosition: null,
-      loserNextMatchIndex: null,
-      loserNextMatchPosition: null,
-      isBye: false,
-    });
-  }
-
-  // 브라켓 소속 분리: 같은 소속 팀이 같은 하프에 있으면 최대한 이동
-  // (simplified: top half = index 0..bracketSize/2-1, bottom half = bracketSize/2..)
-  // slot seeding 배열에서 조정
-  // 여기서는 1라운드 슬롯만 조정
-  const firstRoundCount = Math.floor(bracketSize / 2);
-  adjustBracketForAffiliation(slots, firstRoundCount);
-
-  return slots;
-}
-
-/** 같은 조 출신 팀이 같은 하프에 있거나 1라운드에서 직접 대결하지 않도록 조정 */
-function adjustBracketForAffiliation(slots: BracketSlot[], firstRoundCount: number) {
-  if (firstRoundCount < 2) return;
-  const half = Math.floor(firstRoundCount / 2);
-
-  function groupOf(s: Seed | null): number | null {
-    return s?.type === "team" ? s.groupNumber : null;
-  }
-
-  for (let pass = 0; pass < 10; pass++) {
-    let improved = false;
-
-    // 1) 같은 슬롯 내 seed1-seed2가 같은 조인 경우 (직접 1라운드 충돌) 수정
-    for (let i = 0; i < firstRoundCount; i++) {
-      const gi1 = groupOf(slots[i].seed1);
-      const gi2 = groupOf(slots[i].seed2);
-      if (gi1 !== null && gi2 !== null && gi1 === gi2) {
-        const otherHalfStart = i < half ? half : 0;
-        for (let j = otherHalfStart; j < otherHalfStart + half; j++) {
-          const gj1 = groupOf(slots[j].seed1);
-          if (gj1 !== null && gj1 !== gi1 && groupOf(slots[j].seed2) !== gi1) {
-            [slots[i].seed2, slots[j].seed1] = [slots[j].seed1, slots[i].seed2];
-            improved = true;
-            break;
-          }
-        }
-      }
-    }
-
-    // 2) 같은 하프에 같은 조 팀이 있는 경우 수정 (seed1/seed2 모두 체크)
-    for (let i = 0; i < firstRoundCount; i++) {
-      for (let j = i + 1; j < firstRoundCount; j++) {
-        if (Math.floor(i / half) !== Math.floor(j / half)) continue;
-
-        const gi1 = groupOf(slots[i].seed1);
-        const gi2 = groupOf(slots[i].seed2);
-        const gj1 = groupOf(slots[j].seed1);
-        const gj2 = groupOf(slots[j].seed2);
-
-        const conflict =
-          (gi1 !== null && gj1 !== null && gi1 === gj1) ||
-          (gi1 !== null && gj2 !== null && gi1 === gj2) ||
-          (gi2 !== null && gj1 !== null && gi2 === gj1) ||
-          (gi2 !== null && gj2 !== null && gi2 === gj2);
-
-        if (conflict) {
-          const mirror = i < half ? i + half : i - half;
-          if (mirror !== j && mirror < firstRoundCount) {
-            [slots[j].seed1, slots[mirror].seed1] = [slots[mirror].seed1, slots[j].seed1];
-            improved = true;
-          }
-        }
-      }
-    }
-
-    if (!improved) break;
-  }
-}
-
 // ─── Score Validation ────────────────────────────────────
 
 function isValidFinalScore(
@@ -455,7 +275,7 @@ function getRoundName(roundNumber: number, totalRounds: number, matchNumber: num
   return `${teams}강`;
 }
 
-function getSeedLabel(seed: Seed | null): string {
+function getSeedLabel(seed: BracketSeed | null): string {
   if (!seed) return "미정";
   if (seed.type === "bye") return "부전승";
   return `${seed.groupNumber}조 ${seed.rank}위`;
@@ -898,7 +718,7 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
       }
     }
 
-    const slots = buildBracketSlots(numGroups, settings.advanceCount, settings.hasThirdPlace);
+    const slots = buildBracketSlotsCore(numGroups, settings.advanceCount, settings.hasThirdPlace);
     const mainMatchIds: number[] = [];
 
     for (const slot of slots) {
