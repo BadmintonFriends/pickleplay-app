@@ -167,8 +167,10 @@ function isValidFinalScore(
 interface SchedulableMatch {
   matchId: number;
   eventOrder: number;
+  tournamentEventId?: number;
   team1Phones: string[];
   team2Phones: string[];
+  externalConflictPhones?: string[];
   minSlot?: number; // 이 슬롯 이전에는 배정 불가 (본선 의존성 제약)
 }
 
@@ -190,7 +192,8 @@ function computeSchedule(
   courtSetting: { courtCount: number; startTime: string; estimatedMinutes: number },
   matchDate: string,
   startSlotOffset = 0,
-  occupiedSlotCourts: Set<string> = new Set()
+  occupiedSlotCourts: Set<string> = new Set(),
+  occupiedSlotPhones: Map<number, Set<string>> = new Map()
 ): { results: ScheduleResult[]; slotsUsed: number } {
   const results: ScheduleResult[] = [];
   const [startHour, startMin] = courtSetting.startTime.split(":").map(Number);
@@ -221,11 +224,15 @@ function computeSchedule(
       }
       if (courtIdx >= freeCourts.length) { remaining.push(match); continue; }
       const allPhones = [...match.team1Phones, ...match.team2Phones];
-      const conflict = allPhones.some(p => {
-        if (currentSlotPhones.has(p)) return true;
-        const last = lastPlayedSlot.get(p);
-        return last !== undefined && (slotIndex - last) <= REST_SLOTS;
-      });
+      const externalPhones = match.externalConflictPhones ?? allPhones;
+      const occupiedPhones = occupiedSlotPhones.get(slotIndex);
+      const conflict =
+        externalPhones.some(p => occupiedPhones?.has(p)) ||
+        allPhones.some(p => {
+          if (currentSlotPhones.has(p)) return true;
+          const last = lastPlayedSlot.get(p);
+          return last !== undefined && (slotIndex - last) <= REST_SLOTS;
+        });
       if (!conflict) {
         for (const p of allPhones) currentSlotPhones.add(p);
         const totalMins = startHour * 60 + startMin + slotIndex * courtSetting.estimatedMinutes;
@@ -246,6 +253,117 @@ function computeSchedule(
     slotIndex++;
   }
   return { results, slotsUsed: slotIndex };
+}
+
+type BracketMatchRow = Awaited<ReturnType<typeof bdb.getBracketMatches>>[number];
+type BracketGroupTeamRow = Awaited<ReturnType<typeof bdb.getBracketGroupTeamsByGroupIds>>[number];
+
+function normalizePhone(phone: string | null | undefined): string {
+  return (phone ?? "").replace(/\D/g, "");
+}
+
+async function getRegistrationPhonesCached(registrationId: number, cache: Map<number, string[]>): Promise<string[]> {
+  const cached = cache.get(registrationId);
+  if (cached) return cached;
+  const phones = (await db.getPlayersByRegistration(registrationId))
+    .map((p: any) => normalizePhone(p.phone))
+    .filter(Boolean);
+  cache.set(registrationId, phones);
+  return phones;
+}
+
+function addPhones(target: Set<string>, phones: string[]) {
+  for (const phone of phones) if (phone) target.add(phone);
+}
+
+function buildGroupTeamsByGroupId(groupTeams: BracketGroupTeamRow[]) {
+  const map = new Map<number, BracketGroupTeamRow[]>();
+  for (const team of groupTeams) {
+    const list = map.get(team.groupId) ?? [];
+    list.push(team);
+    map.set(team.groupId, list);
+  }
+  return map;
+}
+
+async function collectGroupRankCandidatePhones(
+  groupId: number,
+  rank: number | null,
+  groupTeamsByGroupId: Map<number, BracketGroupTeamRow[]>,
+  phoneCache: Map<number, string[]>
+): Promise<string[]> {
+  const groupTeams = groupTeamsByGroupId.get(groupId) ?? [];
+  const rankedTeams = rank != null ? groupTeams.filter(team => team.finalRank === rank) : [];
+  const candidateTeams = rankedTeams.length > 0 ? rankedTeams : groupTeams;
+  const phones = new Set<string>();
+  for (const team of candidateTeams) {
+    addPhones(phones, await getRegistrationPhonesCached(team.registrationId, phoneCache));
+  }
+  return [...phones];
+}
+
+async function collectMainCandidatePhones(
+  match: BracketMatchRow,
+  matchById: Map<number, BracketMatchRow>,
+  groupTeamsByGroupId: Map<number, BracketGroupTeamRow[]>,
+  phoneCache: Map<number, string[]>,
+  seenMatchIds: Set<number> = new Set()
+): Promise<string[]> {
+  if (seenMatchIds.has(match.id)) return [];
+  seenMatchIds.add(match.id);
+  const phones = new Set<string>();
+
+  async function addSide(
+    position: 1 | 2,
+    teamId: number | null,
+    sourceType: string | null,
+    sourceGroupId: number | null,
+    sourceRank: number | null,
+    sourceMatchId: number | null
+  ) {
+    if (teamId) {
+      addPhones(phones, await getRegistrationPhonesCached(teamId, phoneCache));
+      return;
+    }
+    if (sourceType === "group_rank" && sourceGroupId) {
+      addPhones(phones, await collectGroupRankCandidatePhones(sourceGroupId, sourceRank, groupTeamsByGroupId, phoneCache));
+      return;
+    }
+    const winnerSourceMatchId = sourceMatchId ?? [...matchById.values()]
+      .find(candidate => candidate.nextMatchId === match.id && candidate.nextMatchPosition === position)?.id;
+    if (winnerSourceMatchId) {
+      const sourceMatch = matchById.get(winnerSourceMatchId);
+      if (sourceMatch) {
+        addPhones(phones, await collectMainCandidatePhones(sourceMatch, matchById, groupTeamsByGroupId, phoneCache, seenMatchIds));
+      }
+    }
+  }
+
+  await addSide(1, match.team1Id, match.team1SourceType, match.team1SourceGroupId, match.team1SourceRank, match.team1SourceMatchId);
+  await addSide(2, match.team2Id, match.team2SourceType, match.team2SourceGroupId, match.team2SourceRank, match.team2SourceMatchId);
+
+  return [...phones];
+}
+
+function buildMixedQualifyingSlotPhones(
+  qualMatches: SchedulableMatch[],
+  qualResults: ScheduleResult[],
+  eventTypeById: Map<number, string>
+): Map<number, Set<string>> {
+  const qualById = new Map(qualMatches.map(match => [match.matchId, match]));
+  const slotPhones = new Map<number, Set<string>>();
+
+  for (const result of qualResults) {
+    const match = qualById.get(result.matchId);
+    if (!match || eventTypeById.get(match.tournamentEventId ?? 0) !== "혼복") continue;
+    const phones = slotPhones.get(result.slotIndex) ?? new Set<string>();
+    for (const phone of [...match.team1Phones, ...match.team2Phones]) {
+      if (phone) phones.add(phone);
+    }
+    slotPhones.set(result.slotIndex, phones);
+  }
+
+  return slotPhones;
 }
 
 function getHeadToHead(
@@ -549,6 +667,8 @@ async function runRescheduleMatches(tournamentId: number): Promise<void> {
 
   const courtSettingsList = await bdb.getBracketCourtSettings(tournamentId);
   const courtMap = new Map(courtSettingsList.map(cs => [cs.matchDate ?? "", cs]));
+  const events = await db.getEventsByTournament(tournamentId);
+  const eventTypeById = new Map(events.map(event => [event.id, event.eventType]));
 
   const dateGroups = new Map<string, SchedulableMatch[]>();
   const eventQualEndSlot = new Map<string, number>(); // `${date}_${eventId}` → last qual slotIndex
@@ -578,6 +698,7 @@ async function runRescheduleMatches(tournamentId: number): Promise<void> {
       dateGroups.get(matchDate)!.push({
         matchId: m.id,
         eventOrder: settings.eventOrder,
+        tournamentEventId: eventId,
         team1Phones: t1Phones,
         team2Phones: t2Phones,
       });
@@ -589,26 +710,37 @@ async function runRescheduleMatches(tournamentId: number): Promise<void> {
     if (!cs) continue;
 
     const { results: qualResults } = computeSchedule(qualSchedulable, cs, date);
+    const mixedQualifyingSlotPhones = buildMixedQualifyingSlotPhones(qualSchedulable, qualResults, eventTypeById);
     const occupiedSlotCourts = new Set<string>();
 
     for (const sr of qualResults) {
       occupiedSlotCourts.add(`${sr.slotIndex}_${sr.courtNumber}`);
       await bdb.updateBracketMatch(sr.matchId, { courtNumber: sr.courtNumber, scheduledAt: sr.scheduledAt });
       const qm = qualSchedulable.find(m => m.matchId === sr.matchId)!;
-      const evDate = `${date}_${(allSettings.find(s => s.eventOrder === qm.eventOrder)?.tournamentEventId ?? 0)}`;
+      const evDate = `${date}_${qm.tournamentEventId ?? 0}`;
       const prev = eventQualEndSlot.get(evDate) ?? -1;
       eventQualEndSlot.set(evDate, Math.max(prev, sr.slotIndex));
     }
 
     // 본선 경기 재스케줄링
-    const allMainItems: { matchId: number; eventId: number; eventOrder: number; roundNumber: number }[] = [];
+    const allTournamentGroups = await bdb.getBracketGroups(tournamentId);
+    const groupIds = allTournamentGroups.map(group => group.id);
+    const allGroupTeams = groupIds.length > 0 ? await bdb.getBracketGroupTeamsByGroupIds(groupIds) : [];
+    const groupTeamsByGroupId = buildGroupTeamsByGroupId(allGroupTeams);
+    const allTournamentMatches = await bdb.getBracketMatches(tournamentId);
+    const matchById = new Map(allTournamentMatches.map(match => [match.id, match]));
+    const phoneCache = new Map<number, string[]>();
+    const allMainItems: { matchId: number; eventId: number; eventOrder: number; roundNumber: number; externalConflictPhones: string[] }[] = [];
     for (const settings of allSettings.filter(s => (s.matchDate ?? "") === date).sort((a, b) => a.eventOrder - b.eventOrder)) {
       const eventId = settings.tournamentEventId;
       const mains = (await bdb.getBracketMatches(tournamentId, eventId))
         .filter(m => m.phase === "main" && !m.isBye && m.status !== "completed");
       for (const m of mains) {
         await bdb.updateBracketMatch(m.id, { courtNumber: null, slotOrder: null });
-        allMainItems.push({ matchId: m.id, eventId, eventOrder: settings.eventOrder, roundNumber: m.roundNumber });
+        const externalConflictPhones = ["남복", "여복"].includes(eventTypeById.get(eventId) ?? "")
+          ? await collectMainCandidatePhones(m, matchById, groupTeamsByGroupId, phoneCache)
+          : [];
+        allMainItems.push({ matchId: m.id, eventId, eventOrder: settings.eventOrder, roundNumber: m.roundNumber, externalConflictPhones });
       }
     }
 
@@ -626,11 +758,11 @@ async function runRescheduleMatches(tournamentId: number): Promise<void> {
         const minSlot = prevRoundLevel === undefined
           ? (eventQualEndSlot.get(evDate) ?? -1) + 1
           : (eventRoundEndSlot.get(`${item.eventId}_${prevRoundLevel}`) ?? -1) + 1;
-        return { matchId: item.matchId, eventOrder: item.eventOrder, team1Phones: [], team2Phones: [], minSlot };
+        return { matchId: item.matchId, eventOrder: item.eventOrder, tournamentEventId: item.eventId, team1Phones: [], team2Phones: [], externalConflictPhones: item.externalConflictPhones, minSlot };
       });
 
       const startSlot = Math.min(...roundSchedulable.map(m => m.minSlot ?? 0));
-      const { results: roundResults } = computeSchedule(roundSchedulable, cs, date, startSlot, occupiedSlotCourts);
+      const { results: roundResults } = computeSchedule(roundSchedulable, cs, date, startSlot, occupiedSlotCourts, mixedQualifyingSlotPhones);
 
       for (const sr of roundResults) {
         occupiedSlotCourts.add(`${sr.slotIndex}_${sr.courtNumber}`);
@@ -656,6 +788,8 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
 
   const courtSettingsList = await bdb.getBracketCourtSettings(tournamentId);
   const courtMap = new Map(courtSettingsList.map(cs => [cs.matchDate ?? "", cs]));
+  const events = await db.getEventsByTournament(tournamentId);
+  const eventTypeById = new Map(events.map(event => [event.id, event.eventType]));
 
   const allSchedulable: { matchId: number; eventOrder: number; matchDate: string; tournamentEventId: number; team1Phones: string[]; team2Phones: string[] }[] = [];
 
@@ -770,6 +904,7 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
 
     // 1. 모든 예선을 날짜 단위로 함께 스케줄링 → 코트를 최대한 채움
     const { results: qualResults } = computeSchedule(qualMatches, cs, date);
+    const mixedQualifyingSlotPhones = buildMixedQualifyingSlotPhones(qualMatches, qualResults, eventTypeById);
 
     // 점유 슬롯 추적 (본선과 코트 중복 방지) + 종목별 예선 마지막 슬롯
     const occupiedSlotCourts = new Set<string>();
@@ -784,7 +919,14 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
     }
 
     // 2. 이 날짜의 모든 본선 경기 수집 (라운드별)
-    const allMainItems: { matchId: number; eventId: number; eventOrder: number; roundNumber: number }[] = [];
+    const allTournamentGroups = await bdb.getBracketGroups(tournamentId);
+    const groupIds = allTournamentGroups.map(group => group.id);
+    const allGroupTeams = groupIds.length > 0 ? await bdb.getBracketGroupTeamsByGroupIds(groupIds) : [];
+    const groupTeamsByGroupId = buildGroupTeamsByGroupId(allGroupTeams);
+    const allTournamentMatches = await bdb.getBracketMatches(tournamentId);
+    const matchById = new Map(allTournamentMatches.map(match => [match.id, match]));
+    const phoneCache = new Map<number, string[]>();
+    const allMainItems: { matchId: number; eventId: number; eventOrder: number; roundNumber: number; externalConflictPhones: string[] }[] = [];
     for (const settings of allSettings
       .filter(s => (s.matchDate ?? "") === date)
       .sort((a, b) => a.eventOrder - b.eventOrder)) {
@@ -792,7 +934,10 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
       const mains = (await bdb.getBracketMatches(tournamentId, eventId))
         .filter(m => m.phase === "main" && !m.isBye);
       for (const m of mains) {
-        allMainItems.push({ matchId: m.id, eventId, eventOrder: settings.eventOrder, roundNumber: m.roundNumber });
+        const externalConflictPhones = ["남복", "여복"].includes(eventTypeById.get(eventId) ?? "")
+          ? await collectMainCandidatePhones(m, matchById, groupTeamsByGroupId, phoneCache)
+          : [];
+        allMainItems.push({ matchId: m.id, eventId, eventOrder: settings.eventOrder, roundNumber: m.roundNumber, externalConflictPhones });
       }
     }
     if (allMainItems.length === 0) continue;
@@ -812,11 +957,11 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
         const minSlot = prevRoundLevel === undefined
           ? (eventQualEndSlot.get(item.eventId) ?? -1) + 1          // Round 1: 예선 직후
           : (eventRoundEndSlot.get(`${item.eventId}_${prevRoundLevel}`) ?? -1) + 1; // Round N: 이전 라운드 직후
-        return { matchId: item.matchId, eventOrder: item.eventOrder, team1Phones: [], team2Phones: [], minSlot };
+        return { matchId: item.matchId, eventOrder: item.eventOrder, tournamentEventId: item.eventId, team1Phones: [], team2Phones: [], externalConflictPhones: item.externalConflictPhones, minSlot };
       });
 
       const startSlot = Math.min(...roundSchedulable.map(m => m.minSlot ?? 0));
-      const { results: roundResults } = computeSchedule(roundSchedulable, cs, date, startSlot, occupiedSlotCourts);
+      const { results: roundResults } = computeSchedule(roundSchedulable, cs, date, startSlot, occupiedSlotCourts, mixedQualifyingSlotPhones);
 
       for (const sr of roundResults) {
         occupiedSlotCourts.add(`${sr.slotIndex}_${sr.courtNumber}`);
