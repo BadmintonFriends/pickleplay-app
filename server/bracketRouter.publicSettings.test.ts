@@ -140,6 +140,7 @@ describe("bracket public settings display data", () => {
       mainScore: 21,
       deuceEnabled: true,
       deuceMaxScore: 25,
+      advanceCount: 1,
       teamCount: 6,
       mainAdvanceTeamCount: 2,
     });

@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { findPotentialBracketConflicts } from "@/lib/bracketConflictPotential";
 import { trpc } from "@/lib/trpc";
 import { motion, Reorder } from "framer-motion";
 import {
@@ -428,6 +429,8 @@ export default function TournamentManagePage() {
           !!tournamentId && (activeTab === "bracket" || activeTab === "status"),
       }
     );
+  const hasGeneratedBracket =
+    Array.isArray(bracketSchedule) && bracketSchedule.length > 0;
   const { data: mainBracket, refetch: refetchMainBracket } =
     trpc.bracket.getMainBracket.useQuery(
       { tournamentId: tournamentId!, tournamentEventId: bracketEventId ?? 0 },
@@ -492,9 +495,9 @@ export default function TournamentManagePage() {
   >([]);
   const [targetEndTime, setTargetEndTime] = useState<string>("18:00");
   const [schedGroupId, setSchedGroupId] = useState<number | null>(null);
-  const [bracketSubTab, setBracketSubTab] = useState<"settings" | "view">(
-    "settings"
-  );
+  const [bracketSubTab, setBracketSubTab] = useState<
+    "settings" | "view" | "conflicts"
+  >("settings");
   const [viewDateTab, setViewDateTab] = useState<string>("");
   const [refereePinInput, setRefereePinInput] = useState<string>("");
 
@@ -535,7 +538,20 @@ export default function TournamentManagePage() {
     refetch: refetchPublicBracket,
   } = trpc.bracket.getPublicBracket.useQuery(
     { tournamentId: tournamentId! },
-    { enabled: !!tournamentId && activeTab === "onsite" }
+    {
+      enabled:
+        !!tournamentId &&
+        (activeTab === "onsite" ||
+          (activeTab === "bracket" &&
+            bracketSubTab === "conflicts" &&
+            hasGeneratedBracket)),
+    }
+  );
+
+  const potentialBracketConflicts = useMemo(
+    () =>
+      publicBracket ? findPotentialBracketConflicts(publicBracket as any) : [],
+    [publicBracket]
   );
 
   const adminUpdateResult = trpc.bracket.adminUpdateMatchResult.useMutation({
@@ -2563,8 +2579,6 @@ export default function TournamentManagePage() {
             )}
             {/* 서브탭 */}
             {(() => {
-              const hasBracket =
-                Array.isArray(bracketSchedule) && bracketSchedule.length > 0;
               return (
                 <div className="flex gap-1 border-b border-line-strong pb-0">
                   <button
@@ -2578,18 +2592,43 @@ export default function TournamentManagePage() {
                     대진 설정
                   </button>
                   <button
-                    onClick={() => hasBracket && setBracketSubTab("view")}
-                    disabled={!hasBracket}
+                    onClick={() =>
+                      hasGeneratedBracket && setBracketSubTab("view")
+                    }
+                    disabled={!hasGeneratedBracket}
                     className={`text-[11px] font-bold px-4 py-2 border-b-2 transition-colors ${
                       bracketSubTab === "view"
                         ? "border-primary text-primary"
-                        : !hasBracket
+                        : !hasGeneratedBracket
                           ? "border-transparent text-muted-foreground/40 cursor-not-allowed"
                           : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     대진 조회
-                    {!hasBracket && (
+                    {!hasGeneratedBracket && (
+                      <span className="ml-1 text-[9px]">(미생성)</span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() =>
+                      hasGeneratedBracket && setBracketSubTab("conflicts")
+                    }
+                    disabled={!hasGeneratedBracket}
+                    className={`text-[11px] font-bold px-4 py-2 border-b-2 transition-colors ${
+                      bracketSubTab === "conflicts"
+                        ? "border-primary text-primary"
+                        : !hasGeneratedBracket
+                          ? "border-transparent text-muted-foreground/40 cursor-not-allowed"
+                          : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    대진 충돌 여부
+                    {potentialBracketConflicts.length > 0 && (
+                      <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                        {potentialBracketConflicts.length}
+                      </span>
+                    )}
+                    {!hasGeneratedBracket && (
                       <span className="ml-1 text-[9px]">(미생성)</span>
                     )}
                   </button>
@@ -3566,6 +3605,156 @@ export default function TournamentManagePage() {
                     </div>
                   )}
                 </div>
+              </>
+            )}
+
+            {/* ── 대회 충돌 서브탭 ── */}
+            {bracketSubTab === "conflicts" && (
+              <>
+                {(() => {
+                  const conflictDates =
+                    (publicBracket as any)?.dates ?? tournamentDates;
+                  const visibleConflicts = potentialBracketConflicts.filter(
+                    conflict => !viewDateTab || conflict.date === viewDateTab
+                  );
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="bg-card rounded-xl p-4 border border-line-strong space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-7 h-7 rounded-lg bg-ink-3 border border-line-strong flex items-center justify-center shrink-0">
+                              <AlertCircle className="w-3.5 h-3.5 text-yellow-600" />
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="text-xs font-bold text-foreground">
+                                대진 충돌 여부 확인
+                              </h3>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                혼복 예선과 남/여복 본선의 같은 시간대 후보 충돌
+                              </p>
+                            </div>
+                          </div>
+                          <Badge
+                            className={`text-[9px] font-bold shrink-0 ${
+                              visibleConflicts.length > 0
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-ink-3 text-muted-foreground"
+                            }`}
+                          >
+                            {publicBracketLoading
+                              ? "확인 중"
+                              : `${visibleConflicts.length}건`}
+                          </Badge>
+                        </div>
+
+                        {conflictDates.length > 1 && (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => setViewDateTab("")}
+                              className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                                !viewDateTab
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
+                              }`}
+                            >
+                              전체
+                            </button>
+                            {conflictDates.map((d: string) => (
+                              <button
+                                key={d}
+                                onClick={() => setViewDateTab(d)}
+                                className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                                  viewDateTab === d
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-ink-3 border-line-strong text-foreground hover:border-primary"
+                                }`}
+                              >
+                                {d.slice(5).replace("-", "/")}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {publicBracketLoading ? (
+                        <div className="bg-card rounded-xl p-4 border border-line-strong flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          확인 중
+                        </div>
+                      ) : !publicBracket ? (
+                        <p className="bg-card rounded-xl p-4 border border-line-strong text-[10px] text-muted-foreground">
+                          대진 데이터 없음
+                        </p>
+                      ) : visibleConflicts.length === 0 ? (
+                        <p className="bg-card rounded-xl p-4 border border-line-strong text-[10px] text-muted-foreground">
+                          감지된 충돌 가능 경기 없음
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {visibleConflicts.map(conflict => (
+                            <div
+                              key={`${conflict.mainMatchId}_${conflict.mixedMatchId}`}
+                              className="bg-card rounded-xl border border-line-strong overflow-hidden"
+                            >
+                              <div className="px-3 py-2 border-b border-line-strong bg-ink-3/60 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-[10px] font-black text-foreground shrink-0">
+                                    {conflict.date.slice(5).replace("-", "/")}{" "}
+                                    {conflict.timeStr}
+                                  </span>
+                                  <span className="text-[9px] text-muted-foreground truncate">
+                                    같은 시간대
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap justify-end gap-1 shrink-0">
+                                  {conflict.overlappingPlayers.map(player => (
+                                    <span
+                                      key={player}
+                                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700"
+                                    >
+                                      {player}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="grid gap-0 sm:grid-cols-2">
+                                <div className="px-3 py-2.5 min-w-0 border-b sm:border-b-0 sm:border-r border-line-strong">
+                                  <p className="text-[9px] font-bold text-muted-foreground mb-0.5">
+                                    남/여복 본선
+                                  </p>
+                                  <p className="text-[10px] font-bold text-foreground truncate">
+                                    {conflict.mainEventLabel}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {conflict.mainCourtNumber
+                                      ? `${conflict.mainCourtNumber}코트 · `
+                                      : ""}
+                                    {conflict.mainMatchLabel}
+                                  </p>
+                                </div>
+                                <div className="px-3 py-2.5 min-w-0">
+                                  <p className="text-[9px] font-bold text-muted-foreground mb-0.5">
+                                    혼복 예선
+                                  </p>
+                                  <p className="text-[10px] font-bold text-foreground truncate">
+                                    {conflict.mixedEventLabel}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {conflict.mixedCourtNumber
+                                      ? `${conflict.mixedCourtNumber}코트 · `
+                                      : ""}
+                                    {conflict.mixedMatchLabel}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             )}
 
