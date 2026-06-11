@@ -389,9 +389,9 @@ function getHeadToHead(
 
 function getRoundName(roundNumber: number, totalRounds: number, matchNumber: number): string {
   if (matchNumber === 0) return "3·4위전";
-  if (roundNumber === totalRounds) return "결승";
+  if (roundNumber >= totalRounds) return "결승";
   const remaining = totalRounds - roundNumber;
-  if (remaining === 1) return "준결승 (4강)";
+  if (remaining === 1) return "4강";
   const teams = Math.pow(2, remaining + 1);
   return `${teams}강`;
 }
@@ -1192,9 +1192,8 @@ export const bracketRouter = router({
 
       function roundName(roundNumber: number, matchNumber: number): string {
         if (matchNumber === 0) return "3·4위전";
-        if (roundNumber === totalRounds) return "결승";
+        if (roundNumber >= totalRounds) return "결승";
         const remaining = totalRounds - roundNumber;
-        if (remaining === 1) return "준결승";
         return `${Math.pow(2, remaining + 1)}강`;
       }
 
@@ -1749,6 +1748,21 @@ export const bracketRouter = router({
       const mainMatches = allMatches.filter(m => m.phase === "main");
       const groupsMap = new Map(allGroups.map(g => [g.id, g]));
 
+      // 이벤트별 본선 총 라운드 수: 실제 match 데이터 기반 (3·4위전 제외)
+      const eventTotalRoundsCache = new Map<number, number>();
+      for (const e of events) {
+        const evMainMatches = mainMatches.filter(m => m.tournamentEventId === e.id && m.matchNumber !== 0);
+        if (evMainMatches.length > 0) {
+          eventTotalRoundsCache.set(e.id, Math.max(...evMainMatches.map(m => m.roundNumber)));
+        } else {
+          // 아직 대진 없으면 설정값 기반으로 추정
+          const ev = settingsMap.get(e.id);
+          const evGroups = allGroups.filter(g => g.tournamentEventId === e.id);
+          const n = Math.max(evGroups.length * (ev?.advanceCount ?? 1), 1);
+          eventTotalRoundsCache.set(e.id, Math.max(1, Math.ceil(Math.log2(nextPowerOf2(n)))));
+        }
+      }
+
       function mainTeamLabel(m: typeof mainMatches[0], pos: 1 | 2): string {
         const teamId = pos === 1 ? m.team1Id : m.team2Id;
         if (teamId) return teamNameMap.get(teamId) ?? `팀#${teamId}`;
@@ -1763,9 +1777,7 @@ export const bracketRouter = router({
         if (srcType === "match_winner" && srcMatchId) {
           const src = mainMatches.find(x => x.id === srcMatchId);
           if (src) {
-            const ev = settingsMap.get(src.tournamentEventId);
-            const evGroups = allGroups.filter(g => g.tournamentEventId === src.tournamentEventId);
-            const totalRounds = ev ? Math.ceil(Math.log2(nextPowerOf2(Math.max(evGroups.length * (ev.advanceCount ?? 1), 1)))) : 1;
+            const totalRounds = eventTotalRoundsCache.get(src.tournamentEventId) ?? 1;
             return `${getRoundName(src.roundNumber, totalRounds, src.matchNumber)} ${src.matchNumber}경기 승자`;
           }
         }
@@ -1774,9 +1786,7 @@ export const bracketRouter = router({
       }
 
       const mainByEvent = events.map(e => {
-        const evGroups = allGroups.filter(g => g.tournamentEventId === e.id);
-        const ev = settingsMap.get(e.id);
-        const totalRounds = ev ? Math.ceil(Math.log2(nextPowerOf2(Math.max(evGroups.length * (ev.advanceCount ?? 1), 1)))) : 1;
+        const totalRounds = eventTotalRoundsCache.get(e.id) ?? 1;
         const sorted = mainMatches
           .filter(m => m.tournamentEventId === e.id)
           .sort((a, b) => a.roundNumber - b.roundNumber || a.matchNumber - b.matchNumber);
