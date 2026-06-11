@@ -417,14 +417,14 @@ function GameCard({
       <div
         className={`flex items-center gap-2 px-4 py-2 ${showCourt ? "bg-ink-3/50 border-b border-line-strong" : "pt-3"}`}
       >
-        {showGameNum && (
-          <span className="text-xs font-black text-muted-foreground">
-            {m.courtGameNum}번게임
-          </span>
-        )}
         {showCourt && (
           <span className="text-xs font-bold text-muted-foreground">
             {m.courtNumber}코트
+          </span>
+        )}
+        {showGameNum && (
+          <span className="text-xs font-black text-muted-foreground">
+            {m.courtGameNum}번게임
           </span>
         )}
         <span className="text-[10px] text-muted-foreground">

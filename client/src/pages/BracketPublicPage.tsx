@@ -689,8 +689,8 @@ function MainMatchCard({ match: m }: { match: MainMatch }) {
     <div className="bg-card rounded-2xl border border-line-strong overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2.5 bg-ink-3/50 border-b border-line-strong">
         <span className="text-xs font-bold text-muted-foreground">
-          {m.courtGameNum != null ? `${m.courtGameNum}번게임` : "-"}
-          {m.courtNumber != null ? ` ${m.courtNumber}코트` : ""}
+          {m.courtNumber != null ? `${m.courtNumber}코트` : "-"}
+          {m.courtGameNum != null ? ` ${m.courtGameNum}번게임` : ""}
         </span>
         {m.timeStr && (
           <span className="text-xs text-muted-foreground">{m.timeStr}</span>
