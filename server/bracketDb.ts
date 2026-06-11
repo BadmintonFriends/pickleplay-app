@@ -33,6 +33,7 @@ export async function upsertBracketSettings(data: InsertBracketSettings) {
     set: {
       qualifyingScore: data.qualifyingScore,
       mainScore: data.mainScore,
+      mainFinalsScore: data.mainFinalsScore,
       deuceEnabled: data.deuceEnabled,
       deuceMaxScore: data.deuceMaxScore,
       advanceCount: data.advanceCount,
@@ -42,6 +43,14 @@ export async function upsertBracketSettings(data: InsertBracketSettings) {
       status: data.status,
     },
   });
+}
+
+export async function setTotalMainRounds(tournamentEventId: number, totalMainRounds: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(bracketSettings)
+    .set({ totalMainRounds })
+    .where(eq(bracketSettings.tournamentEventId, tournamentEventId));
 }
 
 export async function updateBracketSettingsStatus(
