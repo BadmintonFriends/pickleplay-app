@@ -1350,7 +1350,8 @@ export const bracketRouter = router({
       // 설정된 목표점수 및 듀스 규칙으로 점수 유효성 검사
       const eventSettings = await bdb.getBracketSettingsByEvent(match.tournamentEventId);
       if (eventSettings) {
-        const targetScore = getTargetScore(match, eventSettings);
+        const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, eventSettings.totalMainRounds);
+        const targetScore = getTargetScore(match, { ...eventSettings, totalMainRounds });
         const deuceEnabled = eventSettings.deuceEnabled ?? true;
         const deuceMaxScore = eventSettings.deuceMaxScore ?? 17;
         if (!isValidFinalScore(input.team1Score, input.team2Score, targetScore, deuceEnabled, deuceMaxScore)) {
@@ -1854,7 +1855,8 @@ export const bracketRouter = router({
 
       const ev = (await db.getEventsByTournament(match.tournamentId)).find(e => e.id === match.tournamentEventId);
       const evSettings = settingsMap.get(match.tournamentEventId);
-      const targetScore = evSettings ? getTargetScore(match, evSettings) : 21;
+      const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, evSettings?.totalMainRounds ?? null);
+      const targetScore = evSettings ? getTargetScore(match, { ...evSettings, totalMainRounds }) : 21;
       const deuceEnabled = evSettings?.deuceEnabled ?? false;
       const maxScore = evSettings?.deuceMaxScore ?? 25;
 
@@ -1903,7 +1905,8 @@ export const bracketRouter = router({
       // 점수 유효성 검증
       const allSettings = await bdb.getBracketSettings(match.tournamentId);
       const evSettings = allSettings.find(s => s.tournamentEventId === match.tournamentEventId);
-      const targetScore = evSettings ? getTargetScore(match, evSettings) : 21;
+      const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, evSettings?.totalMainRounds ?? null);
+      const targetScore = evSettings ? getTargetScore(match, { ...evSettings, totalMainRounds }) : 21;
       const deuceEnabled = evSettings?.deuceEnabled ?? false;
       const deuceMaxScore = evSettings?.deuceMaxScore ?? 25;
       if (!isValidFinalScore(input.team1Score, input.team2Score, targetScore, deuceEnabled, deuceMaxScore)) {
@@ -1978,7 +1981,8 @@ export const bracketRouter = router({
 
       const allSettings = await bdb.getBracketSettings(match.tournamentId);
       const evSettings = allSettings.find(s => s.tournamentEventId === match.tournamentEventId);
-      const targetScore = evSettings ? getTargetScore(match, evSettings) : 21;
+      const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, evSettings?.totalMainRounds ?? null);
+      const targetScore = evSettings ? getTargetScore(match, { ...evSettings, totalMainRounds }) : 21;
       const deuceEnabled = evSettings?.deuceEnabled ?? false;
       const deuceMaxScore = evSettings?.deuceMaxScore ?? 25;
       if (!isValidFinalScore(input.team1Score, input.team2Score, targetScore, deuceEnabled, deuceMaxScore)) {
