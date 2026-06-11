@@ -34,6 +34,7 @@ export async function upsertBracketSettings(data: InsertBracketSettings) {
       qualifyingScore: data.qualifyingScore,
       mainScore: data.mainScore,
       mainFinalsScore: data.mainFinalsScore,
+      finalsFromRound: data.finalsFromRound,
       deuceEnabled: data.deuceEnabled,
       deuceMaxScore: data.deuceMaxScore,
       advanceCount: data.advanceCount,
