@@ -1,10 +1,11 @@
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
 type ScheduleMatch = {
   id: number;
+  eventId: number;
   courtNumber: number;
   courtGameNum: number;
   team1Name: string;
@@ -32,6 +33,13 @@ export default function SchedulePublicPage() {
   const [selectedCourt, setSelectedCourt] = useState<number | null>(null);
   const [selectedGameNum, setSelectedGameNum] = useState<number | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+
+  // 코트/게임번호 선택 시 화면 상단으로 스크롤
+  useEffect(() => {
+    if (selectedCourt != null || selectedGameNum != null) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [selectedCourt, selectedGameNum]);
 
   const { data, isLoading, error, refetch } =
     trpc.bracket.getPublicBracket.useQuery(
@@ -89,6 +97,7 @@ export default function SchedulePublicPage() {
       if (m.courtNumber != null && m.courtGameNum != null) {
         allMatches.push({
           id: m.id,
+          eventId: g.tournamentEventId,
           courtNumber: m.courtNumber,
           courtGameNum: m.courtGameNum,
           team1Name: m.team1Name,
@@ -114,6 +123,7 @@ export default function SchedulePublicPage() {
       if (!m.isBye && m.courtNumber != null && m.courtGameNum != null) {
         allMatches.push({
           id: m.id,
+          eventId: ev.eventId,
           courtNumber: m.courtNumber,
           courtGameNum: m.courtGameNum,
           team1Name: m.team1Label,
@@ -313,7 +323,15 @@ export default function SchedulePublicPage() {
                   </div>
                   <div className="divide-y divide-line-strong">
                     {courtMatches.map(m => (
-                      <GameCard key={m.id} match={m} showCourt={false} />
+                      <GameCard
+                        key={m.id}
+                        match={m}
+                        showCourt={false}
+                        showGameNum
+                        onBracketClick={() =>
+                          navigate(`/tournaments/${tournamentId}/bracket?eventId=${m.eventId}`)
+                        }
+                      />
                     ))}
                   </div>
                 </div>
@@ -354,7 +372,15 @@ export default function SchedulePublicPage() {
               ) : (
                 <div className="space-y-2">
                   {gameMatches.map(m => (
-                    <GameCard key={m.id} match={m} showCourt />
+                    <GameCard
+                      key={m.id}
+                      match={m}
+                      showCourt
+                      showGameNum={false}
+                      onBracketClick={() =>
+                        navigate(`/tournaments/${tournamentId}/bracket?eventId=${m.eventId}`)
+                      }
+                    />
                   ))}
                 </div>
               ))}
@@ -365,43 +391,18 @@ export default function SchedulePublicPage() {
   );
 }
 
-// ─── 코트 섹션 ────────────────────────────────────────────
-
-function CourtSection({
-  court,
-  matches,
-}: {
-  court: number;
-  matches: ScheduleMatch[];
-}) {
-  const remaining = matches.filter(m => m.status !== "completed").length;
-  return (
-    <div className="bg-card rounded-2xl border border-line-strong overflow-hidden">
-      <div className="px-4 py-2.5 bg-ink-3 border-b border-line-strong flex items-center justify-between">
-        <span className="text-sm font-extrabold text-foreground">
-          {court}코트
-        </span>
-        <span className="text-[10px] text-muted-foreground">
-          {remaining > 0 ? `${remaining}경기 남음` : "모두 완료"}
-        </span>
-      </div>
-      <div className="divide-y divide-line-strong">
-        {matches.map(m => (
-          <GameCard key={m.id} match={m} showCourt={false} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── 경기 카드 ────────────────────────────────────────────
 
 function GameCard({
   match: m,
   showCourt,
+  showGameNum = true,
+  onBracketClick,
 }: {
   match: ScheduleMatch;
   showCourt: boolean;
+  showGameNum?: boolean;
+  onBracketClick?: () => void;
 }) {
   const isCompleted = m.status === "completed";
 
@@ -413,9 +414,11 @@ function GameCard({
       <div
         className={`flex items-center gap-2 px-4 py-2 ${showCourt ? "bg-ink-3/50 border-b border-line-strong" : "pt-3"}`}
       >
-        <span className="text-xs font-black text-muted-foreground">
-          {m.courtGameNum}번게임
-        </span>
+        {showGameNum && (
+          <span className="text-xs font-black text-muted-foreground">
+            {m.courtGameNum}번게임
+          </span>
+        )}
         {showCourt && (
           <span className="text-xs font-bold text-muted-foreground">
             {m.courtNumber}코트
@@ -427,15 +430,25 @@ function GameCard({
         {m.timeStr && (
           <span className="text-[10px] text-muted-foreground">{m.timeStr}</span>
         )}
-        <span
-          className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
-            isCompleted
-              ? "bg-green-500/15 text-green-600"
-              : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {isCompleted ? "종료" : "예정"}
-        </span>
+        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              isCompleted
+                ? "bg-green-500/15 text-green-600"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {isCompleted ? "종료" : "예정"}
+          </span>
+          {onBracketClick && (
+            <button
+              onClick={onBracketClick}
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              대진표
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 팀 vs 팀 */}

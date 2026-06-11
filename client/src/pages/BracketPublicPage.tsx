@@ -2,7 +2,7 @@ import { track } from "@/lib/mixpanel";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, CalendarClock, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useLocation, useRoute } from "wouter";
+import { useLocation, useRoute, useSearch } from "wouter";
 
 type ActualBracketSettings = {
   matchDate: string | null;
@@ -60,7 +60,10 @@ function formatEventLabel(event: {
 export default function BracketPublicPage() {
   const [, params] = useRoute("/tournaments/:id/bracket");
   const [, navigate] = useLocation();
+  const search = useSearch();
   const tournamentId = params?.id ? parseInt(params.id) : null;
+
+  const initEventId = new URLSearchParams(search).get("eventId");
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -80,6 +83,15 @@ export default function BracketPublicPage() {
         tournament_id: tournamentId,
         tournament_name: data.tournamentName,
       });
+    }
+    // eventId query param으로 자동 선택
+    if (data && initEventId) {
+      const targetId = parseInt(initEventId);
+      const event = data.events.find((e: any) => e.id === targetId);
+      if (event?.matchDate) {
+        setSelectedDate(event.matchDate);
+        setSelectedEventId(targetId);
+      }
     }
   }, [data?.tournamentName]);
 
