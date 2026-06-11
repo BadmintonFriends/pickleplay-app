@@ -153,15 +153,26 @@ export default function TournamentDetailPage() {
       {/* 대진표 확인 + 심판 로그인 버튼 */}
       {(tournament.status === "bracket_published" || tournament.status === "in_progress") && (
         <motion.section className="px-4 pb-2 space-y-2" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
-          <button
-            onClick={() => navigate(`/tournaments/${tournamentId}/bracket`)}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold text-sm py-3.5 rounded-2xl hover:bg-primary/90 transition-colors active:scale-[0.98]"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            대진표 확인
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate(`/tournaments/${tournamentId}/bracket`)}
+              className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold text-sm py-3.5 rounded-2xl hover:bg-primary/90 transition-colors active:scale-[0.98]"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              대진표 확인
+            </button>
+            <button
+              onClick={() => navigate(`/tournament/${tournamentId}/schedule`)}
+              className="flex-1 flex items-center justify-center gap-2 bg-card border border-line-strong text-foreground font-bold text-sm py-3.5 rounded-2xl hover:border-primary transition-colors active:scale-[0.98]"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              경기 일정
+            </button>
+          </div>
           {isAuthenticated && tournament.status === "in_progress" && (
             <button
               onClick={() => navigate(`/tournament/${tournamentId}/referee/login`)}

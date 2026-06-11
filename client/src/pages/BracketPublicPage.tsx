@@ -1,6 +1,6 @@
 import { track } from "@/lib/mixpanel";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, CalendarClock, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
@@ -162,6 +162,15 @@ export default function BracketPublicPage() {
               {tournamentName}
             </h1>
           </div>
+          <button
+            onClick={() =>
+              tournamentId && navigate(`/tournament/${tournamentId}/schedule`)
+            }
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-ink-3 transition-colors shrink-0"
+            title="경기 일정"
+          >
+            <CalendarClock className="w-4 h-4 text-muted-foreground" />
+          </button>
           <button
             onClick={() => refetch()}
             className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-ink-3 transition-colors shrink-0"
