@@ -353,6 +353,8 @@ export default function TournamentManagePage() {
       eventOrder: number;
       qualifyingScore: number;
       mainScore: number;
+      mainFinalsScore: number | null;
+      finalsFromRound: number | null;
       deuceEnabled: boolean;
       deuceMaxScore: number;
       advanceCount: number;
@@ -363,6 +365,8 @@ export default function TournamentManagePage() {
   const [bulkForm, setBulkForm] = useState({
     qualifyingScore: "21",
     mainScore: "21",
+    mainFinalsScore: "",
+    finalsFromRound: "",
     deuceEnabled: false,
     deuceMaxScore: "25",
     advanceCount: 1,
@@ -643,6 +647,8 @@ export default function TournamentManagePage() {
             eventOrder: existing?.eventOrder ?? i,
             qualifyingScore: existing?.qualifyingScore ?? 21,
             mainScore: existing?.mainScore ?? 21,
+            mainFinalsScore: existing?.mainFinalsScore ?? null,
+            finalsFromRound: existing?.finalsFromRound ?? null,
             deuceEnabled: existing?.deuceEnabled ?? false,
             deuceMaxScore: existing?.deuceMaxScore ?? 17,
             advanceCount: existing?.advanceCount ?? 1,
@@ -658,6 +664,8 @@ export default function TournamentManagePage() {
           eventOrder: i,
           qualifyingScore: 21,
           mainScore: 21,
+          mainFinalsScore: null,
+          finalsFromRound: null,
           deuceEnabled: false,
           deuceMaxScore: 17,
           advanceCount: 1,
@@ -1224,6 +1232,8 @@ export default function TournamentManagePage() {
         !!current &&
         (current.qualifyingScore !== saved.qualifyingScore ||
           current.mainScore !== saved.mainScore ||
+          current.mainFinalsScore !== (saved.mainFinalsScore ?? null) ||
+          current.finalsFromRound !== (saved.finalsFromRound ?? null) ||
           current.deuceEnabled !== saved.deuceEnabled ||
           current.deuceMaxScore !== saved.deuceMaxScore);
       const courtDiff =
@@ -3117,6 +3127,14 @@ export default function TournamentManagePage() {
                                   qualifyingScore:
                                     Number(bulkForm.qualifyingScore) || 0,
                                   mainScore: Number(bulkForm.mainScore) || 0,
+                                  mainFinalsScore:
+                                    bulkForm.mainFinalsScore === ""
+                                      ? null
+                                      : Number(bulkForm.mainFinalsScore),
+                                  finalsFromRound:
+                                    bulkForm.finalsFromRound === ""
+                                      ? null
+                                      : Number(bulkForm.finalsFromRound),
                                   deuceMaxScore:
                                     Number(bulkForm.deuceMaxScore) || 0,
                                 };
@@ -3256,6 +3274,44 @@ export default function TournamentManagePage() {
                               }
                               className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
                             />
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-muted-foreground block mb-0.5">
+                              결승권 점수
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="미적용"
+                              value={bulkForm.mainFinalsScore}
+                              onChange={e =>
+                                setBulkForm(f => ({
+                                  ...f,
+                                  mainFinalsScore: e.target.value,
+                                }))
+                              }
+                              className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-muted-foreground block mb-0.5">
+                              적용 시작 라운드
+                            </label>
+                            <select
+                              value={bulkForm.finalsFromRound}
+                              onChange={e =>
+                                setBulkForm(f => ({
+                                  ...f,
+                                  finalsFromRound: e.target.value,
+                                }))
+                              }
+                              className="w-full px-2 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                            >
+                              <option value="">전체</option>
+                              <option value="0">결승</option>
+                              <option value="1">준결승(4강)</option>
+                              <option value="2">8강</option>
+                              <option value="3">16강</option>
+                            </select>
                           </div>
                           <div>
                             <label className="text-[9px] text-muted-foreground block mb-0.5">
@@ -3527,6 +3583,62 @@ export default function TournamentManagePage() {
                                     }
                                     className="w-full px-1.5 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
                                   />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-muted-foreground block mb-0.5">
+                                    결승권 점수
+                                  </label>
+                                  <input
+                                    type="number"
+                                    placeholder="미적용"
+                                    value={s.mainFinalsScore ?? ""}
+                                    onChange={e =>
+                                      setSettingsForm(prev =>
+                                        prev.map((item, i) =>
+                                          i === globalIdx
+                                            ? {
+                                                ...item,
+                                                mainFinalsScore:
+                                                  e.target.value === ""
+                                                    ? null
+                                                    : Number(e.target.value),
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    className="w-full px-1.5 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-muted-foreground block mb-0.5">
+                                    적용 시작 라운드
+                                  </label>
+                                  <select
+                                    value={s.finalsFromRound ?? ""}
+                                    onChange={e =>
+                                      setSettingsForm(prev =>
+                                        prev.map((item, i) =>
+                                          i === globalIdx
+                                            ? {
+                                                ...item,
+                                                finalsFromRound:
+                                                  e.target.value === ""
+                                                    ? null
+                                                    : Number(e.target.value),
+                                              }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    className="w-full px-1.5 py-1 bg-card rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                                  >
+                                    <option value="">전체</option>
+                                    <option value="0">결승</option>
+                                    <option value="1">준결승(4강)</option>
+                                    <option value="2">8강</option>
+                                    <option value="3">16강</option>
+                                  </select>
                                 </div>
                                 <div>
                                   <label className="text-[9px] text-muted-foreground block mb-0.5">

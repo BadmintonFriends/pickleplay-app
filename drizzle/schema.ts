@@ -348,6 +348,9 @@ export const bracketSettings = mysqlTable("bracket_settings", {
   deuceMaxScore: int("deuceMaxScore").notNull().default(17),
   advanceCount: int("advanceCount").notNull().default(1), // 1 or 2
   hasThirdPlace: boolean("hasThirdPlace").notNull().default(false),
+  mainFinalsScore: int("mainFinalsScore"),      // 결승권 목표점수 (null이면 mainScore 사용)
+  finalsFromRound: int("finalsFromRound"),      // 몇 라운드 전부터 적용: null=전체, 0=결승, 1=준결승, 2=8강...
+  totalMainRounds: int("totalMainRounds"),      // 본선 총 라운드 수 (대진 생성 시 자동 저장)
   eventOrder: int("eventOrder").notNull().default(0),
   matchDate: varchar("matchDate", { length: 10 }),
   status: mysqlEnum("status", ["draft", "qualifying", "main", "completed"]).notNull().default("draft"),

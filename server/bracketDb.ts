@@ -33,6 +33,8 @@ export async function upsertBracketSettings(data: InsertBracketSettings) {
     set: {
       qualifyingScore: data.qualifyingScore,
       mainScore: data.mainScore,
+      mainFinalsScore: data.mainFinalsScore,
+      finalsFromRound: data.finalsFromRound,
       deuceEnabled: data.deuceEnabled,
       deuceMaxScore: data.deuceMaxScore,
       advanceCount: data.advanceCount,
@@ -42,6 +44,33 @@ export async function upsertBracketSettings(data: InsertBracketSettings) {
       status: data.status,
     },
   });
+}
+
+export async function setTotalMainRounds(tournamentEventId: number, totalMainRounds: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(bracketSettings)
+    .set({ totalMainRounds })
+    .where(eq(bracketSettings.tournamentEventId, tournamentEventId));
+}
+
+/** storedValue가 null이면 기존 main 경기의 MAX(roundNumber)로 계산 (기존 대진 fallback) */
+export async function getEffectiveTotalMainRounds(
+  tournamentEventId: number,
+  storedValue: number | null | undefined
+): Promise<number | null> {
+  if (storedValue != null) return storedValue;
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ roundNumber: bracketMatches.roundNumber })
+    .from(bracketMatches)
+    .where(and(
+      eq(bracketMatches.tournamentEventId, tournamentEventId),
+      eq(bracketMatches.phase, "main"),
+    ));
+  if (rows.length === 0) return null;
+  return Math.max(...rows.map(r => r.roundNumber));
 }
 
 export async function updateBracketSettingsStatus(

@@ -5,6 +5,7 @@ import * as db from "./db";
 import * as bdb from "./bracketDb";
 import { buildBracketSlots as buildBracketSlotsCore, calculateQualifyingGroupSizes, computeStandings, isEffectivelyCompleted, isGroupComplete, planGroupAdvancement, type BracketSeed } from "./bracketLogic";
 import { createKstDate, formatStoredDate, formatStoredTime } from "./_core/kstDate";
+import { getTargetScore } from "../shared/bracketScore";
 import { createRequire } from "module";
 const XLSX: typeof import("xlsx") = createRequire(import.meta.url)("xlsx-js-style");
 
@@ -857,6 +858,8 @@ async function runGenerateBracket(tournamentId: number): Promise<{ success: bool
     }
 
     const slots = buildBracketSlotsCore(numGroups, settings.advanceCount, settings.hasThirdPlace);
+    const totalMainRounds = Math.round(Math.log2(nextPowerOf2(numGroups * settings.advanceCount)));
+    await bdb.setTotalMainRounds(settings.tournamentEventId, totalMainRounds);
     const mainMatchIds: number[] = [];
 
     for (const slot of slots) {
@@ -1005,6 +1008,8 @@ export const bracketRouter = router({
         tournamentEventId: z.number(),
         qualifyingScore: z.number().default(15),
         mainScore: z.number().default(15),
+        mainFinalsScore: z.number().nullable().optional(),
+        finalsFromRound: z.number().nullable().optional(),
         deuceEnabled: z.boolean().default(true),
         deuceMaxScore: z.number().default(17),
         advanceCount: z.number().min(1).max(2).default(1),
@@ -1029,6 +1034,8 @@ export const bracketRouter = router({
           tournamentEventId: s.tournamentEventId,
           qualifyingScore: s.qualifyingScore,
           mainScore: s.mainScore,
+          mainFinalsScore: s.mainFinalsScore ?? null,
+          finalsFromRound: s.finalsFromRound ?? null,
           deuceEnabled: s.deuceEnabled,
           deuceMaxScore: s.deuceMaxScore,
           advanceCount: s.advanceCount,
@@ -1343,9 +1350,8 @@ export const bracketRouter = router({
       // 설정된 목표점수 및 듀스 규칙으로 점수 유효성 검사
       const eventSettings = await bdb.getBracketSettingsByEvent(match.tournamentEventId);
       if (eventSettings) {
-        const targetScore = match.phase === "qualifying"
-          ? (eventSettings.qualifyingScore ?? 15)
-          : (eventSettings.mainScore ?? 15);
+        const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, eventSettings.totalMainRounds);
+        const targetScore = getTargetScore(match, { ...eventSettings, totalMainRounds });
         const deuceEnabled = eventSettings.deuceEnabled ?? true;
         const deuceMaxScore = eventSettings.deuceMaxScore ?? 17;
         if (!isValidFinalScore(input.team1Score, input.team2Score, targetScore, deuceEnabled, deuceMaxScore)) {
@@ -1849,9 +1855,8 @@ export const bracketRouter = router({
 
       const ev = (await db.getEventsByTournament(match.tournamentId)).find(e => e.id === match.tournamentEventId);
       const evSettings = settingsMap.get(match.tournamentEventId);
-      const targetScore = match.phase === "qualifying"
-        ? (evSettings?.qualifyingScore ?? 21)
-        : (evSettings?.mainScore ?? 21);
+      const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, evSettings?.totalMainRounds ?? null);
+      const targetScore = evSettings ? getTargetScore(match, { ...evSettings, totalMainRounds }) : 21;
       const deuceEnabled = evSettings?.deuceEnabled ?? false;
       const maxScore = evSettings?.deuceMaxScore ?? 25;
 
@@ -1900,9 +1905,8 @@ export const bracketRouter = router({
       // 점수 유효성 검증
       const allSettings = await bdb.getBracketSettings(match.tournamentId);
       const evSettings = allSettings.find(s => s.tournamentEventId === match.tournamentEventId);
-      const targetScore = match.phase === "qualifying"
-        ? (evSettings?.qualifyingScore ?? 21)
-        : (evSettings?.mainScore ?? 21);
+      const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, evSettings?.totalMainRounds ?? null);
+      const targetScore = evSettings ? getTargetScore(match, { ...evSettings, totalMainRounds }) : 21;
       const deuceEnabled = evSettings?.deuceEnabled ?? false;
       const deuceMaxScore = evSettings?.deuceMaxScore ?? 25;
       if (!isValidFinalScore(input.team1Score, input.team2Score, targetScore, deuceEnabled, deuceMaxScore)) {
@@ -1977,9 +1981,8 @@ export const bracketRouter = router({
 
       const allSettings = await bdb.getBracketSettings(match.tournamentId);
       const evSettings = allSettings.find(s => s.tournamentEventId === match.tournamentEventId);
-      const targetScore = match.phase === "qualifying"
-        ? (evSettings?.qualifyingScore ?? 21)
-        : (evSettings?.mainScore ?? 21);
+      const totalMainRounds = await bdb.getEffectiveTotalMainRounds(match.tournamentEventId, evSettings?.totalMainRounds ?? null);
+      const targetScore = evSettings ? getTargetScore(match, { ...evSettings, totalMainRounds }) : 21;
       const deuceEnabled = evSettings?.deuceEnabled ?? false;
       const deuceMaxScore = evSettings?.deuceMaxScore ?? 25;
       if (!isValidFinalScore(input.team1Score, input.team2Score, targetScore, deuceEnabled, deuceMaxScore)) {
