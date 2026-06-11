@@ -63,7 +63,9 @@ export default function BracketPublicPage() {
   const search = useSearch();
   const tournamentId = params?.id ? parseInt(params.id) : null;
 
-  const initEventId = new URLSearchParams(search).get("eventId");
+  const searchParams = new URLSearchParams(search);
+  const initEventId = searchParams.get("eventId");
+  const initView = searchParams.get("view"); // groupId(숫자) 또는 "main"
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -84,13 +86,18 @@ export default function BracketPublicPage() {
         tournament_name: data.tournamentName,
       });
     }
-    // eventId query param으로 자동 선택
+    // eventId / view query param으로 자동 선택
     if (data && initEventId) {
       const targetId = parseInt(initEventId);
       const event = data.events.find((e: any) => e.id === targetId);
       if (event?.matchDate) {
         setSelectedDate(event.matchDate);
         setSelectedEventId(targetId);
+        if (initView === "main") {
+          setSelectedView("main");
+        } else if (initView && !isNaN(parseInt(initView))) {
+          setSelectedView(parseInt(initView)); // groupId
+        }
       }
     }
   }, [data?.tournamentName]);

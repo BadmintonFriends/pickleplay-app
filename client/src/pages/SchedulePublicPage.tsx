@@ -6,6 +6,7 @@ import { useLocation, useRoute } from "wouter";
 type ScheduleMatch = {
   id: number;
   eventId: number;
+  groupId: number | null; // 예선이면 groupId, 본선이면 null
   courtNumber: number;
   courtGameNum: number;
   team1Name: string;
@@ -98,6 +99,7 @@ export default function SchedulePublicPage() {
         allMatches.push({
           id: m.id,
           eventId: g.tournamentEventId,
+          groupId: g.id,
           courtNumber: m.courtNumber,
           courtGameNum: m.courtGameNum,
           team1Name: m.team1Name,
@@ -124,6 +126,7 @@ export default function SchedulePublicPage() {
         allMatches.push({
           id: m.id,
           eventId: ev.eventId,
+          groupId: null,
           courtNumber: m.courtNumber,
           courtGameNum: m.courtGameNum,
           team1Name: m.team1Label,
@@ -329,7 +332,7 @@ export default function SchedulePublicPage() {
                         showCourt={false}
                         showGameNum
                         onBracketClick={() =>
-                          navigate(`/tournaments/${tournamentId}/bracket?eventId=${m.eventId}`)
+                          navigate(`/tournaments/${tournamentId}/bracket?eventId=${m.eventId}&view=${m.groupId ?? "main"}`)
                         }
                       />
                     ))}
@@ -378,7 +381,7 @@ export default function SchedulePublicPage() {
                       showCourt
                       showGameNum={false}
                       onBracketClick={() =>
-                        navigate(`/tournaments/${tournamentId}/bracket?eventId=${m.eventId}`)
+                        navigate(`/tournaments/${tournamentId}/bracket?eventId=${m.eventId}&view=${m.groupId ?? "main"}`)
                       }
                     />
                   ))}
