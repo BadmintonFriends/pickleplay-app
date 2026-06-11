@@ -10,6 +10,8 @@ type ActualBracketSettings = {
   courtNumbers: number[];
   qualifyingScore: number | null;
   mainScore: number | null;
+  mainFinalsScore: number | null;
+  finalsFromRound: number | null;
   deuceEnabled: boolean | null;
   deuceMaxScore: number | null;
   advanceCount: number | null;
@@ -31,6 +33,12 @@ function formatDeuceLabel(settings: ActualBracketSettings) {
     : "듀스 있음";
 }
 
+function finalsFromRoundLabel(finalsFromRound: number | null): string {
+  if (finalsFromRound === null) return "전체 본선";
+  if (finalsFromRound === 0) return "결승";
+  return `${Math.pow(2, finalsFromRound + 1)}강 이상`;
+}
+
 function formatScoreLabel(settings: ActualBracketSettings) {
   const qualifying =
     settings.qualifyingScore != null
@@ -38,7 +46,11 @@ function formatScoreLabel(settings: ActualBracketSettings) {
       : null;
   const main =
     settings.mainScore != null ? `본선 ${settings.mainScore}점` : null;
-  return [qualifying, main].filter(Boolean).join(" · ") || "점수 미설정";
+  const finals =
+    settings.mainFinalsScore != null
+      ? `${finalsFromRoundLabel(settings.finalsFromRound)} ${settings.mainFinalsScore}점`
+      : null;
+  return [qualifying, main, finals].filter(Boolean).join(" · ") || "점수 미설정";
 }
 
 function formatAdvanceRankLabel(settings: ActualBracketSettings) {

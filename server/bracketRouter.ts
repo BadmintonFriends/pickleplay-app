@@ -1651,6 +1651,8 @@ export const bracketRouter = router({
           courtNumbers,
           qualifyingScore: settings?.qualifyingScore ?? null,
           mainScore: settings?.mainScore ?? null,
+          mainFinalsScore: settings?.mainFinalsScore ?? null,
+          finalsFromRound: settings?.finalsFromRound ?? null,
           deuceEnabled: settings?.deuceEnabled ?? null,
           deuceMaxScore: settings?.deuceMaxScore ?? null,
           advanceCount: settings?.advanceCount ?? null,
