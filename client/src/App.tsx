@@ -24,6 +24,7 @@ import TournamentManagePage from "./pages/TournamentManagePage";
 import BracketPublicPage from "./pages/BracketPublicPage";
 import TournamentWinnersPage from "./pages/TournamentWinnersPage";
 import SchedulePublicPage from "./pages/SchedulePublicPage";
+import MatchSearchPage from "./pages/MatchSearchPage";
 import RefereeLoginPage from "./pages/RefereeLoginPage";
 import RefereePage from "./pages/RefereePage";
 import RefereeCourtPage from "./pages/RefereeCourtPage";
@@ -74,6 +75,7 @@ function Router() {
       <Route path="/tournaments/:id/bracket" component={BracketPublicPage} />
       <Route path="/tournament/:id/winners" component={TournamentWinnersPage} />
       <Route path="/tournament/:id/schedule" component={SchedulePublicPage} />
+      <Route path="/tournament/:id/matches/search" component={MatchSearchPage} />
       <Route path="/tournament/:id/referee/login" component={RefereeLoginPage} />
       <Route path="/tournament/:id/referee/match/:matchId" component={RefereeMatchPage} />
       <Route path="/tournament/:id/referee/court/:court" component={RefereeCourtPage} />

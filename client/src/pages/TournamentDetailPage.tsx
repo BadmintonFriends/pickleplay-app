@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, MapPin, Users, Trophy, ChevronRight,
   ExternalLink, FileText, Clock, AlertCircle, CheckCircle2,
-  ChevronLeft, Image as ImageIcon, LogIn, X,
+  ChevronLeft, Image as ImageIcon, LogIn, Search, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -173,6 +173,13 @@ export default function TournamentDetailPage() {
               경기 일정
             </button>
           </div>
+          <button
+            onClick={() => navigate(`/tournament/${tournamentId}/matches/search`)}
+            className="w-full flex items-center justify-center gap-2 bg-card border border-line-strong text-foreground font-bold text-sm py-3.5 rounded-2xl hover:border-primary transition-colors active:scale-[0.98]"
+          >
+            <Search className="w-4 h-4" />
+            이름으로 경기 찾기
+          </button>
           <button
             onClick={() => navigate(`/tournament/${tournamentId}/winners`)}
             className="w-full flex items-center justify-center gap-2 bg-amber-50 border border-amber-300 text-amber-700 font-bold text-sm py-3.5 rounded-2xl hover:bg-amber-100 transition-colors active:scale-[0.98] dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-400"

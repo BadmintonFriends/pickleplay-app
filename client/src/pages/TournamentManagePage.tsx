@@ -1403,6 +1403,15 @@ export default function TournamentManagePage() {
             {user?.name ?? user?.email}
           </p>
         </div>
+        <button
+          onClick={() =>
+            tournamentId && navigate(`/tournament/${tournamentId}/matches/search`)
+          }
+          className="w-8 h-8 rounded-full bg-card/10 flex items-center justify-center hover:bg-card/20 transition-colors"
+          title="경기 찾기"
+        >
+          <Search className="w-4 h-4" />
+        </button>
         <Badge className="bg-primary text-foreground text-[10px] font-bold">
           {user?.role === "admin" || user?.role === "super_admin"
             ? "관리자"

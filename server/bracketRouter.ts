@@ -1949,6 +1949,449 @@ export const bracketRouter = router({
       return { dates, events: eventList, groups, mainByEvent, tournamentName: tournament.name };
     }),
 
+  // ── 선수 이름으로 경기 위치 검색 (public) ─────────────────────
+
+  searchMatchesByPlayerName: publicProcedure
+    .input(z.object({ tournamentId: z.number(), query: z.string().max(40) }))
+    .query(async ({ input }) => {
+      const tournament = await db.getTournamentById(input.tournamentId);
+      if (!tournament) throw new TRPCError({ code: "NOT_FOUND" });
+      if (
+        !["bracket_published", "in_progress", "closed"].includes(
+          tournament.status ?? ""
+        )
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "대진표가 공개되지 않은 대회입니다",
+        });
+      }
+
+      const normalizeSearch = (value: string) =>
+        value.trim().toLocaleLowerCase().replace(/\s+/g, "");
+      const normalizedQuery = normalizeSearch(input.query);
+
+      if (!normalizedQuery) {
+        return {
+          tournamentName: tournament.name,
+          query: input.query,
+          total: 0,
+          matches: [],
+        };
+      }
+
+      const allMatches = await bdb.getBracketMatches(input.tournamentId);
+      const allGroups = await bdb.getBracketGroups(input.tournamentId);
+      const groupIds = allGroups.map(g => g.id);
+      const allGroupTeams =
+        groupIds.length > 0
+          ? await bdb.getBracketGroupTeamsByGroupIds(groupIds)
+          : [];
+      const events = await db.getEventsByTournament(input.tournamentId);
+      const allSettings = await bdb.getBracketSettings(input.tournamentId);
+      const registrationsWithPlayers = await db.getRegistrationsWithPlayers(
+        input.tournamentId
+      );
+      const allCourtSettings = await bdb.getBracketCourtSettings(
+        input.tournamentId
+      );
+      const courtGameNumMap = buildCourtGameNumMap(
+        allMatches,
+        allCourtSettings
+      );
+
+      const regIds = [
+        ...new Set(
+          [
+            ...allGroupTeams.map(t => t.registrationId),
+            ...allMatches.flatMap(m => [m.team1Id, m.team2Id]),
+          ].filter((id): id is number => typeof id === "number")
+        ),
+      ];
+
+      const playerRows = await Promise.all(
+        regIds.map(async regId => ({
+          regId,
+          players: await db.getPlayersByRegistration(regId),
+        }))
+      );
+
+      const teamMetaMap = new Map<
+        number,
+        { teamName: string; playerNames: string; playerNameList: string[] }
+      >();
+      for (const { regId, players } of playerRows) {
+        if (players.length === 0) {
+          teamMetaMap.set(regId, {
+            teamName: `팀#${regId}`,
+            playerNames: "",
+            playerNameList: [],
+          });
+          continue;
+        }
+        const uniqueAffs = [
+          ...new Set(
+            players.map(p => (p.affiliation ?? "").trim()).filter(Boolean)
+          ),
+        ];
+        const playerNameList = players.map(p => p.name);
+        teamMetaMap.set(regId, {
+          teamName:
+            uniqueAffs.length > 0
+              ? uniqueAffs.join(" & ")
+              : playerNameList.join(", "),
+          playerNames: playerNameList.join(", "),
+          playerNameList,
+        });
+      }
+
+      const eventMap = new Map(events.map(e => [e.id, e]));
+      const registrationInfoMap = new Map(
+        registrationsWithPlayers.map(reg => [
+          reg.id,
+          {
+            eventType: reg.eventType,
+            skillLevel: reg.skillLevel,
+            ageGroupLabel: reg.ageGroupLabel,
+          },
+        ])
+      );
+      const groupMap = new Map(allGroups.map(g => [g.id, g]));
+      const matchById = new Map(allMatches.map(m => [m.id, m]));
+      const groupRankRegistrationMap = new Map<string, number>();
+      for (const team of allGroupTeams) {
+        if (team.finalRank != null) {
+          groupRankRegistrationMap.set(
+            `${team.groupId}_${team.finalRank}`,
+            team.registrationId
+          );
+        }
+      }
+
+      const eventTotalRoundsCache = new Map<number, number>();
+      for (const event of events) {
+        const eventMainMatches = allMatches.filter(
+          m =>
+            m.tournamentEventId === event.id &&
+            m.phase === "main" &&
+            m.matchNumber !== 0
+        );
+        if (eventMainMatches.length > 0) {
+          eventTotalRoundsCache.set(
+            event.id,
+            Math.max(...eventMainMatches.map(m => m.roundNumber))
+          );
+          continue;
+        }
+        const settings = allSettings.find(
+          s => s.tournamentEventId === event.id
+        );
+        const eventGroups = allGroups.filter(
+          g => g.tournamentEventId === event.id
+        );
+        const n = Math.max(
+          eventGroups.length * (settings?.advanceCount ?? 1),
+          1
+        );
+        eventTotalRoundsCache.set(
+          event.id,
+          Math.max(1, Math.ceil(Math.log2(nextPowerOf2(n))))
+        );
+      }
+
+      function resolveSideRegistrationId(
+        match: (typeof allMatches)[number],
+        position: 1 | 2
+      ): number | null {
+        const teamId = position === 1 ? match.team1Id : match.team2Id;
+        if (teamId != null) return teamId;
+
+        const sourceType =
+          position === 1 ? match.team1SourceType : match.team2SourceType;
+        const sourceGroupId =
+          position === 1 ? match.team1SourceGroupId : match.team2SourceGroupId;
+        const sourceRank =
+          position === 1 ? match.team1SourceRank : match.team2SourceRank;
+        const sourceMatchId =
+          position === 1 ? match.team1SourceMatchId : match.team2SourceMatchId;
+
+        if (sourceType === "group_rank" && sourceGroupId && sourceRank) {
+          return (
+            groupRankRegistrationMap.get(`${sourceGroupId}_${sourceRank}`) ??
+            null
+          );
+        }
+        if (sourceType === "match_winner" && sourceMatchId) {
+          return matchById.get(sourceMatchId)?.winnerId ?? null;
+        }
+
+        const inferredSource = allMatches.find(
+          candidate =>
+            candidate.nextMatchId === match.id &&
+            candidate.nextMatchPosition === position
+        );
+        return inferredSource?.winnerId ?? null;
+      }
+
+      function unresolvedSideLabel(
+        match: (typeof allMatches)[number],
+        position: 1 | 2
+      ) {
+        const sourceType =
+          position === 1 ? match.team1SourceType : match.team2SourceType;
+        const sourceGroupId =
+          position === 1 ? match.team1SourceGroupId : match.team2SourceGroupId;
+        const sourceRank =
+          position === 1 ? match.team1SourceRank : match.team2SourceRank;
+        const sourceMatchId =
+          position === 1 ? match.team1SourceMatchId : match.team2SourceMatchId;
+
+        if (sourceType === "group_rank" && sourceGroupId && sourceRank) {
+          const group = groupMap.get(sourceGroupId);
+          return group ? `${group.groupNumber}조 ${sourceRank}위` : "미정";
+        }
+        if (sourceType === "match_winner" && sourceMatchId) {
+          const source = matchById.get(sourceMatchId);
+          if (source) {
+            const totalRounds =
+              eventTotalRoundsCache.get(source.tournamentEventId) ?? 1;
+            return `${getRoundName(source.roundNumber, totalRounds, source.matchNumber)} ${source.matchNumber}경기 승자`;
+          }
+        }
+        return match.isBye ? "부전승" : "미정";
+      }
+
+      function sideInfo(match: (typeof allMatches)[number], position: 1 | 2) {
+        const regId = resolveSideRegistrationId(match, position);
+        if (regId != null) {
+          const meta = teamMetaMap.get(regId);
+          return {
+            registrationId: regId,
+            teamName: meta?.teamName ?? `팀#${regId}`,
+            playerNames: meta?.playerNames ?? "",
+            playerNameList: meta?.playerNameList ?? [],
+          };
+        }
+        return {
+          registrationId: null,
+          teamName: unresolvedSideLabel(match, position),
+          playerNames: "",
+          playerNameList: [],
+        };
+      }
+
+      const courtProgressMap = new Map<
+        string,
+        {
+          completedThroughGameNum: number;
+          completedCount: number;
+          totalCount: number;
+        }
+      >();
+      const scheduledByCourtDate = new Map<string, typeof allMatches>();
+      for (const match of allMatches) {
+        if (!match.scheduledAt || match.courtNumber == null || match.isBye)
+          continue;
+        const date = formatStoredDate(match.scheduledAt);
+        if (!date) continue;
+        const key = `${date}_${match.courtNumber}`;
+        const list = scheduledByCourtDate.get(key) ?? [];
+        list.push(match);
+        scheduledByCourtDate.set(key, list);
+      }
+      for (const [key, matches] of scheduledByCourtDate.entries()) {
+        const sorted = [...matches].sort(
+          (a, b) =>
+            (courtGameNumMap.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+            (courtGameNumMap.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+        );
+        let completedThroughGameNum = 0;
+        for (const match of sorted) {
+          const gameNum = courtGameNumMap.get(match.id);
+          if (gameNum == null) continue;
+          if (
+            gameNum === completedThroughGameNum + 1 &&
+            match.status === "completed"
+          ) {
+            completedThroughGameNum = gameNum;
+            continue;
+          }
+          break;
+        }
+        courtProgressMap.set(key, {
+          completedThroughGameNum,
+          completedCount: sorted.filter(m => m.status === "completed").length,
+          totalCount: sorted.length,
+        });
+      }
+
+      const scheduledMatches = allMatches
+        .filter(
+          match =>
+            !match.isBye && match.scheduledAt && match.courtNumber != null
+        )
+        .map(match => {
+          const team1 = sideInfo(match, 1);
+          const team2 = sideInfo(match, 2);
+          const dateStr = formatStoredDate(match.scheduledAt);
+          const courtGameNum = courtGameNumMap.get(match.id) ?? null;
+          const progress =
+            dateStr && match.courtNumber != null
+              ? courtProgressMap.get(`${dateStr}_${match.courtNumber}`)
+              : null;
+          const event = eventMap.get(match.tournamentEventId);
+          const totalRounds =
+            eventTotalRoundsCache.get(match.tournamentEventId) ?? 1;
+          const phaseLabel =
+            match.phase === "qualifying"
+              ? `${match.groupId ? `${groupMap.get(match.groupId)?.groupNumber ?? ""}조 ` : ""}예선`
+              : getRoundName(match.roundNumber, totalRounds, match.matchNumber);
+          const isCompleted =
+            match.status === "completed" &&
+            match.team1Score !== null &&
+            match.team2Score !== null;
+
+          return {
+            id: match.id,
+            eventId: match.tournamentEventId,
+            groupId: match.groupId,
+            team1RegistrationId: team1.registrationId,
+            team2RegistrationId: team2.registrationId,
+            team1PlayerNameList: team1.playerNameList,
+            team2PlayerNameList: team2.playerNameList,
+            eventLabel: event
+              ? `${event.eventType} ${event.skillLevel}`
+              : `종목#${match.tournamentEventId}`,
+            phase: match.phase,
+            phaseLabel,
+            matchDate: dateStr,
+            timeStr: formatStoredTime(match.scheduledAt),
+            courtNumber: match.courtNumber,
+            courtGameNum,
+            courtCompletedThroughGameNum:
+              progress?.completedThroughGameNum ?? 0,
+            courtCompletedCount: progress?.completedCount ?? 0,
+            courtTotalCount: progress?.totalCount ?? 0,
+            status: match.status,
+            team1Name: team1.teamName,
+            team1Players: team1.playerNames,
+            team2Name: team2.teamName,
+            team2Players: team2.playerNames,
+            team1Score: match.team1Score,
+            team2Score: match.team2Score,
+            team1Result: isCompleted
+              ? match.team1Score! > match.team2Score!
+                ? "승"
+                : "패"
+              : null,
+            team2Result: isCompleted
+              ? match.team2Score! > match.team1Score!
+                ? "승"
+                : "패"
+              : null,
+          };
+        })
+        .sort((a, b) => {
+          const dateCompare = (a.matchDate ?? "").localeCompare(
+            b.matchDate ?? ""
+          );
+          if (dateCompare !== 0) return dateCompare;
+          const timeCompare = (a.timeStr ?? "").localeCompare(b.timeStr ?? "");
+          if (timeCompare !== 0) return timeCompare;
+          if (a.courtNumber !== b.courtNumber)
+            return (a.courtNumber ?? 0) - (b.courtNumber ?? 0);
+          return (a.courtGameNum ?? 0) - (b.courtGameNum ?? 0);
+        });
+
+      const candidateMatches = new Map<number, typeof scheduledMatches>();
+      for (const match of scheduledMatches) {
+        if (match.team1RegistrationId != null) {
+          const list = candidateMatches.get(match.team1RegistrationId) ?? [];
+          list.push(match);
+          candidateMatches.set(match.team1RegistrationId, list);
+        }
+        if (match.team2RegistrationId != null) {
+          const list = candidateMatches.get(match.team2RegistrationId) ?? [];
+          list.push(match);
+          candidateMatches.set(match.team2RegistrationId, list);
+        }
+      }
+
+      const candidates = playerRows
+        .flatMap(({ regId, players }) => {
+          const matches = candidateMatches.get(regId) ?? [];
+          if (matches.length === 0) return [];
+
+          const registrationInfo = registrationInfoMap.get(regId);
+          return players
+            .filter(player => normalizeSearch(player.name).includes(normalizedQuery))
+            .map(player => {
+              const teammateNames = players
+                .filter(teamPlayer => teamPlayer.id !== player.id)
+                .map(teamPlayer => teamPlayer.name);
+              const matchResults = matches.map(match => {
+                const {
+                  team1RegistrationId,
+                  team2RegistrationId,
+                  team1PlayerNameList,
+                  team2PlayerNameList,
+                  ...publicMatch
+                } = match;
+                return {
+                  ...publicMatch,
+                  matchedPlayerNames: [player.name],
+                };
+              });
+              const matchDates = [
+                ...new Set(
+                  matchResults
+                    .map(match => match.matchDate)
+                    .filter((date): date is string => !!date)
+                ),
+              ].sort();
+
+              return {
+                id: `${regId}_${player.id}`,
+                playerId: player.id,
+                registrationId: regId,
+                name: player.name,
+                affiliation: player.affiliation,
+                ageLabel: registrationInfo?.ageGroupLabel ?? "연령 미구분",
+                skillLevel: registrationInfo?.skillLevel ?? "급수 미정",
+                eventType: registrationInfo?.eventType ?? "",
+                eventLabel: [
+                  registrationInfo?.eventType,
+                  registrationInfo?.skillLevel,
+                ]
+                  .filter(Boolean)
+                  .join(" "),
+                teammateNames,
+                matchDates,
+                matchCount: matchResults.length,
+                matches: matchResults,
+              };
+            });
+        })
+        .sort((a, b) => {
+          const nameCompare = a.name.localeCompare(b.name, "ko");
+          if (nameCompare !== 0) return nameCompare;
+          const ageCompare = a.ageLabel.localeCompare(b.ageLabel, "ko");
+          if (ageCompare !== 0) return ageCompare;
+          return a.skillLevel.localeCompare(b.skillLevel, "ko");
+        });
+
+      const matches = candidates.flatMap(candidate => candidate.matches);
+
+      return {
+        tournamentName: tournament.name,
+        query: input.query,
+        total: candidates.length,
+        totalMatches: matches.length,
+        candidates: candidates.slice(0, 50),
+        matches: matches.slice(0, 50),
+      };
+    }),
+
   // ── 심판 PIN 확인 (login required) ────────────────────────────
 
   // ── 심판 경기 상세 조회 (login + PIN required) ─────────────────────────
