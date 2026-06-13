@@ -19,50 +19,45 @@ export async function verifyBracketAccess(user: { id: number; role: string }, to
 
 // ─── Pure Helper Functions ───────────────────────────────
 
-/** 코트별 경기 순번 맵 빌드: slotOrder 우선, 없으면 scheduledAt 기준 */
+/** 코트별 경기 순번 맵 빌드: courtSettings 기준 시간 계산, 없으면 scheduledAt 순서 카운팅 */
 function buildCourtGameNumMap(
-  matches: { id: number; courtNumber: number | null; scheduledAt: Date | null; slotOrder: number | null; isBye: boolean }[]
+  matches: { id: number; courtNumber: number | null; scheduledAt: Date | null; slotOrder: number | null; isBye: boolean }[],
+  courtSettings: { matchDate: string; startTime: string; estimatedMinutes: number }[]
 ): Map<number, number> {
   const map = new Map<number, number>();
   const candidates = matches.filter(m => m.courtNumber != null && !m.isBye);
-  const hasSlotOrder = candidates.some(m => m.slotOrder != null);
 
-  // 날짜(YYYY-MM-DD) + 코트번호 조합을 키로 사용해 날짜별로 게임번호를 1번부터 시작
-  const dateStr = (d: Date | null) => {
-    if (!d) return "unknown";
-    return formatStoredDate(d) ?? "unknown";
-  };
+  const dateStr = (d: Date | null) => formatStoredDate(d) ?? "unknown";
 
-  if (hasSlotOrder) {
-    const sorted = candidates.filter(m => m.slotOrder != null).sort((a, b) => {
-      const dateA = dateStr(a.scheduledAt);
-      const dateB = dateStr(b.scheduledAt);
-      if (dateA !== dateB) return dateA.localeCompare(dateB);
-      if (a.courtNumber !== b.courtNumber) return a.courtNumber! - b.courtNumber!;
-      return a.slotOrder! - b.slotOrder!;
-    });
-    const counter = new Map<string, number>();
-    for (const m of sorted) {
-      const key = `${dateStr(m.scheduledAt)}_${m.courtNumber}`;
-      const n = (counter.get(key) ?? 0) + 1;
-      counter.set(key, n);
-      map.set(m.id, n);
+  if (courtSettings.length > 0) {
+    const csMap = new Map(courtSettings.map(s => [s.matchDate, s]));
+    for (const m of candidates) {
+      if (!m.scheduledAt) continue;
+      const cs = csMap.get(dateStr(m.scheduledAt));
+      if (!cs) continue;
+      const [sh, sm] = cs.startTime.split(":").map(Number);
+      const startMinutes = sh * 60 + sm;
+      const matchMinutes = m.scheduledAt.getUTCHours() * 60 + m.scheduledAt.getUTCMinutes();
+      const gameNum = Math.round((matchMinutes - startMinutes) / cs.estimatedMinutes) + 1;
+      map.set(m.id, Math.max(1, gameNum));
     }
-  } else {
-    const sorted = candidates.filter(m => m.scheduledAt != null).sort((a, b) => {
-      const dateA = dateStr(a.scheduledAt);
-      const dateB = dateStr(b.scheduledAt);
-      if (dateA !== dateB) return dateA.localeCompare(dateB);
-      if (a.courtNumber !== b.courtNumber) return a.courtNumber! - b.courtNumber!;
-      return new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime();
-    });
-    const counter = new Map<string, number>();
-    for (const m of sorted) {
-      const key = `${dateStr(m.scheduledAt)}_${m.courtNumber}`;
-      const n = (counter.get(key) ?? 0) + 1;
-      counter.set(key, n);
-      map.set(m.id, n);
-    }
+    return map;
+  }
+
+  // fallback: scheduledAt 순서 카운팅
+  const sorted = candidates.filter(m => m.scheduledAt != null).sort((a, b) => {
+    const dateA = dateStr(a.scheduledAt);
+    const dateB = dateStr(b.scheduledAt);
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+    if (a.courtNumber !== b.courtNumber) return a.courtNumber! - b.courtNumber!;
+    return new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime();
+  });
+  const counter = new Map<string, number>();
+  for (const m of sorted) {
+    const key = `${dateStr(m.scheduledAt)}_${m.courtNumber}`;
+    const n = (counter.get(key) ?? 0) + 1;
+    counter.set(key, n);
+    map.set(m.id, n);
   }
   return map;
 }
@@ -1291,7 +1286,8 @@ export const bracketRouter = router({
 
       // 해당 날짜·코트 기준 게임 번호 계산 (전체 대회 경기 기반)
       const allTournamentMatches = await bdb.getBracketMatches(group.tournamentId);
-      const courtGameNumMap = buildCourtGameNumMap(allTournamentMatches);
+      const allCourtSettings1 = await bdb.getBracketCourtSettings(group.tournamentId);
+      const courtGameNumMap = buildCourtGameNumMap(allTournamentMatches, allCourtSettings1);
 
       const regIds = [...new Set(matches.flatMap(m => [m.team1Id, m.team2Id]).filter((id): id is number => id !== null))];
       const teamLabelMap = new Map<number, { teamName: string; playerNames: string }>();
@@ -1630,8 +1626,9 @@ export const bracketRouter = router({
       // 날짜 목록
       const dates = [...new Set(allSettings.map(s => s.matchDate).filter(Boolean))].sort() as string[];
 
-      // 코트별 경기 순번 계산 (slotOrder 우선, 없으면 scheduledAt)
-      const courtGameNumMap = buildCourtGameNumMap(allMatches);
+      // 코트별 경기 순번 계산 (시간 기반)
+      const allCourtSettings2 = await bdb.getBracketCourtSettings(input.tournamentId);
+      const courtGameNumMap = buildCourtGameNumMap(allMatches, allCourtSettings2);
 
       const settingsMap = new Map(allSettings.map(s => [s.tournamentEventId, s]));
 
@@ -2292,8 +2289,9 @@ export const bracketRouter = router({
         return m.isBye ? "부전승" : "미정";
       }
 
-      // 코트별 경기 순번 계산 (slotOrder 우선, 없으면 scheduledAt)
-      const courtGameNumMap = buildCourtGameNumMap(allMatches);
+      // 코트별 경기 순번 계산 (시간 기반)
+      const allCourtSettings3 = await bdb.getBracketCourtSettings(input.tournamentId);
+      const courtGameNumMap = buildCourtGameNumMap(allMatches, allCourtSettings3);
 
       // 코트 목록 및 날짜 목록 (scheduledAt 기준)
       const scheduledWithTime = allMatches.filter(m => m.scheduledAt != null && m.courtNumber != null && !m.isBye);
