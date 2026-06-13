@@ -173,6 +173,15 @@ export default function TournamentDetailPage() {
               경기 일정
             </button>
           </div>
+          <button
+            onClick={() => navigate(`/tournament/${tournamentId}/winners`)}
+            className="w-full flex items-center justify-center gap-2 bg-amber-50 border border-amber-300 text-amber-700 font-bold text-sm py-3.5 rounded-2xl hover:bg-amber-100 transition-colors active:scale-[0.98] dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-400"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3h14M5 3a2 2 0 00-2 2v1a4 4 0 004 4h6a4 4 0 004-4V5a2 2 0 00-2-2M5 3H3m16 0h2M9 12v5m6-5v5M3 21h18" />
+            </svg>
+            입상자 확인
+          </button>
           {isAuthenticated && tournament.status === "in_progress" && (
             <button
               onClick={() => navigate(`/tournament/${tournamentId}/referee/login`)}
@@ -184,6 +193,21 @@ export default function TournamentDetailPage() {
               심판 로그인
             </button>
           )}
+        </motion.section>
+      )}
+
+      {/* 대회 종료 후 입상자 확인 */}
+      {tournament.status === "closed" && (
+        <motion.section className="px-4 pb-2" initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+          <button
+            onClick={() => navigate(`/tournament/${tournamentId}/winners`)}
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold text-sm py-3.5 rounded-2xl hover:bg-primary/90 transition-colors active:scale-[0.98]"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+            입상자 확인
+          </button>
         </motion.section>
       )}
 

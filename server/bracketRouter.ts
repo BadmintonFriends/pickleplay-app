@@ -2331,6 +2331,108 @@ export const bracketRouter = router({
       return { tournamentName: tournament.name, courts, dates, matches };
     }),
 
+  // ── 종목별 입상자 조회 (public) ──────────────────────────
+
+  getTournamentPodium: publicProcedure
+    .input(z.object({ tournamentId: z.number() }))
+    .query(async ({ input }) => {
+      const tournament = await db.getTournamentById(input.tournamentId);
+      if (!tournament) throw new TRPCError({ code: "NOT_FOUND" });
+      if (!["bracket_published", "in_progress", "closed"].includes(tournament.status ?? "")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "대진표가 공개되지 않은 대회입니다" });
+      }
+
+      const events = await db.getEventsByTournament(input.tournamentId);
+      const allMatches = await bdb.getBracketMatches(input.tournamentId);
+      const allSettings = await bdb.getBracketSettings(input.tournamentId);
+      const settingsMap = new Map(allSettings.map(s => [s.tournamentEventId, s]));
+
+      const resolveTeam = async (regId: number | null) => {
+        if (!regId) return null;
+        const ps = await db.getPlayersByRegistration(regId);
+        if (ps.length === 0) return { teamName: `팀#${regId}`, playerNames: "" };
+        const uniqueAffs = [...new Set(ps.map(p => (p.affiliation ?? "").trim()).filter(Boolean))];
+        return {
+          teamName: uniqueAffs.length > 0 ? uniqueAffs.join(" & ") : ps.map(p => p.name).join(", "),
+          playerNames: ps.map(p => p.name).join(", "),
+        };
+      };
+
+      const results = await Promise.all(events.map(async (event) => {
+        const eventName = `${event.eventType} ${event.skillLevel}`;
+        const matchDate = settingsMap.get(event.id)?.matchDate ?? null;
+        const mainMatches = allMatches.filter(m => m.tournamentEventId === event.id && m.phase === "main");
+        const nonByeMatches = mainMatches.filter(m => !m.isBye);
+
+        if (nonByeMatches.length === 0) {
+          return { eventId: event.id, eventName, matchDate, complete: false as const };
+        }
+
+        const allCompleted = nonByeMatches.every(m => m.status === "completed");
+        if (!allCompleted) {
+          return { eventId: event.id, eventName, matchDate, complete: false as const };
+        }
+
+        const totalRounds = Math.max(...nonByeMatches.map(m => m.roundNumber));
+        const finalMatch = nonByeMatches.find(m => m.roundNumber === totalRounds && m.matchNumber !== 0);
+        if (!finalMatch?.winnerId) {
+          return { eventId: event.id, eventName, matchDate, complete: false as const };
+        }
+
+        const firstId = finalMatch.winnerId;
+        const secondId = finalMatch.team1Id === firstId ? finalMatch.team2Id : finalMatch.team1Id;
+
+        const thirdPlaceMatch = nonByeMatches.find(m => m.matchNumber === 0);
+
+        let thirdId: number | null = null;
+        let fourthId: number | null = null;
+
+        if (thirdPlaceMatch?.winnerId) {
+          // 3·4위전이 있으면 해당 경기 결과
+          thirdId = thirdPlaceMatch.winnerId;
+          fourthId = thirdPlaceMatch.team1Id === thirdId ? thirdPlaceMatch.team2Id : thirdPlaceMatch.team1Id;
+        } else if (totalRounds === 1) {
+          // 본선이 바로 결승: 1등 출신 조의 2위
+          const winnerSourceType = finalMatch.team1Id === firstId ? finalMatch.team1SourceType : finalMatch.team2SourceType;
+          const winnerSourceGroupId = finalMatch.team1Id === firstId ? finalMatch.team1SourceGroupId : finalMatch.team2SourceGroupId;
+          if (winnerSourceType === "group_rank" && winnerSourceGroupId) {
+            const groupTeams = await bdb.getBracketGroupTeamsByGroupIds([winnerSourceGroupId]);
+            const secondRanked = groupTeams.find(t => t.finalRank === 2);
+            if (secondRanked) thirdId = secondRanked.registrationId;
+          }
+        } else {
+          // 1위가 이긴 4강 경기의 패자 = 3위
+          const semiFinals = nonByeMatches.filter(m => m.roundNumber === totalRounds - 1);
+          const winnersSemi = semiFinals.find(m => m.winnerId === firstId);
+          if (winnersSemi) {
+            const loserId = winnersSemi.team1Id === firstId ? winnersSemi.team2Id : winnersSemi.team1Id;
+            if (loserId) thirdId = loserId;
+          }
+        }
+
+        const [first, second, third, fourth] = await Promise.all([
+          resolveTeam(firstId),
+          resolveTeam(secondId),
+          resolveTeam(thirdId),
+          resolveTeam(fourthId),
+        ]);
+
+        return {
+          eventId: event.id,
+          eventName,
+          matchDate,
+          complete: true as const,
+          first,
+          second,
+          third: third ?? null,
+          fourth: fourth ?? null,
+        };
+      }));
+
+      const dates = [...new Set(results.map(e => e.matchDate).filter((d): d is string => !!d))].sort();
+      return { tournamentName: tournament.name, dates, events: results };
+    }),
+
 });
 
 // ─── 조 예선 경기 재생성 ──────────────────────────────────
