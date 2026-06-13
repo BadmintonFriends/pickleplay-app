@@ -501,6 +501,13 @@ export default function TournamentManagePage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
+  const rescheduleCourtMutation = trpc.bracket.rescheduleWithCourtCount.useMutation({
+    onSuccess: (data) => {
+      toast.success(`재배정 완료: ${data.updatedCount}경기`);
+      refetchCourtSettings();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
   const [courtForm, setCourtForm] = useState<
     {
       matchDate: string;
@@ -3041,6 +3048,31 @@ export default function TournamentManagePage() {
                                   className="w-full px-2 py-1 bg-ink-3 rounded text-[10px] border border-line-strong focus:outline-none focus:ring-1 focus:ring-primary"
                                 />
                               </div>
+                            </div>
+                            <div className="flex justify-end pt-1">
+                              <button
+                                onClick={() => {
+                                  const newCount = Number(cf.courtCount);
+                                  if (!newCount || newCount < 1) {
+                                    toast.error("코트 수를 올바르게 입력하세요");
+                                    return;
+                                  }
+                                  if (!tournamentId) return;
+                                  if (!confirm(`${cf.matchDate} 경기를 ${newCount}코트 기준으로 재배정합니다. 완료된 경기는 결과가 유지됩니다. 계속할까요?`)) return;
+                                  rescheduleCourtMutation.mutate({
+                                    tournamentId,
+                                    matchDate: cf.matchDate,
+                                    newCourtCount: newCount,
+                                  });
+                                }}
+                                disabled={rescheduleCourtMutation.isPending}
+                                className="flex items-center gap-1 text-[9px] font-bold px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-400"
+                              >
+                                {rescheduleCourtMutation.isPending ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : null}
+                                코트 수 재배정
+                              </button>
                             </div>
                           </div>
                         );

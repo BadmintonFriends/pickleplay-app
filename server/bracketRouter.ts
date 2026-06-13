@@ -1075,6 +1075,67 @@ export const bracketRouter = router({
       return { success: true };
     }),
 
+  // ── 코트 수 변경 후 경기 재배정 ───────────────────────
+
+  rescheduleWithCourtCount: protectedProcedure
+    .input(z.object({
+      tournamentId: z.number(),
+      matchDate: z.string(),
+      newCourtCount: z.number().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await verifyBracketAccess(ctx.user!, input.tournamentId);
+
+      const courtSettings = await bdb.getBracketCourtSettings(input.tournamentId);
+      const cs = courtSettings.find(s => s.matchDate === input.matchDate);
+      if (!cs) throw new TRPCError({ code: "NOT_FOUND", message: "해당 날짜의 코트 설정이 없습니다" });
+
+      const allMatches = await bdb.getBracketMatches(input.tournamentId);
+      const dateMatches = allMatches.filter(m =>
+        !m.isBye &&
+        m.courtNumber != null &&
+        m.scheduledAt != null &&
+        (formatStoredDate(m.scheduledAt) === input.matchDate)
+      );
+
+      // 현재 순서 보존: slotOrder 우선, 없으면 scheduledAt → courtNumber 순
+      const sorted = [...dateMatches].sort((a, b) => {
+        if (a.slotOrder != null && b.slotOrder != null) return a.slotOrder - b.slotOrder;
+        if (a.slotOrder != null) return -1;
+        if (b.slotOrder != null) return 1;
+        const timeDiff = new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return (a.courtNumber ?? 0) - (b.courtNumber ?? 0);
+      });
+
+      const [sh, sm] = cs.startTime.split(":").map(Number);
+      const [year, month, day] = input.matchDate.split("-").map(Number);
+
+      for (let i = 0; i < sorted.length; i++) {
+        const slotIndex = Math.floor(i / input.newCourtCount);
+        const courtNumber = (i % input.newCourtCount) + 1;
+        const totalMins = sh * 60 + sm + slotIndex * cs.estimatedMinutes;
+        const scheduledAt = createKstDate(year, month, day, Math.floor(totalMins / 60), totalMins % 60);
+        await bdb.updateBracketMatch(sorted[i].id, {
+          courtNumber,
+          scheduledAt,
+          slotOrder: i + 1,
+        });
+      }
+
+      // court settings 업데이트
+      await bdb.upsertBracketCourtSettings({
+        tournamentId: input.tournamentId,
+        matchDate: input.matchDate,
+        courtCount: input.newCourtCount,
+        startTime: cs.startTime,
+        estimatedMinutes: cs.estimatedMinutes,
+        targetEndTime: cs.targetEndTime,
+      });
+
+      return { success: true, updatedCount: sorted.length };
+    }),
+
   // ── 대진 생성 ────────────────────────────────────────
 
   generate: protectedProcedure
