@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
+import * as db from "./db";
 import type { TrpcContext } from "./_core/context";
+import { COOKIE_NAME } from "../shared/const";
 
 // ─── Mock db module ─────────────────────────────────────
 vi.mock("./db", () => {
@@ -37,10 +39,46 @@ vi.mock("./db", () => {
   };
 
   const mockEvents = [
-    { id: 1, tournamentId: 1, eventType: "남복", skillLevel: "오픈부", maxTeams: 40, dayLabel: null, currentTeams: 5, createdAt: new Date() },
-    { id: 2, tournamentId: 1, eventType: "여복", skillLevel: "오픈부", maxTeams: 40, dayLabel: null, currentTeams: 3, createdAt: new Date() },
-    { id: 3, tournamentId: 1, eventType: "남단", skillLevel: "오픈부", maxTeams: 20, dayLabel: null, currentTeams: 10, createdAt: new Date() },
-    { id: 4, tournamentId: 1, eventType: "여단", skillLevel: "오픈부", maxTeams: 20, dayLabel: null, currentTeams: 0, createdAt: new Date() },
+    {
+      id: 1,
+      tournamentId: 1,
+      eventType: "남복",
+      skillLevel: "오픈부",
+      maxTeams: 40,
+      dayLabel: null,
+      currentTeams: 5,
+      createdAt: new Date(),
+    },
+    {
+      id: 2,
+      tournamentId: 1,
+      eventType: "여복",
+      skillLevel: "오픈부",
+      maxTeams: 40,
+      dayLabel: null,
+      currentTeams: 3,
+      createdAt: new Date(),
+    },
+    {
+      id: 3,
+      tournamentId: 1,
+      eventType: "남단",
+      skillLevel: "오픈부",
+      maxTeams: 20,
+      dayLabel: null,
+      currentTeams: 10,
+      createdAt: new Date(),
+    },
+    {
+      id: 4,
+      tournamentId: 1,
+      eventType: "여단",
+      skillLevel: "오픈부",
+      maxTeams: 20,
+      dayLabel: null,
+      currentTeams: 0,
+      createdAt: new Date(),
+    },
   ];
 
   const mockRegistrations: any[] = [];
@@ -55,13 +93,22 @@ vi.mock("./db", () => {
       return undefined;
     }),
     getFullTournamentData: vi.fn().mockImplementation(async (id: number) => {
-      if (id === 1) return { ...mockTournament, events: mockEvents, ageGroups: [], posters: [], documents: [] };
+      if (id === 1)
+        return {
+          ...mockTournament,
+          events: mockEvents,
+          ageGroups: [],
+          posters: [],
+          documents: [],
+        };
       return null;
     }),
-    getEventsByTournament: vi.fn().mockImplementation(async (tournamentId: number) => {
-      if (tournamentId === 1) return mockEvents;
-      return [];
-    }),
+    getEventsByTournament: vi
+      .fn()
+      .mockImplementation(async (tournamentId: number) => {
+        if (tournamentId === 1) return mockEvents;
+        return [];
+      }),
     getEventRegistrationCounts: vi.fn().mockResolvedValue([
       { tournamentEventId: 1, count: 5 },
       { tournamentEventId: 2, count: 3 },
@@ -73,7 +120,12 @@ vi.mock("./db", () => {
     generateRegistrationNumber: vi.fn().mockResolvedValue("R001-0001"),
     createRegistration: vi.fn().mockImplementation(async (data: any) => {
       const id = regIdCounter++;
-      mockRegistrations.push({ id, ...data, createdAt: new Date(), updatedAt: new Date() });
+      mockRegistrations.push({
+        id,
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       return id;
     }),
     createPlayer: vi.fn().mockImplementation(async (data: any) => {
@@ -106,79 +158,153 @@ vi.mock("./db", () => {
     deletePoster: vi.fn().mockResolvedValue(undefined),
     deleteDocument: vi.fn().mockResolvedValue(undefined),
     getAllUsers: vi.fn().mockResolvedValue([
-      { id: 1, openId: "owner-1", name: "관리자", email: "admin@test.com", role: "admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+      {
+        id: 1,
+        openId: "owner-1",
+        name: "관리자",
+        email: "admin@test.com",
+        role: "admin",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSignedIn: new Date(),
+      },
     ]),
     updateUserRole: vi.fn().mockResolvedValue(undefined),
+    softDeleteUser: vi.fn().mockResolvedValue(undefined),
     getUserByPhone: vi.fn().mockImplementation(async (phone: string) => {
-      if (phone === "01012345678") return {
-        id: 10, openId: "phone_01012345678", name: "테스트유저", phone: "01012345678",
-        role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-      };
+      if (phone === "01012345678")
+        return {
+          id: 10,
+          openId: "phone_01012345678",
+          name: "테스트유저",
+          phone: "01012345678",
+          role: "user",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastSignedIn: new Date(),
+        };
       return undefined;
     }),
     getUserByOpenId: vi.fn().mockImplementation(async (openId: string) => {
-      if (openId === "phone_01099998888") return {
-        id: 20, openId: "phone_01099998888", name: "신규유저", phone: "01099998888",
-        role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-      };
+      if (openId === "phone_01099998888")
+        return {
+          id: 20,
+          openId: "phone_01099998888",
+          name: "신규유저",
+          phone: "01099998888",
+          role: "user",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastSignedIn: new Date(),
+        };
       return undefined;
     }),
     upsertUser: vi.fn().mockResolvedValue(undefined),
     getUserById: vi.fn().mockImplementation(async (id: number) => {
-      if (id === 1) return {
-        id: 1, openId: "owner-1", name: "관리자", phone: "01011112222",
-        gender: "male", birthDate: "1990-01-01", role: "admin",
-        createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-      };
-      if (id === 10) return {
-        id: 10, openId: "phone_01012345678", name: "테스트유저", phone: "01012345678",
-        gender: "male", birthDate: "1995-05-15", role: "user",
-        createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-      };
+      if (id === 1)
+        return {
+          id: 1,
+          openId: "owner-1",
+          name: "관리자",
+          phone: "01011112222",
+          gender: "male",
+          birthDate: "1990-01-01",
+          role: "admin",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastSignedIn: new Date(),
+        };
+      if (id === 10)
+        return {
+          id: 10,
+          openId: "phone_01012345678",
+          name: "테스트유저",
+          phone: "01012345678",
+          gender: "male",
+          birthDate: "1995-05-15",
+          role: "user",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastSignedIn: new Date(),
+        };
       return undefined;
     }),
     updateUserProfile: vi.fn().mockResolvedValue(undefined),
     // KPR functions
     getKprRating: vi.fn().mockResolvedValue({
-      id: 1, userId: 10, rating: 1000, ratingDelta: 0, totalMatches: 0, wins: 0, losses: 0,
-      winStreak: 0, bestRating: 1000, weeklyRankDelta: 0,
-      createdAt: new Date(), updatedAt: new Date(),
+      id: 1,
+      userId: 10,
+      rating: 1000,
+      ratingDelta: 0,
+      totalMatches: 0,
+      wins: 0,
+      losses: 0,
+      winStreak: 0,
+      bestRating: 1000,
+      weeklyRankDelta: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }),
     initKprRating: vi.fn().mockResolvedValue(undefined),
     getKprLeaderboard: vi.fn().mockResolvedValue([
-      { userId: 10, rating: 1000, totalMatches: 0, wins: 0, losses: 0, winStreak: 0, userName: "테스트유저" },
+      {
+        userId: 10,
+        rating: 1000,
+        totalMatches: 0,
+        wins: 0,
+        losses: 0,
+        winStreak: 0,
+        userName: "테스트유저",
+      },
     ]),
     getKprTotalParticipants: vi.fn().mockResolvedValue(2),
     getKprRank: vi.fn().mockResolvedValue(1),
     getRecentMatches: vi.fn().mockResolvedValue([]),
-    getPlayerById: vi.fn().mockResolvedValue({ id: 1, registrationId: 1, name: "테스트선수", phone: "01012345678", birthDate: "1990-01-01", affiliation: "테스트클럽", giftSize: "L" }),
+    getPlayerById: vi.fn().mockResolvedValue({
+      id: 1,
+      registrationId: 1,
+      name: "테스트선수",
+      phone: "01012345678",
+      birthDate: "1990-01-01",
+      affiliation: "테스트클럽",
+      giftSize: "L",
+    }),
     updatePlayer: vi.fn().mockResolvedValue(undefined),
     // Phase 38: tournament_organizers
     getTournamentOrganizers: vi.fn().mockResolvedValue([]),
-    isTournamentOrganizer: vi.fn().mockImplementation(async (tournamentId: number, userId: number) => {
-      // user id=1 is organizer of tournament 1
-      return tournamentId === 1 && userId === 1;
-    }),
+    isTournamentOrganizer: vi
+      .fn()
+      .mockImplementation(async (tournamentId: number, userId: number) => {
+        // user id=1 is organizer of tournament 1
+        return tournamentId === 1 && userId === 1;
+      }),
     addTournamentOrganizer: vi.fn().mockResolvedValue(undefined),
     removeTournamentOrganizer: vi.fn().mockResolvedValue(undefined),
-    getUserManagedTournaments: vi.fn().mockImplementation(async (userId: number) => {
-      // user id=1 manages tournament 1
-      if (userId === 1) return [1];
-      return [];
-    }),
+    getUserManagedTournaments: vi
+      .fn()
+      .mockImplementation(async (userId: number) => {
+        // user id=1 manages tournament 1
+        if (userId === 1) return [1];
+        return [];
+      }),
     searchUsers: vi.fn().mockResolvedValue([]),
   };
 });
 
 vi.mock("./storage", () => ({
-  storagePut: vi.fn().mockResolvedValue({ url: "https://cdn.example.com/test.jpg", key: "test-key" }),
+  storagePut: vi.fn().mockResolvedValue({
+    url: "https://cdn.example.com/test.jpg",
+    key: "test-key",
+  }),
 }));
 
 vi.mock("./sms", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
-  verifyCode: vi.fn().mockImplementation(async (_phone: string, code: string) => {
-    return { success: code === "123456" };
-  }),
+  verifyCode: vi
+    .fn()
+    .mockImplementation(async (_phone: string, code: string) => {
+      return { success: code === "123456" };
+    }),
   normalizePhoneToDigits: vi.fn().mockImplementation((phone: string) => {
     const digits = phone.replace(/\D/g, "");
     if (digits.startsWith("82")) return `0${digits.slice(2)}`;
@@ -206,7 +332,9 @@ function createPublicContext(): TrpcContext {
   };
 }
 
-function createUserContext(overrides?: Partial<AuthenticatedUser>): TrpcContext {
+function createUserContext(
+  overrides?: Partial<AuthenticatedUser>
+): TrpcContext {
   const user: AuthenticatedUser = {
     id: 10,
     openId: "test-user-1",
@@ -227,13 +355,20 @@ function createUserContext(overrides?: Partial<AuthenticatedUser>): TrpcContext 
   };
 }
 
-function createAdminContext(role: "admin" | "super_admin" | "user" = "admin"): TrpcContext {
+function createAdminContext(
+  role: "admin" | "super_admin" | "user" = "admin"
+): TrpcContext {
   return createUserContext({ id: 1, openId: "admin-1", name: "관리자", role });
 }
 
 // Phase 38: tournament_organizers에 등록된 일반 user context (id=1, tournament 1의 관리자)
 function createTournamentManagerContext(): TrpcContext {
-  return createUserContext({ id: 1, openId: "manager-1", name: "대회관리자", role: "user" });
+  return createUserContext({
+    id: 1,
+    openId: "manager-1",
+    name: "대회관리자",
+    role: "user",
+  });
 }
 
 // ─── Tournament Router Tests ────────────────────────────
@@ -257,12 +392,16 @@ describe("tournament router", () => {
 
   it("throws NOT_FOUND for nonexistent tournament", async () => {
     const caller = appRouter.createCaller(createPublicContext());
-    await expect(caller.tournament.detail({ id: 9999 })).rejects.toThrow("대회를 찾을 수 없습니다");
+    await expect(caller.tournament.detail({ id: 9999 })).rejects.toThrow(
+      "대회를 찾을 수 없습니다"
+    );
   });
 
   it("returns registration status per event (public)", async () => {
     const caller = appRouter.createCaller(createPublicContext());
-    const result = await caller.tournament.registrationStatus({ tournamentId: 1 });
+    const result = await caller.tournament.registrationStatus({
+      tournamentId: 1,
+    });
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
     const firstEvent = result[0];
@@ -302,8 +441,20 @@ describe("registration router", () => {
       tournamentEventId: 1, // 남복 오픈부
       isSelfParticipant: true,
       players: [
-        { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "L", affiliation: "OO클럽" },
-        { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", giftSize: "XL", affiliation: "XX클럽" },
+        {
+          name: "홍길동",
+          birthDate: "1990-01-01",
+          phone: "01012345678",
+          giftSize: "L",
+          affiliation: "OO클럽",
+        },
+        {
+          name: "김철수",
+          birthDate: "1991-02-02",
+          phone: "01098765432",
+          giftSize: "XL",
+          affiliation: "XX클럽",
+        },
       ],
     });
     expect(result).toHaveProperty("registrationId");
@@ -320,7 +471,13 @@ describe("registration router", () => {
       tournamentEventId: 3, // 남단 오픈부
       isSelfParticipant: true,
       players: [
-        { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "M", affiliation: "OO클럽" },
+        {
+          name: "홍길동",
+          birthDate: "1990-01-01",
+          phone: "01012345678",
+          giftSize: "M",
+          affiliation: "OO클럽",
+        },
       ],
     });
     expect(result).toHaveProperty("registrationId");
@@ -335,8 +492,18 @@ describe("registration router", () => {
         tournamentEventId: 3, // 남단 오픈부
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", affiliation: "B클럽" },
+          {
+            name: "홍길동",
+            birthDate: "1990-01-01",
+            phone: "01012345678",
+            affiliation: "A클럽",
+          },
+          {
+            name: "김철수",
+            birthDate: "1991-02-02",
+            phone: "01098765432",
+            affiliation: "B클럽",
+          },
         ],
       })
     ).rejects.toThrow("단식 종목은 1명만 등록 가능합니다");
@@ -350,7 +517,12 @@ describe("registration router", () => {
         tournamentEventId: 1, // 남복 오픈부
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
+          {
+            name: "홍길동",
+            birthDate: "1990-01-01",
+            phone: "01012345678",
+            affiliation: "A클럽",
+          },
         ],
       })
     ).rejects.toThrow("복식 종목은 2명을 등록해야 합니다");
@@ -364,8 +536,20 @@ describe("registration router", () => {
         tournamentEventId: 1,
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", giftSize: "XXXL", affiliation: "A클럽" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", giftSize: "M", affiliation: "B클럽" },
+          {
+            name: "홍길동",
+            birthDate: "1990-01-01",
+            phone: "01012345678",
+            giftSize: "XXXL",
+            affiliation: "A클럽",
+          },
+          {
+            name: "김철수",
+            birthDate: "1991-02-02",
+            phone: "01098765432",
+            giftSize: "M",
+            affiliation: "B클럽",
+          },
         ],
       })
     ).rejects.toThrow("유효하지 않은 사이즈입니다");
@@ -379,8 +563,18 @@ describe("registration router", () => {
         tournamentEventId: 1,
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", affiliation: "B클럽" },
+          {
+            name: "홍길동",
+            birthDate: "1990-01-01",
+            phone: "01012345678",
+            affiliation: "A클럽",
+          },
+          {
+            name: "김철수",
+            birthDate: "1991-02-02",
+            phone: "01098765432",
+            affiliation: "B클럽",
+          },
         ],
       })
     ).rejects.toThrow("대회를 찾을 수 없습니다");
@@ -394,8 +588,18 @@ describe("registration router", () => {
         tournamentEventId: 9999,
         isSelfParticipant: true,
         players: [
-          { name: "홍길동", birthDate: "1990-01-01", phone: "01012345678", affiliation: "A클럽" },
-          { name: "김철수", birthDate: "1991-02-02", phone: "01098765432", affiliation: "B클럽" },
+          {
+            name: "홍길동",
+            birthDate: "1990-01-01",
+            phone: "01012345678",
+            affiliation: "A클럽",
+          },
+          {
+            name: "김철수",
+            birthDate: "1991-02-02",
+            phone: "01098765432",
+            affiliation: "B클럽",
+          },
         ],
       })
     ).rejects.toThrow("종목을 찾을 수 없습니다");
@@ -454,16 +658,40 @@ describe("registration router", () => {
           tournamentEventId: 1,
           isSelfParticipant: false,
           players: [
-            { name: "선수A", birthDate: "1990-01-01", phone: "01011111111", giftSize: "S", affiliation: "A클럽" },
-            { name: "선수B", birthDate: "1992-03-03", phone: "01022222222", giftSize: "M", affiliation: "A클럽" },
+            {
+              name: "선수A",
+              birthDate: "1990-01-01",
+              phone: "01011111111",
+              giftSize: "S",
+              affiliation: "A클럽",
+            },
+            {
+              name: "선수B",
+              birthDate: "1992-03-03",
+              phone: "01022222222",
+              giftSize: "M",
+              affiliation: "A클럽",
+            },
           ],
         },
         {
           tournamentEventId: 2,
           isSelfParticipant: false,
           players: [
-            { name: "선수C", birthDate: "1993-04-04", phone: "01033333333", giftSize: "L", affiliation: "B클럽" },
-            { name: "선수D", birthDate: "1994-05-05", phone: "01044444444", giftSize: "XL", affiliation: "B클럽" },
+            {
+              name: "선수C",
+              birthDate: "1993-04-04",
+              phone: "01033333333",
+              giftSize: "L",
+              affiliation: "B클럽",
+            },
+            {
+              name: "선수D",
+              birthDate: "1994-05-05",
+              phone: "01044444444",
+              giftSize: "XL",
+              affiliation: "B클럽",
+            },
           ],
         },
       ],
@@ -486,13 +714,17 @@ describe("admin router", () => {
 
   it("allows admin to view tournament registrations", async () => {
     const caller = appRouter.createCaller(createAdminContext());
-    const result = await caller.admin.tournamentRegistrations({ tournamentId: 1 });
+    const result = await caller.admin.tournamentRegistrations({
+      tournamentId: 1,
+    });
     expect(Array.isArray(result)).toBe(true);
   });
 
   it("allows tournament manager (user in tournament_organizers) to view registrations", async () => {
     const caller = appRouter.createCaller(createTournamentManagerContext());
-    const result = await caller.admin.tournamentRegistrations({ tournamentId: 1 });
+    const result = await caller.admin.tournamentRegistrations({
+      tournamentId: 1,
+    });
     expect(Array.isArray(result)).toBe(true);
   });
 
@@ -664,7 +896,10 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.smsAuth.login({ phone: "01012345678", code: "123456" });
+    const result = await caller.smsAuth.login({
+      phone: "01012345678",
+      code: "123456",
+    });
     expect(result.success).toBe(true);
     expect(result.user.name).toBe("테스트유저");
     expect(ctx.res.cookie).toHaveBeenCalled();
@@ -676,7 +911,9 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.smsAuth.login({ phone: "01012345678", code: "999999" })).rejects.toThrow("인증번호가 올바르지 않습니다");
+    await expect(
+      caller.smsAuth.login({ phone: "01012345678", code: "999999" })
+    ).rejects.toThrow("인증번호가 올바르지 않습니다");
   });
 
   it("rejects login for unregistered phone", async () => {
@@ -685,7 +922,9 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.smsAuth.login({ phone: "01099998888", code: "123456" })).rejects.toThrow("가입되지 않은");
+    await expect(
+      caller.smsAuth.login({ phone: "01099998888", code: "123456" })
+    ).rejects.toThrow("가입되지 않은");
   });
 
   it("registers new user with correct code", async () => {
@@ -714,15 +953,17 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.smsAuth.register({
-      phone: "01099998888",
-      code: "000000",
-      name: "신규",
-      gender: "female",
-      birthDate: "1995-06-15",
-      termsAccepted: true,
-      privacyAccepted: true,
-    })).rejects.toThrow("인증번호가 올바르지 않습니다");
+    await expect(
+      caller.smsAuth.register({
+        phone: "01099998888",
+        code: "000000",
+        name: "신규",
+        gender: "female",
+        birthDate: "1995-06-15",
+        termsAccepted: true,
+        privacyAccepted: true,
+      })
+    ).rejects.toThrow("인증번호가 올바르지 않습니다");
   });
 
   it("rejects registration for already registered phone", async () => {
@@ -731,15 +972,17 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.smsAuth.register({
-      phone: "01012345678",
-      code: "123456",
-      name: "중복",
-      gender: "male",
-      birthDate: "1990-01-01",
-      termsAccepted: true,
-      privacyAccepted: true,
-    })).rejects.toThrow("이미 가입된");
+    await expect(
+      caller.smsAuth.register({
+        phone: "01012345678",
+        code: "123456",
+        name: "중복",
+        gender: "male",
+        birthDate: "1990-01-01",
+        termsAccepted: true,
+        privacyAccepted: true,
+      })
+    ).rejects.toThrow("이미 가입된");
   });
 
   it("rejects registration without terms acceptance", async () => {
@@ -748,35 +991,46 @@ describe("smsAuth router", () => {
       res: { clearCookie: vi.fn(), cookie: vi.fn() } as any,
     };
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.smsAuth.register({
-      phone: "01099998888",
-      code: "123456",
-      name: "신규",
-      gender: "male",
-      birthDate: "1990-01-01",
-      termsAccepted: false,
-      privacyAccepted: true,
-    })).rejects.toThrow();
+    await expect(
+      caller.smsAuth.register({
+        phone: "01099998888",
+        code: "123456",
+        name: "신규",
+        gender: "male",
+        birthDate: "1990-01-01",
+        termsAccepted: false,
+        privacyAccepted: true,
+      })
+    ).rejects.toThrow();
   });
 });
 // ─── User Router Tests ─────────────────────────────────
 describe("user router", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const userCtx: TrpcContext = {
-    user: { id: 10, name: "테스트유저", role: "user", openId: "phone_01012345678" },
+    user: {
+      id: 10,
+      name: "테스트유저",
+      role: "user",
+      openId: "phone_01012345678",
+    },
     res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
-    req: {} as any,
+    req: { protocol: "https", headers: {} } as any,
   };
 
   const adminCtx: TrpcContext = {
     user: { id: 1, name: "관리자", role: "admin", openId: "owner-1" },
     res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
-    req: {} as any,
+    req: { protocol: "https", headers: {} } as any,
   };
 
   const anonCtx: TrpcContext = {
     user: null,
     res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
-    req: {} as any,
+    req: { protocol: "https", headers: {} } as any,
   };
 
   const caller = appRouter.createCaller;
@@ -801,12 +1055,16 @@ describe("user router", () => {
   });
 
   it("updateProfile - 성별을 수정할 수 있다", async () => {
-    const result = await caller(userCtx).user.updateProfile({ gender: "female" });
+    const result = await caller(userCtx).user.updateProfile({
+      gender: "female",
+    });
     expect(result.success).toBe(true);
   });
 
   it("updateProfile - 생년월일을 수정할 수 있다", async () => {
-    const result = await caller(userCtx).user.updateProfile({ birthDate: "2000-12-25" });
+    const result = await caller(userCtx).user.updateProfile({
+      birthDate: "2000-12-25",
+    });
     expect(result.success).toBe(true);
   });
 
@@ -822,6 +1080,28 @@ describe("user router", () => {
     ).rejects.toThrow();
   });
 
+  it("deleteAccount - 계정을 soft delete하고 세션 쿠키를 제거한다", async () => {
+    const result = await caller(userCtx).user.deleteAccount();
+
+    expect(result.success).toBe(true);
+    expect(db.softDeleteUser).toHaveBeenCalledWith(10);
+    expect(userCtx.res.clearCookie).toHaveBeenCalledWith(
+      COOKIE_NAME,
+      expect.objectContaining({
+        maxAge: -1,
+        httpOnly: true,
+        path: "/",
+        sameSite: "none",
+        secure: true,
+      })
+    );
+  });
+
+  it("deleteAccount - 비인증 사용자는 에러를 반환한다", async () => {
+    await expect(caller(anonCtx).user.deleteAccount()).rejects.toThrow();
+    expect(db.softDeleteUser).not.toHaveBeenCalled();
+  });
+
   it("profile - 관리자도 프로필을 조회할 수 있다", async () => {
     const result = await caller(adminCtx).user.profile();
     expect(result).toBeDefined();
@@ -830,16 +1110,22 @@ describe("user router", () => {
   });
 });
 
-
 // ─── KPR Router Tests ──────────────────────────────────
 describe("kpr router", () => {
   const caller = appRouter.createCaller;
 
   const userCtx = {
     user: {
-      id: 10, openId: "test-user-1", email: "user@test.com", name: "테스트유저",
-      phone: "01012345678", loginMethod: "manus" as const, role: "user" as const,
-      createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+      id: 10,
+      openId: "test-user-1",
+      email: "user@test.com",
+      name: "테스트유저",
+      phone: "01012345678",
+      loginMethod: "manus" as const,
+      role: "user" as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSignedIn: new Date(),
     },
     req: { protocol: "https", headers: {} } as any,
     res: { clearCookie: vi.fn() } as any,
@@ -886,7 +1172,6 @@ describe("kpr router", () => {
     expect(result.totalParticipants).toBe(2);
   });
 });
-
 
 // ─── updatePlayerInfo 테스트 ─────────────────────────────
 describe("admin.updatePlayerInfo", () => {

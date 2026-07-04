@@ -120,3 +120,6 @@ client/public/__manus__/version.json
 *.jpg
 *.png
 *.jpeg
+
+# Generated store listing screenshots/previews
+store-previews/

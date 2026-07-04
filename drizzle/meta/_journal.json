@@ -141,6 +141,13 @@
       "when": 1781155251931,
       "tag": "0019_fixed_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1783043822773,
+      "tag": "0020_magenta_frank_castle",
+      "breakpoints": true
     }
   ]
 }

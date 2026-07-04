@@ -32,6 +32,7 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  deletedAt: timestamp("deletedAt"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -52,7 +53,9 @@ export const tournaments = mysqlTable("tournaments", {
   feePerTeam: int("feePerTeam").default(0).notNull(),
   giftDescription: varchar("giftDescription", { length: 500 }),
   // Size options
-  sizeType: mysqlEnum("sizeType", ["numeric", "alpha"]).default("numeric").notNull(),
+  sizeType: mysqlEnum("sizeType", ["numeric", "alpha"])
+    .default("numeric")
+    .notNull(),
   sizeOptions: varchar("sizeOptions", { length: 500 }), // JSON array string e.g. '["85","90","95","100","105","110"]'
   // Features
   hasAgeGroup: boolean("hasAgeGroup").default(false).notNull(),
@@ -66,7 +69,14 @@ export const tournaments = mysqlTable("tournaments", {
   sizeGuideImageUrl: varchar("sizeGuideImageUrl", { length: 1000 }),
   sizeGuideFileKey: varchar("sizeGuideFileKey", { length: 500 }),
   // Status
-  status: mysqlEnum("status", ["draft", "open", "closed", "bracket_published", "in_progress", "cancelled"])
+  status: mysqlEnum("status", [
+    "draft",
+    "open",
+    "closed",
+    "bracket_published",
+    "in_progress",
+    "cancelled",
+  ])
     .default("draft")
     .notNull(),
   officialDocUrl: varchar("officialDocUrl", { length: 1000 }), // 공문 링크 URL
@@ -83,7 +93,13 @@ export type InsertTournament = typeof tournaments.$inferInsert;
 export const tournamentEvents = mysqlTable("tournament_events", {
   id: int("id").autoincrement().primaryKey(),
   tournamentId: int("tournamentId").notNull(),
-  eventType: mysqlEnum("eventType", ["남복", "여복", "혼복", "남단", "여단"]).notNull(),
+  eventType: mysqlEnum("eventType", [
+    "남복",
+    "여복",
+    "혼복",
+    "남단",
+    "여단",
+  ]).notNull(),
   skillLevel: varchar("skillLevel", { length: 50 }).notNull(), // 오픈부, 2부, 3부, 신인부
   maxTeams: int("maxTeams").default(40).notNull(),
   dayLabel: varchar("dayLabel", { length: 50 }), // e.g. "1일차 (6/13)"
@@ -123,18 +139,23 @@ export type TournamentPoster = typeof tournamentPosters.$inferSelect;
 export type InsertTournamentPoster = typeof tournamentPosters.$inferInsert;
 
 // ─── Tournament Organizers (다중 관리자) ─────────────────
-export const tournamentOrganizers = mysqlTable("tournament_organizers", {
-  id: int("id").autoincrement().primaryKey(),
-  tournamentId: int("tournamentId").notNull(),
-  userId: int("userId").notNull(),
-  role: mysqlEnum("role", ["owner", "manager"]).default("manager").notNull(),
-  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
-}, (table) => ({
-  uniqueTournamentUser: unique().on(table.tournamentId, table.userId),
-}));
+export const tournamentOrganizers = mysqlTable(
+  "tournament_organizers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tournamentId: int("tournamentId").notNull(),
+    userId: int("userId").notNull(),
+    role: mysqlEnum("role", ["owner", "manager"]).default("manager").notNull(),
+    assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+  },
+  table => ({
+    uniqueTournamentUser: unique().on(table.tournamentId, table.userId),
+  })
+);
 
 export type TournamentOrganizer = typeof tournamentOrganizers.$inferSelect;
-export type InsertTournamentOrganizer = typeof tournamentOrganizers.$inferInsert;
+export type InsertTournamentOrganizer =
+  typeof tournamentOrganizers.$inferInsert;
 
 // ─── Tournament Documents (공문 PDF) ─────────────────────
 export const tournamentDocuments = mysqlTable("tournament_documents", {
@@ -215,7 +236,9 @@ export const matchResults = mysqlTable("match_results", {
   id: int("id").autoincrement().primaryKey(),
   tournamentId: int("tournamentId"),
   matchDate: timestamp("matchDate").defaultNow().notNull(),
-  matchType: mysqlEnum("matchType", ["singles", "doubles", "mixed"]).default("doubles").notNull(),
+  matchType: mysqlEnum("matchType", ["singles", "doubles", "mixed"])
+    .default("doubles")
+    .notNull(),
   winner1Id: int("winner1Id").notNull(),
   winner2Id: int("winner2Id"),
   loser1Id: int("loser1Id").notNull(),
@@ -325,7 +348,13 @@ export type InsertReport = typeof reports.$inferInsert;
 export const notifications = mysqlTable("notifications", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  type: mysqlEnum("type", ["comment", "like", "notice", "report_result", "hidden"]).notNull(),
+  type: mysqlEnum("type", [
+    "comment",
+    "like",
+    "notice",
+    "report_result",
+    "hidden",
+  ]).notNull(),
   title: varchar("title", { length: 200 }).notNull(),
   body: text("body").notNull(),
   relatedPostId: int("relatedPostId"),
@@ -338,58 +367,75 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
 
 // ─── Bracket: Settings (종목별 대진 설정) ────────────────
-export const bracketSettings = mysqlTable("bracket_settings", {
-  id: int("id").autoincrement().primaryKey(),
-  tournamentId: int("tournamentId").notNull(),
-  tournamentEventId: int("tournamentEventId").notNull(),
-  qualifyingScore: int("qualifyingScore").notNull().default(15),
-  mainScore: int("mainScore").notNull().default(15),
-  deuceEnabled: boolean("deuceEnabled").notNull().default(true),
-  deuceMaxScore: int("deuceMaxScore").notNull().default(17),
-  advanceCount: int("advanceCount").notNull().default(1), // 1 or 2
-  hasThirdPlace: boolean("hasThirdPlace").notNull().default(false),
-  mainFinalsScore: int("mainFinalsScore"),      // 결승권 목표점수 (null이면 mainScore 사용)
-  finalsFromRound: int("finalsFromRound"),      // 몇 라운드 전부터 적용: null=전체, 0=결승, 1=준결승, 2=8강...
-  totalMainRounds: int("totalMainRounds"),      // 본선 총 라운드 수 (대진 생성 시 자동 저장)
-  eventOrder: int("eventOrder").notNull().default(0),
-  matchDate: varchar("matchDate", { length: 10 }),
-  status: mysqlEnum("status", ["draft", "qualifying", "main", "completed"]).notNull().default("draft"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => ({
-  uqTournamentEvent: unique().on(table.tournamentId, table.tournamentEventId),
-}));
+export const bracketSettings = mysqlTable(
+  "bracket_settings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tournamentId: int("tournamentId").notNull(),
+    tournamentEventId: int("tournamentEventId").notNull(),
+    qualifyingScore: int("qualifyingScore").notNull().default(15),
+    mainScore: int("mainScore").notNull().default(15),
+    deuceEnabled: boolean("deuceEnabled").notNull().default(true),
+    deuceMaxScore: int("deuceMaxScore").notNull().default(17),
+    advanceCount: int("advanceCount").notNull().default(1), // 1 or 2
+    hasThirdPlace: boolean("hasThirdPlace").notNull().default(false),
+    mainFinalsScore: int("mainFinalsScore"), // 결승권 목표점수 (null이면 mainScore 사용)
+    finalsFromRound: int("finalsFromRound"), // 몇 라운드 전부터 적용: null=전체, 0=결승, 1=준결승, 2=8강...
+    totalMainRounds: int("totalMainRounds"), // 본선 총 라운드 수 (대진 생성 시 자동 저장)
+    eventOrder: int("eventOrder").notNull().default(0),
+    matchDate: varchar("matchDate", { length: 10 }),
+    status: mysqlEnum("status", ["draft", "qualifying", "main", "completed"])
+      .notNull()
+      .default("draft"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    uqTournamentEvent: unique().on(table.tournamentId, table.tournamentEventId),
+  })
+);
 
 export type BracketSettings = typeof bracketSettings.$inferSelect;
 export type InsertBracketSettings = typeof bracketSettings.$inferInsert;
 
 // ─── Bracket: Court Settings (날짜별 코트 설정) ──────────
-export const bracketCourtSettings = mysqlTable("bracket_court_settings", {
-  id: int("id").autoincrement().primaryKey(),
-  tournamentId: int("tournamentId").notNull(),
-  matchDate: varchar("matchDate", { length: 10 }).notNull(),
-  courtCount: int("courtCount").notNull().default(1),
-  startTime: varchar("startTime", { length: 5 }).notNull().default("09:00"),
-  estimatedMinutes: int("estimatedMinutes").notNull().default(15),
-  targetEndTime: varchar("targetEndTime", { length: 5 }).notNull().default("18:00"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  uqTournamentDate: unique().on(table.tournamentId, table.matchDate),
-}));
+export const bracketCourtSettings = mysqlTable(
+  "bracket_court_settings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tournamentId: int("tournamentId").notNull(),
+    matchDate: varchar("matchDate", { length: 10 }).notNull(),
+    courtCount: int("courtCount").notNull().default(1),
+    startTime: varchar("startTime", { length: 5 }).notNull().default("09:00"),
+    estimatedMinutes: int("estimatedMinutes").notNull().default(15),
+    targetEndTime: varchar("targetEndTime", { length: 5 })
+      .notNull()
+      .default("18:00"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    uqTournamentDate: unique().on(table.tournamentId, table.matchDate),
+  })
+);
 
 export type BracketCourtSettings = typeof bracketCourtSettings.$inferSelect;
-export type InsertBracketCourtSettings = typeof bracketCourtSettings.$inferInsert;
+export type InsertBracketCourtSettings =
+  typeof bracketCourtSettings.$inferInsert;
 
 // ─── Bracket: Groups (예선 조) ───────────────────────────
-export const bracketGroups = mysqlTable("bracket_groups", {
-  id: int("id").autoincrement().primaryKey(),
-  tournamentId: int("tournamentId").notNull(),
-  tournamentEventId: int("tournamentEventId").notNull(),
-  groupNumber: int("groupNumber").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  uqEventGroup: unique().on(table.tournamentEventId, table.groupNumber),
-}));
+export const bracketGroups = mysqlTable(
+  "bracket_groups",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tournamentId: int("tournamentId").notNull(),
+    tournamentEventId: int("tournamentEventId").notNull(),
+    groupNumber: int("groupNumber").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    uqEventGroup: unique().on(table.tournamentEventId, table.groupNumber),
+  })
+);
 
 export type BracketGroup = typeof bracketGroups.$inferSelect;
 export type InsertBracketGroup = typeof bracketGroups.$inferInsert;
@@ -414,8 +460,8 @@ export const bracketMatches = mysqlTable("bracket_matches", {
   phase: mysqlEnum("phase", ["qualifying", "main"]).notNull(),
   roundNumber: int("roundNumber").notNull().default(1),
   matchNumber: int("matchNumber").notNull(), // 0 = 3·4위전
-  groupId: int("groupId"),                  // 예선 조 (qualifying only)
-  team1Id: int("team1Id"),                  // registrations.id
+  groupId: int("groupId"), // 예선 조 (qualifying only)
+  team1Id: int("team1Id"), // registrations.id
   team2Id: int("team2Id"),
   team1Score: int("team1Score"),
   team2Score: int("team2Score"),
@@ -435,11 +481,13 @@ export const bracketMatches = mysqlTable("bracket_matches", {
   // 본선 다음 경기 연결
   nextMatchId: int("nextMatchId"),
   nextMatchPosition: int("nextMatchPosition"), // 1 or 2
-  loserNextMatchId: int("loserNextMatchId"),    // 3·4위전용
+  loserNextMatchId: int("loserNextMatchId"), // 3·4위전용
   loserNextMatchPosition: int("loserNextMatchPosition"),
-  slotOrder: int("slotOrder"),                      // 코트 내 경기 순번 (관리자 조정용)
-  status: mysqlEnum("status", ["scheduled", "completed"]).notNull().default("scheduled"),
-  refereeUserId: int("refereeUserId"),              // 점수 입력 심판 (FK to users.id)
+  slotOrder: int("slotOrder"), // 코트 내 경기 순번 (관리자 조정용)
+  status: mysqlEnum("status", ["scheduled", "completed"])
+    .notNull()
+    .default("scheduled"),
+  refereeUserId: int("refereeUserId"), // 점수 입력 심판 (FK to users.id)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
