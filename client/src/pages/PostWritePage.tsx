@@ -223,10 +223,12 @@ export default function PostWritePage() {
 
         {/* Image upload button */}
         <div className="mt-4 flex items-center gap-3">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || images.length >= MAX_IMAGES}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+          <label
+            htmlFor="post-image-input"
+            aria-disabled={uploading || images.length >= MAX_IMAGES}
+            className={`flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors ${
+              uploading || images.length >= MAX_IMAGES ? "pointer-events-none opacity-40" : ""
+            }`}
           >
             {uploading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -234,14 +236,16 @@ export default function PostWritePage() {
               <ImagePlus className="w-5 h-5" />
             )}
             <span>사진 {images.length}/{MAX_IMAGES}</span>
-          </button>
+          </label>
           <input
+            id="post-image-input"
             ref={fileInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             multiple
+            disabled={uploading || images.length >= MAX_IMAGES}
             onChange={handleImageSelect}
-            className="hidden"
+            className="sr-only"
           />
         </div>
       </div>

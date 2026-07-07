@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure, adminProcedure, superAdminProcedure } from "./_core/trpc";
 import * as db from "./db";
 import { storagePut } from "./storage";
+import { assertCommunityContentAllowed } from "./communityModeration";
 import sharp from "sharp";
 
 // ─── Nickname ──────────────────────────────────────────
@@ -66,8 +67,8 @@ const imageRouter = router({
       return {
         imageUrl: mainResult.url,
         thumbnailUrl: thumbResult.url,
-        fileKey: mainKey,
-        thumbnailFileKey: thumbKey,
+        fileKey: mainResult.key,
+        thumbnailFileKey: thumbResult.key,
         width: metadata.width ?? 0,
         height: metadata.height ?? 0,
       };
@@ -83,7 +84,13 @@ const postRouter = router({
       search: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const result = await db.listPosts({ cursor: input.cursor, limit: input.limit, search: input.search });
+      const blockedUserIds = ctx.user ? await db.getBlockedUserIds(ctx.user.id) : [];
+      const result = await db.listPosts({
+        cursor: input.cursor,
+        limit: input.limit,
+        search: input.search,
+        excludedAuthorIds: blockedUserIds,
+      });
 
       // Get pinned notices first (only on first page, no search)
       let pinnedNotices: any[] = [];
@@ -147,6 +154,9 @@ const postRouter = router({
     .query(async ({ ctx, input }) => {
       const post = await db.getPostById(input.id);
       if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "게시글을 찾을 수 없습니다" });
+      if (ctx.user && await db.isUserBlocked(ctx.user.id, post.authorId)) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "게시글을 찾을 수 없습니다" });
+      }
 
       const isAdmin = ctx.user && ['admin', 'super_admin'].includes(ctx.user.role);
       const author = await db.getUserById(post.authorId);
@@ -199,6 +209,7 @@ const postRouter = router({
       if (!user?.nickname) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "닉네임을 먼저 설정해주세요" });
       }
+      assertCommunityContentAllowed(input.title, input.content);
 
       const postId = await db.createPost({
         authorId: ctx.user.id,
@@ -243,6 +254,7 @@ const postRouter = router({
       const post = await db.getPostById(input.id);
       if (!post) throw new TRPCError({ code: "NOT_FOUND" });
       if (post.authorId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "본인의 글만 수정할 수 있습니다" });
+      assertCommunityContentAllowed(input.title, input.content);
       await db.updatePost(input.id, { title: input.title, content: input.content });
 
       // Update images if provided
@@ -388,7 +400,12 @@ const commentRouter = router({
       limit: z.number().min(1).max(100).default(30),
     }))
     .query(async ({ ctx, input }) => {
-      const result = await db.getCommentsByPost(input.postId, { cursor: input.cursor, limit: input.limit });
+      const blockedUserIds = ctx.user ? await db.getBlockedUserIds(ctx.user.id) : [];
+      const result = await db.getCommentsByPost(input.postId, {
+        cursor: input.cursor,
+        limit: input.limit,
+        excludedAuthorIds: blockedUserIds,
+      });
       const isAdmin = ctx.user && ['admin', 'super_admin'].includes(ctx.user.role);
 
       // Get author info
@@ -425,6 +442,7 @@ const commentRouter = router({
       if (!user?.nickname) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "닉네임을 먼저 설정해주세요" });
       }
+      assertCommunityContentAllowed(input.content);
 
       const commentId = await db.createComment({
         postId: input.postId,
@@ -527,10 +545,28 @@ const reportRouter = router({
       targetId: z.number(),
       reason: z.enum(["spam", "abuse", "inappropriate", "misinformation", "other"]),
       description: z.string().max(500).optional(),
+      blockAuthor: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
       if (input.reason === "other" && !input.description) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "기타 사유를 입력해주세요" });
+      }
+      let targetAuthorId: number;
+      let relatedPostId: number;
+      if (input.targetType === "post") {
+        const post = await db.getPostById(input.targetId);
+        if (!post) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "신고 대상을 찾을 수 없습니다" });
+        }
+        targetAuthorId = post.authorId;
+        relatedPostId = post.id;
+      } else {
+        const comment = await db.getCommentById(input.targetId);
+        if (!comment) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "신고 대상을 찾을 수 없습니다" });
+        }
+        targetAuthorId = comment.authorId;
+        relatedPostId = comment.postId;
       }
       try {
         const reportId = await db.createReport({
@@ -540,7 +576,26 @@ const reportRouter = router({
           reason: input.reason,
           description: input.description,
         });
-        return { id: reportId };
+        if (input.blockAuthor && targetAuthorId !== ctx.user.id) {
+          await db.blockUser(ctx.user.id, targetAuthorId);
+        }
+        const admins = (await db.getAllUsers()).filter(user =>
+          user.role === "admin" || user.role === "super_admin"
+        );
+        for (const admin of admins) {
+          await db.createNotification({
+            userId: admin.id,
+            type: "notice",
+            title: "커뮤니티 신고 접수",
+            body: "부적절한 콘텐츠 신고가 접수되었습니다. 24시간 이내 검토가 필요합니다.",
+            relatedPostId,
+            relatedCommentId: input.targetType === "comment" ? input.targetId : null,
+          });
+        }
+        return {
+          id: reportId,
+          blockedUserId: input.blockAuthor && targetAuthorId !== ctx.user.id ? targetAuthorId : null,
+        };
       } catch (e: any) {
         if (e.message === "DUPLICATE_REPORT") {
           throw new TRPCError({ code: "CONFLICT", message: "이미 신고한 내용입니다" });

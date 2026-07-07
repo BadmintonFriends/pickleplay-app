@@ -76,7 +76,16 @@ export default function TermsPage() {
             <li>회원은 정확한 개인정보를 제공하여야 하며, 변경사항이 있을 경우 즉시 수정하여야 합니다.</li>
           </ol>
 
-          <h2 className="text-base font-bold text-foreground">제8조 (면책조항)</h2>
+          <h2 className="text-base font-bold text-foreground">제8조 (커뮤니티 콘텐츠 및 이용자 보호)</h2>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>서비스는 불쾌한 콘텐츠, 욕설·비방, 괴롭힘, 차별적 표현, 성적 콘텐츠, 스팸, 불법 행위 조장, 타인의 권리를 침해하는 콘텐츠를 허용하지 않습니다.</li>
+            <li>회원은 게시글 또는 댓글에서 부적절한 콘텐츠를 발견한 경우 신고할 수 있으며, 신고와 함께 해당 작성자를 차단할 수 있습니다.</li>
+            <li>회원이 작성자를 차단하면 해당 작성자의 콘텐츠는 회원의 피드와 댓글 목록에서 즉시 제외됩니다.</li>
+            <li>서비스 운영자는 신고 접수 후 24시간 이내에 내용을 검토하고, 필요한 경우 콘텐츠 비공개, 삭제, 이용 제한 또는 차단 조치를 할 수 있습니다.</li>
+            <li>서비스는 커뮤니티 보호를 위해 일부 금지어 또는 명백한 스팸성 표현의 등록을 제한할 수 있습니다.</li>
+          </ol>
+
+          <h2 className="text-base font-bold text-foreground">제9조 (면책조항)</h2>
           <ol className="list-decimal pl-5 space-y-1">
             <li>서비스는 천재지변 또는 이에 준하는 불가항력으로 인하여 서비스를 제공할 수 없는 경우에는 서비스 제공에 관한 책임이 면제됩니다.</li>
             <li>서비스는 회원의 귀책사유로 인한 서비스 이용의 장애에 대하여 책임을 지지 않습니다.</li>

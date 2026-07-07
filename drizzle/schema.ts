@@ -318,6 +318,22 @@ export const postLikes = mysqlTable("post_likes", {
 export type PostLike = typeof postLikes.$inferSelect;
 export type InsertPostLike = typeof postLikes.$inferInsert;
 
+export const userBlocks = mysqlTable(
+  "user_blocks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    blockerId: int("blockerId").notNull(),
+    blockedUserId: int("blockedUserId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    uniqueBlock: unique().on(table.blockerId, table.blockedUserId),
+  })
+);
+
+export type UserBlock = typeof userBlocks.$inferSelect;
+export type InsertUserBlock = typeof userBlocks.$inferInsert;
+
 // ─── Community: Reports ─────────────────────────────────
 export const reports = mysqlTable("reports", {
   id: int("id").autoincrement().primaryKey(),

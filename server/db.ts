@@ -43,6 +43,7 @@ import {
   comments,
   InsertComment,
   postLikes,
+  userBlocks,
   reports,
   InsertReport,
   notifications,
@@ -826,13 +827,20 @@ export async function listPosts(opts: {
   cursor?: number;
   limit: number;
   search?: string;
+  excludedAuthorIds?: number[];
 }) {
   const db = await getDb();
   if (!db) return { items: [], nextCursor: null };
-  const { cursor, limit, search } = opts;
+  const { cursor, limit, search, excludedAuthorIds = [] } = opts;
 
   const conditions: any[] = [];
   if (cursor) conditions.push(sql`${posts.id} < ${cursor}`);
+  if (excludedAuthorIds.length > 0) {
+    conditions.push(sql`${posts.authorId} NOT IN (${sql.join(
+      excludedAuthorIds.map(id => sql`${id}`),
+      sql`, `
+    )})`);
+  }
   if (search)
     conditions.push(
       or(like(posts.title, `%${search}%`), like(posts.content, `%${search}%`))
@@ -913,12 +921,18 @@ export async function createComment(data: InsertComment) {
 
 export async function getCommentsByPost(
   postId: number,
-  opts: { cursor?: number; limit: number }
+  opts: { cursor?: number; limit: number; excludedAuthorIds?: number[] }
 ) {
   const db = await getDb();
   if (!db) return { items: [], nextCursor: null };
   const conditions: any[] = [eq(comments.postId, postId)];
   if (opts.cursor) conditions.push(sql`${comments.id} > ${opts.cursor}`);
+  if (opts.excludedAuthorIds && opts.excludedAuthorIds.length > 0) {
+    conditions.push(sql`${comments.authorId} NOT IN (${sql.join(
+      opts.excludedAuthorIds.map(id => sql`${id}`),
+      sql`, `
+    )})`);
+  }
   const rows = await db
     .select()
     .from(comments)
@@ -929,6 +943,13 @@ export async function getCommentsByPost(
   const items = hasMore ? rows.slice(0, opts.limit) : rows;
   const nextCursor = hasMore ? items[items.length - 1].id : null;
   return { items, nextCursor };
+}
+
+export async function getCommentById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function deleteComment(id: number, postId: number) {
@@ -1003,6 +1024,53 @@ export async function getLikedPostIds(
       )
     );
   return rows.map(r => r.postId);
+}
+
+export async function blockUser(blockerId: number, blockedUserId: number) {
+  if (blockerId === blockedUserId) return;
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db
+    .select({ id: userBlocks.id })
+    .from(userBlocks)
+    .where(
+      and(
+        eq(userBlocks.blockerId, blockerId),
+        eq(userBlocks.blockedUserId, blockedUserId)
+      )
+    )
+    .limit(1);
+  if (existing.length > 0) return;
+  await db.insert(userBlocks).values({ blockerId, blockedUserId });
+}
+
+export async function getBlockedUserIds(blockerId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ blockedUserId: userBlocks.blockedUserId })
+    .from(userBlocks)
+    .where(eq(userBlocks.blockerId, blockerId));
+  return rows.map(row => row.blockedUserId);
+}
+
+export async function isUserBlocked(
+  blockerId: number,
+  blockedUserId: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: userBlocks.id })
+    .from(userBlocks)
+    .where(
+      and(
+        eq(userBlocks.blockerId, blockerId),
+        eq(userBlocks.blockedUserId, blockedUserId)
+      )
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 // ─── Community: Reports ────────────────────────────────

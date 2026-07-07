@@ -813,14 +813,14 @@ const adminRouter = router({
       const buffer = Buffer.from(input.base64Data, "base64");
       const ext = input.contentType.includes("png") ? "png" : "jpg";
       const fileKey = `tournaments/${input.tournamentId}/posters/${nanoid()}.${ext}`;
-      const { url } = await storagePut(fileKey, buffer, input.contentType);
+      const storedFile = await storagePut(fileKey, buffer, input.contentType);
       const id = await db.createPoster({
         tournamentId: input.tournamentId,
-        imageUrl: url,
-        fileKey,
+        imageUrl: storedFile.url,
+        fileKey: storedFile.key,
         sortOrder: input.sortOrder,
       });
-      return { id, url };
+      return { id, url: storedFile.url };
     }),
 
   deletePoster: protectedProcedure
@@ -846,16 +846,16 @@ const adminRouter = router({
       await verifyTournamentOwnership(ctx.user, input.tournamentId);
       const buffer = Buffer.from(input.base64Data, "base64");
       const fileKey = `tournaments/${input.tournamentId}/documents/${nanoid()}.pdf`;
-      const { url } = await storagePut(fileKey, buffer, input.contentType);
+      const storedFile = await storagePut(fileKey, buffer, input.contentType);
       const id = await db.createDocument({
         tournamentId: input.tournamentId,
         title: input.title,
-        fileUrl: url,
-        fileKey,
+        fileUrl: storedFile.url,
+        fileKey: storedFile.key,
         fileSize: input.fileSize,
         sortOrder: input.sortOrder,
       });
-      return { id, url };
+      return { id, url: storedFile.url };
     }),
 
   uploadSizeGuide: protectedProcedure
@@ -871,12 +871,12 @@ const adminRouter = router({
       const buffer = Buffer.from(input.base64Data, "base64");
       const ext = input.contentType.includes("png") ? "png" : "jpg";
       const fileKey = `tournaments/${input.tournamentId}/size-guide/${nanoid()}.${ext}`;
-      const { url } = await storagePut(fileKey, buffer, input.contentType);
+      const storedFile = await storagePut(fileKey, buffer, input.contentType);
       await db.updateTournament(input.tournamentId, {
-        sizeGuideImageUrl: url,
-        sizeGuideFileKey: fileKey,
+        sizeGuideImageUrl: storedFile.url,
+        sizeGuideFileKey: storedFile.key,
       });
-      return { url, fileKey };
+      return { url: storedFile.url, fileKey: storedFile.key };
     }),
 
   deleteSizeGuide: protectedProcedure

@@ -28,6 +28,7 @@ export default function PostDetailPage() {
   const [reportTarget, setReportTarget] = useState<{ type: "post" | "comment"; id: number } | null>(null);
   const [reportReason, setReportReason] = useState<string>("");
   const [reportDesc, setReportDesc] = useState("");
+  const [blockAuthor, setBlockAuthor] = useState(true);
   const [imageViewerIdx, setImageViewerIdx] = useState<number | null>(null);
   const utils = trpc.useUtils();
 
@@ -83,12 +84,21 @@ export default function PostDetailPage() {
   });
 
   const reportMutation = trpc.community.report.create.useMutation({
-    onSuccess: () => {
-      toast.success("신고가 접수되었습니다");
+    onSuccess: (data) => {
+      toast.success(data.blockedUserId ? "신고가 접수되고 작성자가 차단되었습니다" : "신고가 접수되었습니다");
       setReportOpen(false);
+      const reportedType = reportTarget?.type;
       setReportTarget(null);
       setReportReason("");
       setReportDesc("");
+      setBlockAuthor(true);
+      utils.community.post.list.invalidate();
+      utils.community.comment.list.invalidate({ postId });
+      if (data.blockedUserId && reportedType === "post") {
+        navigate("/social");
+      } else {
+        utils.community.post.detail.invalidate({ id: postId });
+      }
     },
     onError: (err) => toast.error(err.message),
   });
@@ -142,6 +152,7 @@ export default function PostDetailPage() {
     if (!user) { window.location.href = getLoginUrl(`/social/post/${postId}`); return; }
     setReportTarget({ type, id });
     setReportOpen(true);
+    setBlockAuthor(true);
     setMenuOpen(false);
   };
 
@@ -152,6 +163,7 @@ export default function PostDetailPage() {
       targetId: reportTarget.id,
       reason: reportReason as any,
       description: reportDesc || undefined,
+      blockAuthor,
     });
   };
 
@@ -453,6 +465,15 @@ export default function PostDetailPage() {
                 rows={3}
               />
             )}
+            <label className="mb-4 flex items-start gap-2 rounded-xl bg-muted px-3 py-2.5 text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={blockAuthor}
+                onChange={(e) => setBlockAuthor(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>신고와 함께 작성자를 차단하고, 해당 작성자의 콘텐츠를 내 피드에서 숨깁니다.</span>
+            </label>
             <Button
               onClick={submitReport}
               className="w-full h-10 text-sm font-bold"

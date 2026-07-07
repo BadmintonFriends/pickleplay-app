@@ -362,7 +362,7 @@ export default function RegisterPage() {
                       <a href="/terms" target="_blank" className="text-primary underline hover:text-optic-deep">
                         이용약관
                       </a>
-                      에 동의합니다
+                      에 동의합니다. 불쾌한 콘텐츠와 악용 행위 금지 정책을 포함합니다.
                     </label>
                   </div>
                   <div className="flex items-start gap-3">

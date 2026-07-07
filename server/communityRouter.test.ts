@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
+import { storagePut } from "./storage";
 import type { TrpcContext } from "./_core/context";
 
 // Mock data constants for use in test assertions (outside vi.mock factory)
@@ -107,8 +108,16 @@ vi.mock("./db", () => {
       items: [{ ..._mockComment }],
       nextCursor: null,
     }),
+    getCommentById: vi.fn().mockImplementation(async (id: number) => {
+      if (id === 1) return { ..._mockComment };
+      return null;
+    }),
     createComment: vi.fn().mockResolvedValue(50),
     deleteComment: vi.fn().mockResolvedValue(undefined),
+
+    blockUser: vi.fn().mockResolvedValue(undefined),
+    getBlockedUserIds: vi.fn().mockResolvedValue([]),
+    isUserBlocked: vi.fn().mockResolvedValue(false),
 
     // Reports
     createReport: vi.fn().mockResolvedValue(1),
@@ -323,6 +332,28 @@ describe("community.post", () => {
     expect(result.images[0].fileKey).toBe("community/10/img-123.webp");
   });
 
+  it("returns storage keys when uploading images", async () => {
+    vi.mocked(storagePut)
+      .mockResolvedValueOnce({
+        url: "https://cdn.example.com/dev/community/10/img.webp",
+        key: "dev/community/10/img.webp",
+      })
+      .mockResolvedValueOnce({
+        url: "https://cdn.example.com/dev/community/10/thumb.webp",
+        key: "dev/community/10/thumb.webp",
+      });
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.community.image.upload({
+      base64: Buffer.from("image").toString("base64"),
+      mimeType: "image/png",
+      fileName: "image.png",
+    });
+
+    expect(result.fileKey).toBe("dev/community/10/img.webp");
+    expect(result.thumbnailFileKey).toBe("dev/community/10/thumb.webp");
+  });
+
   it("returns 404 for non-existent post", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(caller.community.post.detail({ id: 999 }))
@@ -338,6 +369,15 @@ describe("community.post", () => {
     });
     expect(result.id).toBe(100);
     expect(db.createPost).toHaveBeenCalled();
+  });
+
+  it("rejects blocked community content", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.community.post.create({
+      title: "카지노 홍보",
+      content: "새 내용",
+      images: [],
+    })).rejects.toThrow("커뮤니티 이용약관에 따라 등록할 수 없는 내용이 포함되어 있습니다.");
   });
 
   it("rejects post creation without nickname", async () => {
@@ -475,6 +515,14 @@ describe("community.comment", () => {
     expect(db.createNotification).toHaveBeenCalled();
   });
 
+  it("rejects blocked comment content", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.community.comment.create({
+      postId: 1,
+      content: "불법토토 홍보",
+    })).rejects.toThrow("커뮤니티 이용약관에 따라 등록할 수 없는 내용이 포함되어 있습니다.");
+  });
+
   it("does not notify self-comment", async () => {
     // Post author is 10, commenter is also 10
     const caller = appRouter.createCaller(createUserContext());
@@ -500,6 +548,19 @@ describe("community.report", () => {
     });
     expect(result.id).toBe(1);
     expect(db.createReport).toHaveBeenCalled();
+  });
+
+  it("blocks author when reporting with blockAuthor", async () => {
+    vi.mocked(db.getPostById).mockResolvedValueOnce({ ...mockPost, authorId: 99 });
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.community.report.create({
+      targetType: "post",
+      targetId: 1,
+      reason: "abuse",
+      blockAuthor: true,
+    });
+    expect(result.blockedUserId).toBe(99);
+    expect(db.blockUser).toHaveBeenCalledWith(10, 99);
   });
 
   it("requires description for 'other' reason", async () => {
