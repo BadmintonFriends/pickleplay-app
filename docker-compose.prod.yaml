@@ -8,3 +8,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      S3_BUCKET: ${S3_BUCKET:-pickleplay-596776566549-ap-northeast-2-an}
+      S3_KEY_PREFIX: ${S3_KEY_PREFIX:-prod}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}

@@ -14,6 +14,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      tag: ${{ steps.set-variables.outputs.tag }}
+      image_uri: ${{ steps.set-variables.outputs.image_uri }}
     steps:
       - name: Set Variables
         id: set-variables
@@ -29,22 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.19"
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Configure AWS credentials
-        id: creds
         uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
           aws-region: ap-northeast-2
@@ -72,17 +60,50 @@ jobs:
             VITE_MIXPANEL_TOKEN_DEV=${{ secrets.VITE_MIXPANEL_TOKEN_DEV }}
             VITE_MIXPANEL_TOKEN_PROD=${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        id: creds
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          aws-region: ap-northeast-2
+          role-to-assume: arn:aws:iam::596776566549:role/BFGithubAction
+          output-credentials: true
+
       - name: Update docker-compose
         uses: mikefarah/yq@master
         with:
-          cmd: yq '.services.app.image = "${{ steps.set-variables.outputs.image_uri }}"' -i docker-compose.dev.yaml
+          cmd: yq '.services.app.image = "${{ needs.build.outputs.image_uri }}"' -i docker-compose.dev.yaml
 
       - name: Copy docker-compose file
         run: cp docker-compose.dev.yaml docker-compose.yaml
 
       - name: Generate deployment package
         run: |
-          zip -r ${{ steps.set-variables.outputs.tag }}.zip \
+          zip -r ${{ needs.build.outputs.tag }}.zip \
             docker-compose.yaml
 
       - name: Deploy to EB
@@ -93,7 +114,7 @@ jobs:
           aws_session_token: ${{ steps.creds.outputs.aws-session-token }}
           application_name: ${{ vars.EB_APPLICATION_NAME_DEV || 'pickleplay-dev' }}
           environment_name: ${{ vars.EB_ENVIRONMENT_DEV || 'Pickleplay-dev-env' }}
-          version_label: ${{ steps.set-variables.outputs.tag }}
+          version_label: ${{ needs.build.outputs.tag }}
           region: ap-northeast-2
-          deployment_package: ${{ steps.set-variables.outputs.tag }}.zip
+          deployment_package: ${{ needs.build.outputs.tag }}.zip
           wait_for_environment_recovery: 180
